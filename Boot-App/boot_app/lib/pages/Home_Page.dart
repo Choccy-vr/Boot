@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '../services/navigation_service.dart';
+import '/services/navigation_service.dart';
+import '/services/users/User.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -84,7 +85,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Ginobeano@hackathon',
+                'boot-terminal ~ ${UserService.currentUser?.username}@hackathon',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -131,7 +132,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
           const SizedBox(height: 8),
           Text(
-            'Build your OS. Get prizes. Winter 2025.',
+            'Build your OS. Winter 2025.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -179,7 +180,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Expanded(
                   child: _buildStatusItem(
                     'User',
-                    'Ginobeano',
+                    UserService.currentUser?.username ?? 'Unknown',
                     Symbols.person,
                     colorScheme.secondary,
                     colorScheme,
@@ -272,10 +273,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'build',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'build',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -289,10 +290,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'test',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'test',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -306,10 +307,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'vote',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'vote',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -323,10 +324,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'explore',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'explore',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -335,15 +336,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   title: 'LEADERBOARD',
                   subtitle: 'Top rankings',
                   icon: Symbols.leaderboard,
-                  command: './rankings.sh',
+                  command: './leaderboard.sh',
                   color: TerminalColors.red,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'leaderboard',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'leaderboard',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -357,10 +358,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
-                    context,
-                    'profile',
-                    colorScheme,
-                    textTheme,
+                    context: context,
+                    destination: 'profile',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
@@ -475,16 +476,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     '89',
                     Symbols.group,
                     colorScheme.secondary,
-                    colorScheme,
-                    textTheme,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'VMs Running',
-                    '23',
-                    Symbols.computer,
-                    colorScheme.tertiary,
                     colorScheme,
                     textTheme,
                   ),
