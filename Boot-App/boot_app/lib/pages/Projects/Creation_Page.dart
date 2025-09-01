@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/services/navigation_service.dart';
+import '/services/users/User.dart';
+import '/services/supabase/DB/supabase_db.dart';
 
 class CreateProjectPage extends StatefulWidget {
   const CreateProjectPage({super.key});
@@ -30,30 +32,29 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   bool _enableCICD = false;
   bool _isLoading = false;
 
-  // OS Type options
+  // Options maps
   final Map<String, String> _osTypes = {
-    'custom': 'Custom OS (from scratch)',
-    'linux': 'Linux Distribution',
+    'custom': 'Custom OS',
+    'linux': 'Linux-based',
     'microkernel': 'Microkernel',
-    'rtos': 'Real-Time OS',
-    'embedded': 'Embedded System',
-    'experimental': 'Experimental/Research',
+    'monolithic': 'Monolithic Kernel',
+    'hobbyos': 'Hobby OS',
   };
 
   final Map<String, String> _architectures = {
-    'x86_64': 'x86_64 (64-bit)',
+    'x86_64': 'x86-64 (64-bit)',
     'x86': 'x86 (32-bit)',
-    'arm64': 'ARM64 (AArch64)',
-    'arm': 'ARM (32-bit)',
+    'arm64': 'ARM64',
+    'arm': 'ARM 32-bit',
     'riscv': 'RISC-V',
   };
 
   final Map<String, String> _bootloaders = {
-    'grub': 'GRUB (GNU GRand Unified Bootloader)',
-    'limine': 'Limine Bootloader',
-    'syslinux': 'SYSLINUX',
+    'grub': 'GRUB 2',
+    'limine': 'Limine',
+    'uefi': 'UEFI Direct',
+    'multiboot': 'Multiboot',
     'custom': 'Custom Bootloader',
-    'none': 'No Bootloader',
   };
 
   @override
@@ -86,32 +87,70 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Create Project'),
+        title: Row(
+          children: [
+            Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Create Project',
+              style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+            ),
+          ],
+        ),
+        leading: IconButton(
+          icon: Icon(Symbols.arrow_back, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Back',
+        ),
         backgroundColor: colorScheme.surfaceContainerLow,
-        foregroundColor: colorScheme.primary,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Terminal Header
-              _buildTerminalHeader(colorScheme, textTheme),
-              const SizedBox(height: 24),
-
-              // Project Configuration Form
-              _buildProjectForm(colorScheme, textTheme),
-              const SizedBox(height: 24),
-
-              // Advanced Options
-              _buildAdvancedOptions(colorScheme, textTheme),
-              const SizedBox(height: 24),
-
-              // Create Button
-              _buildCreateButton(colorScheme, textTheme),
-            ],
+        elevation: 1,
+        actions: [
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : _createProject,
+            icon: _isLoading
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colorScheme.onPrimary,
+                      ),
+                    ),
+                  )
+                : Icon(Symbols.rocket_launch, size: 18),
+            label: Text(_isLoading ? 'Creating...' : 'Create Project'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
           ),
+          const SizedBox(width: 16),
+        ],
+      ),
+      body: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTerminalHeader(colorScheme, textTheme),
+            const SizedBox(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProjectBasicsSection(colorScheme, textTheme),
+                    const SizedBox(height: 24),
+                    _buildArchitectureSection(colorScheme, textTheme),
+                    const SizedBox(height: 24),
+                    _buildAdvancedOptionsSection(colorScheme, textTheme),
+                    const SizedBox(height: 24),
+                    _buildSystemPreview(colorScheme, textTheme),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -132,7 +171,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           Row(
             children: [
               Text(
-                'boot-terminal ~ project-wizard@hackathon',
+                'boot-terminal ~ ${UserService.currentUser?.username}@hackathon',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -141,7 +180,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           ),
           const SizedBox(height: 16),
 
-          // Animated header text
+          // Animated project creation text
           AnimatedBuilder(
             animation: _typewriterAnimation,
             builder: (context, child) {
@@ -173,7 +212,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
           const SizedBox(height: 8),
           Text(
-            'Configure your OS project settings',
+            'Configure your operating system project parameters',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -183,7 +222,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 
-  Widget _buildProjectForm(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildProjectBasicsSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Card(
       color: colorScheme.surfaceContainer,
       child: Padding(
@@ -193,10 +235,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           children: [
             Row(
               children: [
-                Icon(Symbols.folder_code, color: colorScheme.primary),
+                Icon(Symbols.folder, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Project Configuration',
+                  'Project Basics',
                   style: textTheme.titleLarge?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -206,49 +248,59 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             ),
             const SizedBox(height: 16),
 
-            // Responsive form layout
-            LayoutBuilder(
-              builder: (context, constraints) {
-                bool isMobile = constraints.maxWidth < 600;
+            // Project Name
+            TextField(
+              controller: _projectNameController,
+              style: TextStyle(color: colorScheme.onSurface),
+              decoration: InputDecoration(
+                labelText: 'Project Name',
+                hintText: 'MyAwesomeOS',
+                prefixIcon: Icon(
+                  Symbols.title,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
-                if (isMobile) {
-                  return Column(
-                    children: _buildFormFields(colorScheme, textTheme),
-                  );
-                } else {
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildFormFields(colorScheme, textTheme)[0],
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildFormFields(colorScheme, textTheme)[1],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildFormFields(colorScheme, textTheme)[2],
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildFormFields(colorScheme, textTheme)[3],
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildFormFields(colorScheme, textTheme)[4],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildFormFields(colorScheme, textTheme)[5],
-                    ],
-                  );
-                }
-              },
+            // Description
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              style: TextStyle(color: colorScheme.onSurface),
+              decoration: InputDecoration(
+                labelText: 'Description',
+                hintText: 'Describe your OS project...',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(
+                  Symbols.description,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Repository URL (optional)
+            TextField(
+              controller: _repositoryController,
+              style: TextStyle(color: colorScheme.onSurface),
+              decoration: InputDecoration(
+                labelText: 'Repository URL (Optional)',
+                hintText: 'https://github.com/username/project',
+                prefixIcon: Icon(
+                  Symbols.link,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),
@@ -256,109 +308,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 
-  List<Widget> _buildFormFields(ColorScheme colorScheme, TextTheme textTheme) {
-    return [
-      // Project Name
-      TextField(
-        controller: _projectNameController,
-        style: TextStyle(color: colorScheme.onSurface),
-        decoration: InputDecoration(
-          labelText: 'Project Name',
-          hintText: 'my-awesome-os',
-          prefixIcon: Icon(Symbols.code, color: colorScheme.onSurfaceVariant),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-
-      // OS Type Dropdown
-      DropdownButtonFormField<String>(
-        value: _selectedOSType,
-        style: TextStyle(color: colorScheme.onSurface),
-        dropdownColor: colorScheme.surfaceContainerHigh,
-        decoration: InputDecoration(
-          labelText: 'OS Type',
-          prefixIcon: Icon(Symbols.memory, color: colorScheme.onSurfaceVariant),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        items: _osTypes.entries.map((entry) {
-          return DropdownMenuItem(value: entry.key, child: Text(entry.value));
-        }).toList(),
-        onChanged: (value) => setState(() => _selectedOSType = value!),
-      ),
-
-      // Description
-      TextField(
-        controller: _descriptionController,
-        style: TextStyle(color: colorScheme.onSurface),
-        maxLines: 3,
-        decoration: InputDecoration(
-          labelText: 'Description',
-          hintText: 'Describe your OS project...',
-          alignLabelWithHint: true,
-          prefixIcon: Icon(
-            Symbols.description,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-
-      // Architecture
-      DropdownButtonFormField<String>(
-        value: _selectedArchitecture,
-        style: TextStyle(color: colorScheme.onSurface),
-        dropdownColor: colorScheme.surfaceContainerHigh,
-        decoration: InputDecoration(
-          labelText: 'Target Architecture',
-          prefixIcon: Icon(
-            Symbols.developer_board,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        items: _architectures.entries.map((entry) {
-          return DropdownMenuItem(value: entry.key, child: Text(entry.value));
-        }).toList(),
-        onChanged: (value) => setState(() => _selectedArchitecture = value!),
-      ),
-
-      // Bootloader
-      DropdownButtonFormField<String>(
-        value: _selectedBootloader,
-        style: TextStyle(color: colorScheme.onSurface),
-        dropdownColor: colorScheme.surfaceContainerHigh,
-        decoration: InputDecoration(
-          labelText: 'Bootloader',
-          prefixIcon: Icon(
-            Symbols.rocket_launch,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        items: _bootloaders.entries.map((entry) {
-          return DropdownMenuItem(value: entry.key, child: Text(entry.value));
-        }).toList(),
-        onChanged: (value) => setState(() => _selectedBootloader = value!),
-      ),
-
-      // Repository URL
-      TextField(
-        controller: _repositoryController,
-        style: TextStyle(color: colorScheme.onSurface),
-        decoration: InputDecoration(
-          labelText: 'Repository URL (Optional)',
-          hintText: 'https://github.com/username/my-os',
-          prefixIcon: Icon(
-            Symbols.folder_data,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildAdvancedOptions(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildArchitectureSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Card(
       color: colorScheme.surfaceContainer,
       child: Padding(
@@ -368,12 +321,12 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           children: [
             Row(
               children: [
-                Icon(Symbols.settings, color: colorScheme.secondary),
+                Icon(Symbols.settings, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Advanced Options',
+                  'System Architecture',
                   style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.secondary,
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -381,86 +334,80 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             ),
             const SizedBox(height: 16),
 
-            // Responsive options layout
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 600) {
-                  return Column(
-                    children: [
-                      _buildOptionTile(
-                        'Initialize Git Repository',
-                        'Set up version control for your project',
-                        Symbols.source,
-                        _enableGitInit,
-                        (value) => setState(() => _enableGitInit = value),
-                        colorScheme,
-                        textTheme,
-                      ),
-                      _buildOptionTile(
-                        'Docker Support',
-                        'Include Docker configuration for development',
-                        Symbols.developer_mode,
-                        _enableDockerSupport,
-                        (value) => setState(() => _enableDockerSupport = value),
-                        colorScheme,
-                        textTheme,
-                      ),
-                      _buildOptionTile(
-                        'CI/CD Pipeline',
-                        'Set up automated testing and deployment',
-                        Symbols.build,
-                        _enableCICD,
-                        (value) => setState(() => _enableCICD = value),
-                        colorScheme,
-                        textTheme,
-                      ),
-                    ],
-                  );
-                } else {
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildOptionTile(
-                              'Initialize Git Repository',
-                              'Set up version control for your project',
-                              Symbols.source,
-                              _enableGitInit,
-                              (value) => setState(() => _enableGitInit = value),
-                              colorScheme,
-                              textTheme,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildOptionTile(
-                              'Docker Support',
-                              'Include Docker configuration for development',
-                              Symbols.developer_mode,
-                              _enableDockerSupport,
-                              (value) =>
-                                  setState(() => _enableDockerSupport = value),
-                              colorScheme,
-                              textTheme,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildOptionTile(
-                        'CI/CD Pipeline',
-                        'Set up automated testing and deployment',
-                        Symbols.build,
-                        _enableCICD,
-                        (value) => setState(() => _enableCICD = value),
-                        colorScheme,
-                        textTheme,
-                      ),
-                    ],
-                  );
-                }
-              },
+            // OS Type
+            DropdownButtonFormField<String>(
+              value: _selectedOSType,
+              style: TextStyle(color: colorScheme.onSurface),
+              dropdownColor: colorScheme.surfaceContainerHigh,
+              decoration: InputDecoration(
+                labelText: 'OS Type',
+                prefixIcon: Icon(
+                  Symbols.computer,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              items: _osTypes.entries.map((entry) {
+                return DropdownMenuItem(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
+              onChanged: (value) => setState(() => _selectedOSType = value!),
+            ),
+            const SizedBox(height: 16),
+
+            // Architecture
+            DropdownButtonFormField<String>(
+              value: _selectedArchitecture,
+              style: TextStyle(color: colorScheme.onSurface),
+              dropdownColor: colorScheme.surfaceContainerHigh,
+              decoration: InputDecoration(
+                labelText: 'Target Architecture',
+                prefixIcon: Icon(
+                  Symbols.developer_board,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              items: _architectures.entries.map((entry) {
+                return DropdownMenuItem(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedArchitecture = value!),
+            ),
+            const SizedBox(height: 16),
+
+            // Bootloader
+            DropdownButtonFormField<String>(
+              value: _selectedBootloader,
+              style: TextStyle(color: colorScheme.onSurface),
+              dropdownColor: colorScheme.surfaceContainerHigh,
+              decoration: InputDecoration(
+                labelText: 'Bootloader',
+                prefixIcon: Icon(
+                  Symbols.rocket_launch,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              items: _bootloaders.entries.map((entry) {
+                return DropdownMenuItem(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedBootloader = value!),
             ),
           ],
         ),
@@ -468,169 +415,105 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 
-  Widget _buildOptionTile(
-    String title,
-    String subtitle,
-    IconData icon,
-    bool value,
-    ValueChanged<bool> onChanged,
+  Widget _buildAdvancedOptionsSection(
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
     return Card(
-      color: colorScheme.surfaceContainerLow,
-      child: SwitchListTile(
-        title: Row(
-          children: [
-            Icon(icon, color: colorScheme.tertiary, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Text(
-          subtitle,
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        value: value,
-        onChanged: onChanged,
-        activeColor: colorScheme.primary,
-      ),
-    );
-  }
-
-  Widget _buildCreateButton(ColorScheme colorScheme, TextTheme textTheme) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: _isLoading ? null : _handleCreateProject,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        icon: _isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    colorScheme.onPrimary,
-                  ),
-                ),
-              )
-            : Icon(Symbols.rocket_launch),
-        label: Text(
-          _isLoading ? 'Creating Project...' : 'Initialize Project',
-          style: textTheme.labelLarge?.copyWith(
-            color: colorScheme.onPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleCreateProject() async {
-    if (_projectNameController.text.trim().isEmpty) {
-      _showError('Please enter a project name');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // Simulate project creation process
-      await Future.delayed(Duration(seconds: 2));
-
-      // Show success dialog
-      await _showSuccessDialog();
-
-      // Navigate back or to project page
-      Navigator.pop(context);
-    } catch (e) {
-      _showError('Failed to create project: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _showError(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.errorContainer,
-        title: Row(
-          children: [
-            Icon(Symbols.error, color: Theme.of(context).colorScheme.error),
-            const SizedBox(width: 8),
-            Text(
-              'Error',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onErrorContainer,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showSuccessDialog() async {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colorScheme.surfaceContainer,
-        title: Row(
-          children: [
-            Icon(Symbols.check_circle, color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              'Project Created! 🚀',
-              style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      color: colorScheme.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Your OS project "${_projectNameController.text}" has been successfully initialized!',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface,
-              ),
+            Row(
+              children: [
+                Icon(Symbols.tune, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Development Options',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
+
+            SwitchListTile(
+              title: Text(
+                'Initialize Git Repository',
+                style: TextStyle(color: colorScheme.onSurface),
+              ),
+              subtitle: Text(
+                'Set up version control from the start',
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+              value: _enableGitInit,
+              onChanged: (value) => setState(() => _enableGitInit = value),
+              activeColor: colorScheme.primary,
+            ),
+
+            SwitchListTile(
+              title: Text(
+                'Docker Support',
+                style: TextStyle(color: colorScheme.onSurface),
+              ),
+              subtitle: Text(
+                'Include Dockerfile and docker-compose setup',
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+              value: _enableDockerSupport,
+              onChanged: (value) =>
+                  setState(() => _enableDockerSupport = value),
+              activeColor: colorScheme.primary,
+            ),
+
+            SwitchListTile(
+              title: Text(
+                'CI/CD Pipeline',
+                style: TextStyle(color: colorScheme.onSurface),
+              ),
+              subtitle: Text(
+                'GitHub Actions workflow for building and testing',
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
+              value: _enableCICD,
+              onChanged: (value) => setState(() => _enableCICD = value),
+              activeColor: colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSystemPreview(ColorScheme colorScheme, TextTheme textTheme) {
+    return Card(
+      color: colorScheme.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Symbols.preview, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Project Preview',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLowest,
@@ -641,13 +524,19 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Project Configuration:',
+                    '> Project Configuration Summary',
                     style: textTheme.labelMedium?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
+                  Text(
+                    '• Name: ${_projectNameController.text.isEmpty ? 'MyAwesomeOS' : _projectNameController.text}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   Text(
                     '• Type: ${_osTypes[_selectedOSType]}',
                     style: textTheme.bodySmall?.copyWith(
@@ -666,6 +555,149 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (_enableGitInit ||
+                      _enableDockerSupport ||
+                      _enableCICD) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '• Features: ${[if (_enableGitInit) 'Git', if (_enableDockerSupport) 'Docker', if (_enableCICD) 'CI/CD'].join(', ')}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createProject() async {
+    if (_projectNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Please enter a project name')));
+      return;
+    }
+
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a project description')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Here you would create the project in your database
+      await SupabaseDB.InsertData(
+        table: 'projects',
+        data: {
+          'name': _projectNameController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'owner': UserService.currentUser?.id,
+          'github_repo': _repositoryController.text.trim(),
+          'os_type': _selectedOSType,
+          'architecture': _selectedArchitecture,
+          'bootloader': _selectedBootloader,
+          'git_init': _enableGitInit,
+          'docker_support': _enableDockerSupport,
+          'cicd_enabled': _enableCICD,
+          'status': 'building',
+          'image_url': 'https://via.placeholder.com/400x300?text=OS+Project',
+          'total_time': 0,
+          'total_likes': 0,
+          'level': 1,
+          'awaiting_review': false,
+          'reviewed': false,
+        },
+      );
+
+      // Show success dialog
+      _showSuccessDialog();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create project: $e')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+        title: Row(
+          children: [
+            Icon(
+              Symbols.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Project Created! 🚀',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your OS project has been successfully initialized!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Project Configuration:',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Type: ${_osTypes[_selectedOSType]}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    '• Architecture: ${_architectures[_selectedArchitecture]}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    '• Bootloader: ${_bootloaders[_selectedBootloader]}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -676,7 +708,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Awesome!',
-              style: TextStyle(color: colorScheme.primary),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ),
         ],

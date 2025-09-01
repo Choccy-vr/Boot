@@ -289,18 +289,20 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
       SignupService.signUpUser.username = username;
       SignupService.signUpUser.bio = bio;
       await SignupService.createProfile(SignupService.signUpUser);
+      if (!mounted) return;
       NavigationService.navigateTo(
         context: context,
-        destination: 'home',
+        destination: AppDestination.home,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

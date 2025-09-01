@@ -15,7 +15,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _typewriterController;
   late Animation<int> _typewriterAnimation;
-  final String _welcomeText = "Welcome to Boot Hackathon 2025";
+  final String _welcomeText = "Welcome to Boot";
 
   @override
   void initState() {
@@ -274,7 +274,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'build',
+                    destination: AppDestination.project,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -291,7 +291,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'test',
+                    destination: AppDestination.test,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -308,7 +308,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'vote',
+                    destination: AppDestination.vote,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -325,7 +325,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'explore',
+                    destination: AppDestination.explore,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -342,7 +342,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'leaderboard',
+                    destination: AppDestination.leaderboard,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -359,7 +359,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   textTheme: textTheme,
                   onTap: () => NavigationService.navigateTo(
                     context: context,
-                    destination: 'profile',
+                    destination: AppDestination.profile,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),

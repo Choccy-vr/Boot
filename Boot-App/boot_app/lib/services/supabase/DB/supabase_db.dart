@@ -41,6 +41,18 @@ class SupabaseDB {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> GetMultipleRowData({
+    required String table,
+    required String column,
+    required List<dynamic> columnValue,
+  }) async {
+    try {
+      return await supabase.from(table).select().inFilter(column, columnValue);
+    } catch (e) {
+      throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
   //Insert
   static Future<void> InsertData({
     required String table,

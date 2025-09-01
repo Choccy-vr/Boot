@@ -7,7 +7,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/supabase/auth/Auth.dart';
 import 'services/supabase/auth/auth_listener.dart';
 
-import 'pages/Login/SignUp/SignUp_Profile_Page.dart';
+import 'pages/Projects/Project_Page.dart';
+import 'pages/Projects/Creation_Page.dart';
 
 const supabaseUrl = 'https://zbtphhtuaovleoxkoemt.supabase.co';
 const supabaseKey =
@@ -28,7 +29,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       title: 'Boot App',
       theme: buildTerminalTheme(),
-      //home: const SignUp_Profile_Page(),
+      //home: CreateProjectPage(),
       home: FutureBuilder<bool>(
         future: Authentication.restoreStoredSession(),
         builder: (context, snapshot) {

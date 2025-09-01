@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/users/User.dart';
+import '/services/navigation_service.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -11,7 +12,36 @@ class ProjectsPage extends StatefulWidget {
   State<ProjectsPage> createState() => _ProjectsPageState();
 }
 
-class _ProjectsPageState extends State<ProjectsPage> {
+class _ProjectsPageState extends State<ProjectsPage>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _refreshController;
+
+  @override
+  void dispose() {
+    _refreshController?.dispose();
+    super.dispose();
+  }
+
+  String timeAgoSinceDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()} week${(difference.inDays / 7).floor() == 1 ? '' : 's'} ago';
+    } else if (difference.inDays < 365) {
+      return '${(difference.inDays / 30).floor()} month${(difference.inDays / 30).floor() == 1 ? '' : 's'} ago';
+    } else {
+      return '${(difference.inDays / 365).floor()} year${(difference.inDays / 365).floor() == 1 ? '' : 's'} ago';
+    }
+  }
+
   bool _isGridView = true;
   List<Project> _projects = [];
 
@@ -31,10 +61,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   Future<List<Project>> _getProjects(String userID) async {
-    final response = await SupabaseDB.GetMultipleCustomRowData(
+    final response = await SupabaseDB.GetMultipleRowData(
       table: 'projects',
-      fieldToCheck: 'owner',
-      rowIDs: [userID],
+      column: 'owner',
+      columnValue: [userID],
     );
     if (response.isEmpty) return [];
     return response.map<Project>((row) => Project.fromRow(row)).toList();
@@ -76,7 +106,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
               ),
             ),
             Text(
-              'Last modified: ${project.lastModified}',
+              'Last modified: ${timeAgoSinceDate(project.lastModified)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -398,7 +428,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   ),
                   const Spacer(),
                   Text(
-                    project.lastModified.toString(),
+                    timeAgoSinceDate(project.lastModified),
                     style: textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                       fontSize: 10,
@@ -499,7 +529,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Last modified: ${project.lastModified}',
+                      'Last modified: ${timeAgoSinceDate(project.lastModified)}',
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: 11,
@@ -519,10 +549,14 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    _fetchProjectsOnLoad();
+    _refreshController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 500),
+    );
+    _fetchProjects();
   }
 
-  Future<void> _fetchProjectsOnLoad() async {
+  Future<void> _fetchProjects() async {
     final userId = UserService.currentUser?.id;
     if (userId == null || userId.isEmpty) return;
 
@@ -560,6 +594,25 @@ class _ProjectsPageState extends State<ProjectsPage> {
         backgroundColor: colorScheme.surfaceContainerLow,
         elevation: 1,
         actions: [
+          AnimatedBuilder(
+            animation: _refreshController!,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: (_refreshController?.value ?? 0) * 6.28319, // 2 * pi
+                child: child,
+              );
+            },
+            child: IconButton(
+              icon: Icon(Symbols.refresh, color: colorScheme.onSurface),
+              onPressed: () async {
+                if (!(_refreshController?.isAnimating ?? false)) {
+                  _refreshController?.forward(from: 0);
+                  await _fetchProjects();
+                }
+              },
+              tooltip: 'Refresh',
+            ),
+          ),
           IconButton(
             icon: Icon(
               _isGridView ? Symbols.view_list : Symbols.grid_view,
@@ -574,7 +627,14 @@ class _ProjectsPageState extends State<ProjectsPage> {
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
-            onPressed: _showCreateProjectDialog,
+            onPressed: () {
+              NavigationService.navigateTo(
+                context: context,
+                destination: AppDestination.createProject,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              );
+            },
             icon: Icon(Symbols.add, size: 18),
             label: Text('Create Project'),
             style: ElevatedButton.styleFrom(
@@ -644,7 +704,7 @@ class Project {
       owner: row['owner'] ?? 'unknown',
       createdAt: DateTime.parse(row['created_at'] ?? DateTime.now().toString()),
       lastModified: DateTime.parse(
-        row['last_modified'] ?? DateTime.now().toString(),
+        row['updated_at'] ?? DateTime.now().toString(),
       ),
       awaitingReview: row['awaiting_review'] ?? false,
       level: row['level'] ?? 0,

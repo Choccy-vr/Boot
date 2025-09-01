@@ -9,11 +9,28 @@ import '/pages/Login/SignUp/SignUp_Page.dart';
 import '/pages/Home_Page.dart';
 import '/pages/Login/SignUp/Signup_Pass_page.dart';
 import '/pages/Login/SignUp/SignUp_Profile_Page.dart';
+import '/pages/Projects/Project_Page.dart';
+import '/pages/Projects/Creation_Page.dart';
+
+enum AppDestination {
+  home,
+  project,
+  test,
+  vote,
+  explore,
+  leaderboard,
+  profile,
+  login,
+  signup,
+  signupPass,
+  signupProfile,
+  createProject,
+}
 
 class NavigationService {
   static void navigateTo({
     required BuildContext context,
-    required String destination,
+    required AppDestination destination,
     required ColorScheme colorScheme,
     required TextTheme textTheme,
     bool sharedAxis = false,
@@ -21,36 +38,49 @@ class NavigationService {
         SharedAxisTransitionType.horizontal,
   }) {
     switch (destination) {
-      case 'home':
-        Navigator.push(
+      case AppDestination.home:
+        _pushPage(context, const HomePage(), sharedAxis, transitionType);
+        break;
+      case AppDestination.project:
+        _pushPage(context, const ProjectsPage(), sharedAxis, transitionType);
+        break;
+      case AppDestination.test:
+        _pushPage(context, const TestPage(), sharedAxis, transitionType);
+        break;
+      case AppDestination.login:
+        _pushPage(context, const LoginPage(), sharedAxis, transitionType);
+        break;
+      case AppDestination.signup:
+        _pushPage(context, const SignUpPage(), sharedAxis, transitionType);
+        break;
+      case AppDestination.signupPass:
+        _pushPage(
           context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const HomePage(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(builder: (context) => const HomePage()),
+          const SignUp_Pass_Page(),
+          sharedAxis,
+          transitionType,
         );
         break;
-      case 'build':
-        // Navigate to build screen
-        DialogService.showComingSoon(context, 'Build', textTheme, colorScheme);
-        break;
-      case 'test':
-        Navigator.push(
+      case AppDestination.signupProfile:
+        _pushPage(
           context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const TestPage(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(builder: (context) => const TestPage()),
+          const SignUp_Profile_Page(),
+          sharedAxis,
+          transitionType,
         );
         break;
-      case 'vote':
+      case AppDestination.createProject:
+        _pushPage(
+          context,
+          const CreateProjectPage(),
+          sharedAxis,
+          transitionType,
+        );
+        break;
+      case AppDestination.vote:
         DialogService.showComingSoon(context, 'Vote', textTheme, colorScheme);
         break;
-      case 'explore':
+      case AppDestination.explore:
         DialogService.showComingSoon(
           context,
           'Explore',
@@ -58,7 +88,7 @@ class NavigationService {
           colorScheme,
         );
         break;
-      case 'leaderboard':
+      case AppDestination.leaderboard:
         DialogService.showComingSoon(
           context,
           'Leaderboard',
@@ -66,7 +96,7 @@ class NavigationService {
           colorScheme,
         );
         break;
-      case 'profile':
+      case AppDestination.profile:
         DialogService.showComingSoon(
           context,
           'Profile',
@@ -74,51 +104,20 @@ class NavigationService {
           colorScheme,
         );
         break;
-      case 'login':
-        Navigator.push(
-          context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const LoginPage(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-        break;
-      case 'signup':
-        Navigator.push(
-          context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const SignUpPage(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(builder: (context) => const SignUpPage()),
-        );
-      case 'signup_pass':
-        Navigator.push(
-          context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const SignUp_Pass_Page(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(
-                  builder: (context) => const SignUp_Pass_Page(),
-                ),
-        );
-      case 'signup_profile':
-        Navigator.push(
-          context,
-          sharedAxis
-              ? SharedAxisPageRoute(
-                  child: const SignUp_Profile_Page(),
-                  transitionType: transitionType,
-                )
-              : MaterialPageRoute(
-                  builder: (context) => const SignUp_Profile_Page(),
-                ),
-        );
     }
+  }
+
+  static void _pushPage(
+    BuildContext context,
+    Widget page,
+    bool sharedAxis,
+    SharedAxisTransitionType transitionType,
+  ) {
+    Navigator.push(
+      context,
+      sharedAxis
+          ? SharedAxisPageRoute(child: page, transitionType: transitionType)
+          : MaterialPageRoute(builder: (context) => page),
+    );
   }
 }

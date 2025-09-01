@@ -151,7 +151,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 : () {
                     NavigationService.navigateTo(
                       context: context,
-                      destination: 'login',
+                      destination: AppDestination.login,
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     );
@@ -191,7 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
       SignupService.signUpUser.email = email;
       NavigationService.navigateTo(
         context: context,
-        destination: 'signup_pass',
+        destination: AppDestination.signupPass,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
         sharedAxis: true,

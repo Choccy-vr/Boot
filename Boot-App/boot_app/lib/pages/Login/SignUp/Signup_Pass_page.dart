@@ -159,7 +159,7 @@ class _SignUp_Pass_PageState extends State<SignUp_Pass_Page> {
                 : () {
                     NavigationService.navigateTo(
                       context: context,
-                      destination: 'login',
+                      destination: AppDestination.login,
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     );
@@ -213,18 +213,20 @@ class _SignUp_Pass_PageState extends State<SignUp_Pass_Page> {
     try {
       SignupService.signUpUser.password = password;
       await SignupService.signUp(SignupService.signUpUser);
+      if (!mounted) return;
       NavigationService.navigateTo(
         context: context,
-        destination: 'signup_profile',
+        destination: AppDestination.signupProfile,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

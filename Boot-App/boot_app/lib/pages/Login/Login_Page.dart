@@ -148,7 +148,7 @@ class _LoginPageState extends State<LoginPage> {
                 : () {
                     NavigationService.navigateTo(
                       context: context,
-                      destination: 'signup',
+                      destination: AppDestination.signup,
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     );
@@ -187,18 +187,20 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await Authentication.SignIn(email, password);
+      if (!mounted) return;
       NavigationService.navigateTo(
         context: context,
-        destination: 'home',
+        destination: AppDestination.home,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
