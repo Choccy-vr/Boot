@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import '/animations/Shared_Axis.dart';
-import 'dialog_service.dart';
+import '/services/dialog/dialog_service.dart';
 
 import '/pages/Test_Page.dart';
 import '/pages/Login/Login_Page.dart';

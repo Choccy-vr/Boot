@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
-import '/services/navigation_service.dart';
+import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/SignUp_Service.dart';
 
 class SignUpPage extends StatefulWidget {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/navigation_service.dart';
+import '../services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 
 class HomePage extends StatefulWidget {

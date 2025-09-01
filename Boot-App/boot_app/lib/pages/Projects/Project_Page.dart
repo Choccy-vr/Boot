@@ -3,7 +3,7 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/users/User.dart';
-import '/services/navigation_service.dart';
+import '../../services/navigation/navigation_service.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/navigation_service.dart';
+import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/SignUp_Service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/supabase/Storage/supabase_storage.dart';
