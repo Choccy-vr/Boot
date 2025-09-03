@@ -26,6 +26,10 @@ class UserService {
     currentUser = user;
   }
 
+  static Future<void> updateUser() async {
+    SupabaseDB.UpsertData(table: 'users', data: currentUser?.toJson());
+  }
+
   static Future<void> initializeUser({
     required String id,
     required String email,

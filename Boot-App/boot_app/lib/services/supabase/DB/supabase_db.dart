@@ -113,9 +113,9 @@ class SupabaseDB {
   //Upsert
   static Future<List<Map<String, dynamic>>> UpsertData({
     required String table,
-    required String onConflict,
-    required bool defaultToNull,
-    required bool ignoreDuplicates,
+    String? onConflict,
+    bool? defaultToNull,
+    bool? ignoreDuplicates,
     Map<String, dynamic>? data,
     List<Map<String, dynamic>>? bulkData,
   }) async {
@@ -128,26 +128,24 @@ class SupabaseDB {
     }
 
     try {
+      final upsertArgs = <String, dynamic>{};
+      if (onConflict != null) upsertArgs['onConflict'] = onConflict;
+      if (defaultToNull != null) upsertArgs['defaultToNull'] = defaultToNull;
+      if (ignoreDuplicates != null)
+        upsertArgs['ignoreDuplicates'] = ignoreDuplicates;
+
       if (data != null) {
-        return await supabase
-            .from(table)
-            .upsert(
-              data,
-              onConflict: onConflict,
-              defaultToNull: defaultToNull,
-              ignoreDuplicates: ignoreDuplicates,
-            )
-            .select();
+        return await Function.apply(
+          supabase.from(table).upsert,
+          [data],
+          upsertArgs.map((k, v) => MapEntry(Symbol(k), v)),
+        ).select();
       } else {
-        return await supabase
-            .from(table)
-            .upsert(
-              bulkData!,
-              onConflict: onConflict,
-              defaultToNull: defaultToNull,
-              ignoreDuplicates: ignoreDuplicates,
-            )
-            .select();
+        return await Function.apply(
+          supabase.from(table).upsert,
+          [bulkData!],
+          upsertArgs.map((k, v) => MapEntry(Symbol(k), v)),
+        ).select();
       }
     } catch (e) {
       throw Exception('Unexpected error: ${e.toString()}');

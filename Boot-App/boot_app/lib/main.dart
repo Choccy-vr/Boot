@@ -1,3 +1,4 @@
+import 'package:boot_app/services/supabase/auth/supabase_auth.dart';
 import 'package:flutter/material.dart';
 import 'theme/terminal_theme.dart';
 import 'pages/Test_Page.dart';
@@ -6,6 +7,7 @@ import 'pages/Login/Login_Page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/supabase/auth/Auth.dart';
 import 'services/supabase/auth/auth_listener.dart';
+import 'services/hackatime/hackatime_service.dart';
 
 import 'pages/Projects/Project_Page.dart';
 import 'pages/Projects/Creation_Page.dart';
@@ -18,6 +20,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   AuthListener.startListening();
+  SupabaseAuth.signOut();
   runApp(const MainApp());
 }
 

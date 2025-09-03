@@ -1,0 +1,299 @@
+{
+  "data": {
+    "username": "Choccy-vr",
+    "user_id": "4258",
+    "is_coding_activity_visible": true,
+    "is_other_usage_visible": true,
+    "status": "ok",
+    "start": "2015-09-01T23:03:27Z",
+    "end": "2025-09-01T23:59:59Z",
+    "range": "all_time",
+    "human_readable_range": "All Time",
+    "total_seconds": 883016,
+    "daily_average": 241,
+    "human_readable_total": "245h 16m 56s",
+    "human_readable_daily_average": "4m 1s",
+    "projects": [
+      {
+        "name": "WavePad",
+        "total_seconds": 687734,
+        "text": "191h 2m",
+        "hours": 191,
+        "minutes": 2,
+        "percent": 77.88,
+        "digital": "191:02:14"
+      },
+      {
+        "name": "\u003c\u003cLAST_PROJECT\u003e\u003e",
+        "total_seconds": 212610,
+        "text": "59h 3m",
+        "hours": 59,
+        "minutes": 3,
+        "percent": 24.08,
+        "digital": "59:03:30"
+      },
+      {
+        "name": "Boot",
+        "total_seconds": 72037,
+        "text": "20h",
+        "hours": 20,
+        "minutes": 0,
+        "percent": 8.16,
+        "digital": "20:00:37"
+      },
+      {
+        "name": "Other",
+        "total_seconds": 50476,
+        "text": "14h 1m",
+        "hours": 14,
+        "minutes": 1,
+        "percent": 5.72,
+        "digital": "14:01:16"
+      },
+      {
+        "name": "BeanPad",
+        "total_seconds": 23962,
+        "text": "6h 39m",
+        "hours": 6,
+        "minutes": 39,
+        "percent": 2.71,
+        "digital": "06:39:22"
+      },
+      {
+        "name": "pi-gen",
+        "total_seconds": 9730,
+        "text": "2h 42m",
+        "hours": 2,
+        "minutes": 42,
+        "percent": 1.1,
+        "digital": "02:42:10"
+      },
+      {
+        "name": "hackatime",
+        "total_seconds": 7195,
+        "text": "1h 59m",
+        "hours": 1,
+        "minutes": 59,
+        "percent": 0.81,
+        "digital": "01:59:55"
+      },
+      {
+        "name": "boot_web",
+        "total_seconds": 4529,
+        "text": "1h 15m",
+        "hours": 1,
+        "minutes": 15,
+        "percent": 0.51,
+        "digital": "01:15:29"
+      },
+      {
+        "name": "WLED-BOX",
+        "total_seconds": 2920,
+        "text": "48m",
+        "hours": 0,
+        "minutes": 48,
+        "percent": 0.33,
+        "digital": "00:48:40"
+      },
+      {
+        "name": "rpi-image-gen",
+        "total_seconds": 2316,
+        "text": "38m",
+        "hours": 0,
+        "minutes": 38,
+        "percent": 0.26,
+        "digital": "00:38:36"
+      },
+      {
+        "name": "Boot-Web",
+        "total_seconds": 2007,
+        "text": "33m",
+        "hours": 0,
+        "minutes": 33,
+        "percent": 0.23,
+        "digital": "00:33:27"
+      },
+      {
+        "name": "sdk",
+        "total_seconds": 574,
+        "text": "9m",
+        "hours": 0,
+        "minutes": 9,
+        "percent": 0.07,
+        "digital": "00:09:34"
+      },
+      {
+        "name": "Tomodachi-Life-Save-Editor",
+        "total_seconds": 387,
+        "text": "6m",
+        "hours": 0,
+        "minutes": 6,
+        "percent": 0.04,
+        "digital": "00:06:27"
+      },
+      {
+        "name": "Hackatime-Fusion360",
+        "total_seconds": 385,
+        "text": "6m",
+        "hours": 0,
+        "minutes": 6,
+        "percent": 0.04,
+        "digital": "00:06:25"
+      },
+      {
+        "name": "kmk_firmware",
+        "total_seconds": 264,
+        "text": "4m",
+        "hours": 0,
+        "minutes": 4,
+        "percent": 0.03,
+        "digital": "00:04:24"
+      },
+      {
+        "name": "Other",
+        "total_seconds": 240,
+        "text": "4m",
+        "hours": 0,
+        "minutes": 4,
+        "percent": 0.03,
+        "digital": "00:04:00"
+      },
+      {
+        "name": "wave_env",
+        "total_seconds": 240,
+        "text": "4m",
+        "hours": 0,
+        "minutes": 4,
+        "percent": 0.03,
+        "digital": "00:04:00"
+      },
+      {
+        "name": "EZButton",
+        "total_seconds": 227,
+        "text": "3m",
+        "hours": 0,
+        "minutes": 3,
+        "percent": 0.03,
+        "digital": "00:03:47"
+      },
+      {
+        "name": "highway",
+        "total_seconds": 220,
+        "text": "3m",
+        "hours": 0,
+        "minutes": 3,
+        "percent": 0.02,
+        "digital": "00:03:40"
+      },
+      {
+        "name": "display_firmware",
+        "total_seconds": 120,
+        "text": "2m",
+        "hours": 0,
+        "minutes": 2,
+        "percent": 0.01,
+        "digital": "00:02:00"
+      },
+      {
+        "name": "sketch_jun16a",
+        "total_seconds": 120,
+        "text": "2m",
+        "hours": 0,
+        "minutes": 2,
+        "percent": 0.01,
+        "digital": "00:02:00"
+      },
+      {
+        "name": "Spell-Tale",
+        "total_seconds": 72,
+        "text": "1m",
+        "hours": 0,
+        "minutes": 1,
+        "percent": 0.01,
+        "digital": "00:01:12"
+      },
+      {
+        "name": "IcedField",
+        "total_seconds": 60,
+        "text": "1m",
+        "hours": 0,
+        "minutes": 1,
+        "percent": 0.01,
+        "digital": "00:01:00"
+      },
+      {
+        "name": "flutter",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "GradeTracker",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "Adafruit_CircuitPython_Bundle",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "postgresql-db",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "qemu",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "Num-Pad",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "LGBTQIAHistoryHQApp",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      },
+      {
+        "name": "Knobs",
+        "total_seconds": 0,
+        "text": "0m",
+        "hours": 0,
+        "minutes": 0,
+        "percent": 0.0,
+        "digital": "00:00:00"
+      }
+    ]
+  },
+  "trust_factor": { "trust_level": "red", "trust_value": 1 }
+}

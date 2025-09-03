@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/users/User.dart';
+import '/services/hackatime/hackatime_service.dart';
 
 class CreateProjectPage extends StatefulWidget {
   const CreateProjectPage({super.key});
@@ -21,6 +22,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   String _selectedOSType = 'scratch';
   String _selectedArchitecture = 'x86_64';
+  String _selectedHackatimeProject = 'No Project';
 
   final Map<String, String> _osTypes = {
     'scratch': 'From Scratch (LFS, Buildroot, etc.)',
@@ -35,6 +37,16 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     'arm64': 'ARM64 (EXPERIMENTAL)',
     'arm': 'ARM 32-bit (EXPERIMENTAL)',
   };
+  List<HackatimeProject> _hackatimeProjects = [
+    HackatimeProject(
+      name: 'No Projects Available',
+      totalSeconds: 0,
+      text: '',
+      hours: 0,
+      minutes: 0,
+      digital: '',
+    ),
+  ];
 
   @override
   void initState() {
@@ -47,6 +59,27 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       CurvedAnimation(parent: _typewriterController, curve: Curves.easeInOut),
     );
     _typewriterController.forward();
+    _fetchHackatimeProjects();
+  }
+
+  Future<void> _fetchHackatimeProjects() async {
+    final projects = await HackatimeService.fetchHackatimeProjects(
+      userId: UserService.currentUser?.hackatimeID ?? 0,
+      apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+    );
+    setState(() {
+      _hackatimeProjects = projects;
+      if (_hackatimeProjects.isNotEmpty) {
+        final names = _hackatimeProjects.map((p) => p.name).toSet();
+        if (!names.contains(_selectedHackatimeProject) ||
+            _hackatimeProjects
+                    .where((p) => p.name == _selectedHackatimeProject)
+                    .length !=
+                1) {
+          _selectedHackatimeProject = _hackatimeProjects.first.name;
+        }
+      }
+    });
   }
 
   @override
@@ -115,7 +148,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         const SizedBox(height: 24),
         _buildSystemConfigSection(colorScheme, textTheme),
         const SizedBox(height: 24),
-        _buildHackatimeSection(colorScheme, textTheme),
+        _buildHackatimeConfigSection(colorScheme, textTheme),
         const SizedBox(height: 24),
         _buildProjectPreview(colorScheme, textTheme),
         const SizedBox(height: 32),
@@ -270,7 +303,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 
-  Widget _buildHackatimeSection(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildHackatimeConfigSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Card(
       color: colorScheme.surfaceContainer,
       child: Padding(
@@ -287,7 +323,13 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             ),
             const SizedBox(height: 24),
             DropdownButtonFormField<String>(
-              initialValue: _selectedOSType,
+              initialValue:
+                  (_hackatimeProjects.isEmpty ||
+                      (_hackatimeProjects.length == 1 &&
+                          _hackatimeProjects.first.name ==
+                              'No Projects Available'))
+                  ? 'No Projects Available'
+                  : _selectedHackatimeProject,
               style: TextStyle(color: colorScheme.onSurface),
               dropdownColor: colorScheme.surfaceContainerHigh,
               decoration: InputDecoration(
@@ -300,13 +342,35 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: _osTypes.entries.map((entry) {
-                return DropdownMenuItem(
-                  value: entry.key,
-                  child: Text(entry.value),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _selectedOSType = value!),
+              items:
+                  (_hackatimeProjects.isEmpty ||
+                      (_hackatimeProjects.length == 1 &&
+                          _hackatimeProjects.first.name ==
+                              'No Projects Available'))
+                  ? [
+                      DropdownMenuItem(
+                        value: 'No Projects Available',
+                        child: Text('No Projects Available'),
+                      ),
+                    ]
+                  : _hackatimeProjects.map((project) {
+                      return DropdownMenuItem(
+                        value: project.name,
+                        child: Text(
+                          project.text.isNotEmpty
+                              ? "${project.name} (${project.text})"
+                              : project.name,
+                        ),
+                      );
+                    }).toList(),
+              onChanged:
+                  (_hackatimeProjects.isEmpty ||
+                      (_hackatimeProjects.length == 1 &&
+                          _hackatimeProjects.first.name ==
+                              'No Projects Available'))
+                  ? null
+                  : (value) =>
+                        setState(() => _selectedHackatimeProject = value!),
             ),
           ],
         ),
@@ -441,7 +505,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 
-  void _createProject() {
+  Future<void> _createProject() async {
     if (_projectNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -463,9 +527,14 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Project creation functionality coming soon!')),
-    );
+    if (_selectedHackatimeProject == 'No Project') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a Hackatime project')),
+      );
+      return;
+    }
+
+    //TODO: Implement project creation logic
   }
 
   @override

@@ -9,6 +9,7 @@ import '/pages/Login/SignUp/SignUp_Page.dart';
 import '/pages/Home_Page.dart';
 import '/pages/Login/SignUp/Signup_Pass_page.dart';
 import '/pages/Login/SignUp/SignUp_Profile_Page.dart';
+import '/pages/Login/SignUp/SignUp_Hackatime_Page.dart';
 import '/pages/Projects/Project_Page.dart';
 import '/pages/Projects/Creation_Page.dart';
 
@@ -24,6 +25,7 @@ enum AppDestination {
   signup,
   signupPass,
   signupProfile,
+  signupHackatime,
   createProject,
 }
 
@@ -69,6 +71,15 @@ class NavigationService {
           transitionType,
         );
         break;
+      case AppDestination.signupHackatime:
+        _pushPage(
+          context,
+          const SignupHackatimePage(),
+          sharedAxis,
+          transitionType,
+        );
+        break;
+
       case AppDestination.createProject:
         _pushPage(
           context,

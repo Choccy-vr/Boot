@@ -2,21 +2,23 @@ class Boot_User {
   //identifiers
   final String id;
   final String email;
-  final String username;
+  String username;
   //profile
-  final String bio;
-  final String profilePicture;
+  String bio;
+  String profilePicture;
   //Projects
-  final List<String> projects;
-  final int devlogs;
+  int totalProjects;
+  int devlogs;
   //Time
   final DateTime createdAt;
-  final DateTime updatedAt;
+  DateTime updatedAt;
   //Votes
-  final int votes;
+  int votes;
   //Currency
-  final String bootCoins;
-
+  int bootCoins;
+  //Hackatime
+  String hackatimeApiKey;
+  int hackatimeID;
   //constructor
   Boot_User({
     required this.id,
@@ -24,12 +26,14 @@ class Boot_User {
     required this.username,
     required this.bio,
     required this.profilePicture,
-    this.projects = const [],
+    this.totalProjects = 0,
     this.devlogs = 0,
     required this.createdAt,
     required this.updatedAt,
     this.votes = 0,
     required this.bootCoins,
+    required this.hackatimeApiKey,
+    required this.hackatimeID,
   });
 
   factory Boot_User.fromJson(Map<String, dynamic> json) {
@@ -39,7 +43,7 @@ class Boot_User {
       username: json['username'] ?? '',
       bio: json['bio'] ?? '',
       profilePicture: json['profile_pic_url'] ?? '',
-      projects: List<String>.from(json['projects'] ?? []),
+      totalProjects: json['total_projects'] ?? 0,
       devlogs: json['total_devlogs'] ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -48,7 +52,9 @@ class Boot_User {
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
       votes: json['total_votes'] ?? 0,
-      bootCoins: (json['boot_coins'] ?? 0).toString(),
+      bootCoins: json['boot_coins'] ?? 0,
+      hackatimeApiKey: json['hackatime_api_key'] ?? '',
+      hackatimeID: json['hackatime_id'] ?? 0,
     );
   }
 
@@ -58,13 +64,15 @@ class Boot_User {
       'email': email,
       'username': username,
       'bio': bio,
-      'profilePicture': profilePicture,
-      'projects': projects,
-      'devlogs': devlogs,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'votes': votes,
-      'bootCoins': bootCoins,
+      'profile_picture_url': profilePicture,
+      'total_projects': totalProjects,
+      'total_devlogs': devlogs,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'total_votes': votes,
+      'boot_coins': bootCoins,
+      'hackatime_api_key': hackatimeApiKey,
+      'hackatime_user': hackatimeID,
     };
   }
 }

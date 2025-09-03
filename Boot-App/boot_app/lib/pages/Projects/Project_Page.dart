@@ -671,9 +671,10 @@ class Project {
   final DateTime lastModified;
   final bool awaitingReview;
   final bool reviewed;
-  final int level;
+  final String level;
   final int id;
   final String status;
+  final String hackatimeProjects;
 
   Project({
     required this.title,
@@ -690,6 +691,7 @@ class Project {
     required this.level,
     required this.id,
     required this.status,
+    required this.hackatimeProjects,
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -707,9 +709,10 @@ class Project {
         row['updated_at'] ?? DateTime.now().toString(),
       ),
       awaitingReview: row['awaiting_review'] ?? false,
-      level: row['level'] ?? 0,
+      level: row['level'] ?? 'unknown',
       status: row['status'] ?? 'unknown',
       reviewed: row['reviewed'] ?? false,
+      hackatimeProjects: row['hackatime_projects'] ?? '',
     );
   }
 }

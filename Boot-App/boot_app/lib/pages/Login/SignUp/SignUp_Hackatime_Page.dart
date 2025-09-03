@@ -5,20 +5,17 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/supabase/Storage/supabase_storage.dart';
 import 'package:boot_app/services/users/User.dart';
 
-class SignUp_Profile_Page extends StatefulWidget {
-  const SignUp_Profile_Page({super.key});
+class SignupHackatimePage extends StatefulWidget {
+  const SignupHackatimePage({super.key});
 
   @override
-  State<SignUp_Profile_Page> createState() => _SignUp_Profile_PageState();
+  State<SignupHackatimePage> createState() => _SignupHackatimePageState();
 }
 
-class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
+class _SignupHackatimePageState extends State<SignupHackatimePage> {
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _APIController = TextEditingController();
   bool _isLoading = false;
-  bool _imageLoadError = false;
-  String profilePicUrl =
-      'https://www.pngfind.com/pngs/m/610-6104451_image-placeholder-png-user-profile-placeholder-image-png.png';
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +30,8 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildHeader(colorScheme, textTheme),
-              _buildProfileFields(colorScheme, textTheme),
+              _buildAboutSection(colorScheme, textTheme),
+              _buildAPIFields(colorScheme, textTheme),
               _buildFinishButton(colorScheme, textTheme),
             ],
           ),
@@ -57,7 +55,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@hackathon',
+                'boot-terminal ~ ${UserService.currentUser?.username}@hackathon',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -67,7 +65,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
           const SizedBox(height: 16),
 
           Text(
-            'Welcome to Boot!',
+            'One last step!',
             style: textTheme.displayLarge?.copyWith(
               color: colorScheme.onSurface,
             ),
@@ -76,7 +74,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
           const SizedBox(height: 16),
 
           Text(
-            'Time to create your profile',
+            'Time to configure hackatime',
             style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
           ),
         ],
@@ -84,7 +82,56 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
     );
   }
 
-  Widget _buildProfileFields(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildAboutSection(ColorScheme colorScheme, TextTheme textTheme) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        color: colorScheme.surfaceContainer,
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(Symbols.schedule, color: colorScheme.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'About Hackatime',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Hackatime is a powerful time tracking tool that monitors your coding activity across different projects and programming languages. It provides detailed insights into your development workflow and helps you understand where you spend your time.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Used by developers and Hack Club YSWS (You Ship, We Ship) events to track project time.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.left,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAPIFields(ColorScheme colorScheme, TextTheme textTheme) {
     return Expanded(
       child: SingleChildScrollView(
         child: Padding(
@@ -93,47 +140,13 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
             constraints: BoxConstraints(maxWidth: 600),
             child: Column(
               children: [
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: _imageLoadError
-                        ? null
-                        : NetworkImage(profilePicUrl),
-                    onBackgroundImageError: (exception, stackTrace) {
-                      setState(() {
-                        _imageLoadError = true;
-                      });
-                    },
-                    child: _imageLoadError
-                        ? Icon(Icons.person, size: 60, color: Colors.grey[600])
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () async {
-                    await _handleUploadPic();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Symbols.upload, size: 20),
-                      const SizedBox(width: 8),
-                      Text('Upload Photo'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
                 TextField(
-                  controller: _usernameController,
+                  controller: _APIController,
                   enabled: !_isLoading,
                   onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   decoration: InputDecoration(
-                    labelText: 'Username',
-                    hintText: 'Enter your username',
+                    labelText: 'API Key',
+                    hintText: 'Enter your Hackatime API Key',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -143,14 +156,14 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
                 ),
                 const SizedBox(height: 20),
                 TextField(
-                  controller: _bioController,
+                  controller: _usernameController,
                   enabled: !_isLoading,
                   maxLines: 4,
                   minLines: 3,
                   onSubmitted: (_) => _handleSignUp(),
                   decoration: InputDecoration(
-                    labelText: 'Bio',
-                    hintText: 'Tell us about yourself...',
+                    labelText: 'Hackatime Username',
+                    hintText: 'Enter your Hackatime Username or User ID',
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -197,7 +210,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Creating Profile...',
+                      'Finishing...',
                       style: textTheme.labelLarge?.copyWith(
                         color: colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
@@ -206,7 +219,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
                   ],
                 )
               : Text(
-                  'Create Profile',
+                  'Finish Sign Up',
                   style: textTheme.labelLarge?.copyWith(
                     color: colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
@@ -217,82 +230,36 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
     );
   }
 
-  Future<void> _handleUploadPic() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _imageLoadError = false;
-      });
-
-      String supabasePrivateUrl =
-          await SupabaseStorageService.uploadFileWithPicker(
-            bucket: 'Profiles',
-            supabasePath: '${UserService.currentUser?.id}/profile_pic',
-          );
-
-      String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
-        bucket: 'Profiles',
-        supabasePath: supabasePrivateUrl,
-      );
-
-      if (supabasePublicUrl == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to get public url for profile picture'),
-          ),
-        );
-        return;
-      }
-
-      SignupService.signUpUser.profilePictureUrl = supabasePublicUrl;
-      setState(() {
-        profilePicUrl = supabasePublicUrl;
-        _imageLoadError = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile picture uploaded successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload profile picture: $e')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _handleSignUp() async {
     final username = _usernameController.text.trim();
-    final bio = _bioController.text.trim();
+    final apiKey = _APIController.text.trim();
 
     if (username.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter your username')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter your hackatime username or user id'),
+        ),
+      );
       return;
     }
 
-    if (bio.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter your bio')));
+    if (apiKey.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter your hackatime API key')),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      SignupService.signUpUser.username = username;
-      SignupService.signUpUser.bio = bio;
-      await SignupService.createProfile(SignupService.signUpUser);
+      SignupService.signUpUser.hackatimeUsername = username;
+      SignupService.signUpUser.hackatimeApiKey = apiKey;
+      await SignupService.signUpUserWithHackatime(SignupService.signUpUser);
       if (!mounted) return;
       NavigationService.navigateTo(
         context: context,
-        destination: AppDestination.signupHackatime,
+        destination: AppDestination.home,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
       );
@@ -309,7 +276,7 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
   @override
   void dispose() {
     _usernameController.dispose();
-    _bioController.dispose();
+    _APIController.dispose();
     super.dispose();
   }
 }
