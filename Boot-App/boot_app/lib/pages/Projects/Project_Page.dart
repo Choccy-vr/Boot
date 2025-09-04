@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
-import '/services/supabase/DB/supabase_db.dart';
+import '/services/Projects/project_service.dart';
 import '/services/users/User.dart';
-import '../../services/navigation/navigation_service.dart';
+import '/services/navigation/navigation_service.dart';
+import '/services/Projects/Project.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -23,8 +24,9 @@ class _ProjectsPageState extends State<ProjectsPage>
   }
 
   String timeAgoSinceDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+    final now = DateTime.now().toUtc();
+    final utcDate = date.isUtc ? date : date.toUtc();
+    final difference = now.difference(utcDate);
     if (difference.inSeconds < 60) {
       return 'just now';
     } else if (difference.inMinutes < 60) {
@@ -58,16 +60,6 @@ class _ProjectsPageState extends State<ProjectsPage>
       default:
         return colorScheme.onSurfaceVariant;
     }
-  }
-
-  Future<List<Project>> _getProjects(String userID) async {
-    final response = await SupabaseDB.GetMultipleRowData(
-      table: 'projects',
-      column: 'owner',
-      columnValue: [userID],
-    );
-    if (response.isEmpty) return [];
-    return response.map<Project>((row) => Project.fromRow(row)).toList();
   }
 
   void _openProject(Project project) {
@@ -131,100 +123,6 @@ class _ProjectsPageState extends State<ProjectsPage>
       ),
     );
   }
-
-  void _showCreateProjectDialog() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-        title: Row(
-          children: [
-            Icon(Symbols.add, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              'Create New Project',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  labelText: 'Project Name',
-                  hintText: 'MyAwesome OS',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'A brief description of your OS project...',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (titleController.text.trim().isNotEmpty) {
-                /*_createProject(
-                  titleController.text.trim(),
-                  descriptionController.text.trim(),
-                );*/
-                Navigator.pop(context);
-              }
-            },
-            child: Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /*void _createProject(String title, String description) {
-    setState(() {
-      _projects.insert(
-        0,
-        Project(
-          title: title,
-          description: description.isNotEmpty
-              ? description
-              : 'No description provided',
-          status: 'Building',
-          lastModified: 'Just now',
-          icon: Symbols.computer,
-          thumbnailColor: TerminalColors.darkGray,
-        ),
-      );
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Project "$title" created successfully!'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-    );
-  }*/
 
   Widget _buildTerminalHeader(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
@@ -301,7 +199,12 @@ class _ProjectsPageState extends State<ProjectsPage>
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: _showCreateProjectDialog,
+            onPressed: () => NavigationService.navigateTo(
+              context: context,
+              destination: AppDestination.createProject,
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
             icon: Icon(Symbols.add),
             label: Text('Create Project'),
           ),
@@ -560,7 +463,7 @@ class _ProjectsPageState extends State<ProjectsPage>
     final userId = UserService.currentUser?.id;
     if (userId == null || userId.isEmpty) return;
 
-    final projects = await _getProjects(userId);
+    final projects = await ProjectService.getProjects(userId);
     if (!mounted) return;
 
     setState(() {
@@ -588,7 +491,12 @@ class _ProjectsPageState extends State<ProjectsPage>
         ),
         leading: IconButton(
           icon: Icon(Symbols.arrow_back, color: colorScheme.onSurface),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => NavigationService.navigateTo(
+            context: context,
+            destination: AppDestination.home,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          ),
           tooltip: 'Back',
         ),
         backgroundColor: colorScheme.surfaceContainerLow,
@@ -655,64 +563,6 @@ class _ProjectsPageState extends State<ProjectsPage>
           ],
         ),
       ),
-    );
-  }
-}
-
-class Project {
-  final String title;
-  final String description;
-  final String imageURL;
-  final String githubRepo;
-  final double time;
-  final int likes;
-  final String owner;
-  final DateTime createdAt;
-  final DateTime lastModified;
-  final bool awaitingReview;
-  final bool reviewed;
-  final String level;
-  final int id;
-  final String status;
-  final String hackatimeProjects;
-
-  Project({
-    required this.title,
-    required this.description,
-    required this.reviewed,
-    required this.lastModified,
-    required this.imageURL,
-    required this.githubRepo,
-    required this.time,
-    required this.likes,
-    required this.owner,
-    required this.createdAt,
-    required this.awaitingReview,
-    required this.level,
-    required this.id,
-    required this.status,
-    required this.hackatimeProjects,
-  });
-
-  factory Project.fromRow(Map<String, dynamic> row) {
-    return Project(
-      id: row['id'] ?? 0,
-      title: row['name'] ?? 'Untitled Project',
-      description: row['description'] ?? 'No description provided',
-      imageURL: row['image_url'] ?? '',
-      githubRepo: row['github_repo'] ?? '',
-      time: (row['total_time'] ?? 0.0).toDouble(),
-      likes: row['total_likes'] ?? 0,
-      owner: row['owner'] ?? 'unknown',
-      createdAt: DateTime.parse(row['created_at'] ?? DateTime.now().toString()),
-      lastModified: DateTime.parse(
-        row['updated_at'] ?? DateTime.now().toString(),
-      ),
-      awaitingReview: row['awaiting_review'] ?? false,
-      level: row['level'] ?? 'unknown',
-      status: row['status'] ?? 'unknown',
-      reviewed: row['reviewed'] ?? false,
-      hackatimeProjects: row['hackatime_projects'] ?? '',
     );
   }
 }

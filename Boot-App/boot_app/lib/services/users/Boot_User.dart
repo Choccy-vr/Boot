@@ -54,7 +54,7 @@ class Boot_User {
       votes: json['total_votes'] ?? 0,
       bootCoins: json['boot_coins'] ?? 0,
       hackatimeApiKey: json['hackatime_api_key'] ?? '',
-      hackatimeID: json['hackatime_id'] ?? 0,
+      hackatimeID: json['hackatime_user'] ?? 0,
     );
   }
 

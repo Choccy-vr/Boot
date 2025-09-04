@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
+import '/services/Projects/project_service.dart';
+import '/services/Navigation/navigation_service.dart';
 
 class CreateProjectPage extends StatefulWidget {
   const CreateProjectPage({super.key});
@@ -534,7 +536,28 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       return;
     }
 
-    //TODO: Implement project creation logic
+    await ProjectService.createProject(
+      title: _projectNameController.text.trim(),
+      description: _descriptionController.text.trim(),
+      imageURL: '',
+      githubRepo: _repositoryController.text.trim(),
+      time: 0,
+      likes: 0,
+      lastModified: DateTime.now(),
+      awaitingReview: false,
+      level: _selectedOSType,
+      status: 'Building',
+      reviewed: false,
+      hackatimeProjects: _selectedHackatimeProject,
+      owner: UserService.currentUser?.id,
+    );
+    if (!mounted) return;
+    NavigationService.navigateTo(
+      context: context,
+      destination: AppDestination.project,
+      colorScheme: Theme.of(context).colorScheme,
+      textTheme: Theme.of(context).textTheme,
+    );
   }
 
   @override
