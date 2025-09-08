@@ -4,6 +4,7 @@ import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
+import '/services/hackatime/hackatime_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,6 +17,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _typewriterController;
   late Animation<int> _typewriterAnimation;
   final String _welcomeText = "Welcome to Boot";
+  bool _isHackatimeBanned = false;
 
   @override
   void initState() {
@@ -28,6 +30,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _typewriterController, curve: Curves.easeInOut),
     );
     _typewriterController.forward();
+    _scheduleHackatimeBanCheck();
+  }
+
+  Future<void> _checkHackatimeBanStatus() async {
+    if (UserService.currentUser?.hackatimeID != null &&
+        UserService.currentUser?.hackatimeApiKey != null) {
+      print(
+        'Checking Hackatime ban status for user ID: ${UserService.currentUser!.hackatimeID}',
+      );
+      print('Using API Key: ${UserService.currentUser!.hackatimeApiKey}');
+      final isBanned = await HackatimeService.isHackatimeBanned(
+        userId: UserService.currentUser!.hackatimeID,
+        apiKey: UserService.currentUser!.hackatimeApiKey,
+        context: context,
+      );
+      if (mounted) {
+        setState(() {
+          _isHackatimeBanned = isBanned;
+        });
+      }
+    } else {
+      print('Hackatime ID or API Key is null, skipping ban check.');
+    }
+  }
+
+  void _scheduleHackatimeBanCheck() {
+    // Try up to 10 times (~2s total) for user credentials to load.
+    _attemptHackatimeBanCheck(0);
+  }
+
+  void _attemptHackatimeBanCheck(int attempt) async {
+    if (!mounted) return;
+    final user = UserService.currentUser;
+    if (user?.hackatimeID != null && user?.hackatimeApiKey != null) {
+      await _checkHackatimeBanStatus();
+      return;
+    }
+    if (attempt >= 10) {
+      print(
+        '[HackatimeBan] Gave up waiting for credentials (attempts=$attempt)',
+      );
+      return;
+    }
+    await Future.delayed(const Duration(milliseconds: 200));
+    _attemptHackatimeBanCheck(attempt + 1);
   }
 
   @override
@@ -53,19 +100,100 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               _buildTerminalHeader(colorScheme, textTheme),
               const SizedBox(height: 24),
 
+              // Error Box for Hackatime Ban
+              if (_isHackatimeBanned) ...[
+                _buildHackatimeBanWarning(colorScheme, textTheme),
+                const SizedBox(height: 24),
+              ],
+
               // System Status
               _buildSystemStatus(colorScheme, textTheme),
               const SizedBox(height: 24),
 
-              // Main Navigation Grid
-              _buildNavigationGrid(colorScheme, textTheme),
-              const SizedBox(height: 24),
+              if (!_isHackatimeBanned) ...[
+                // Main Navigation Grid
+                _buildNavigationGrid(colorScheme, textTheme),
+                const SizedBox(height: 24),
 
-              // Quick Stats
-              _buildQuickStats(colorScheme, textTheme),
+                // Quick Stats
+                _buildQuickStats(colorScheme, textTheme),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHackatimeBanWarning(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: TerminalColors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: TerminalColors.red, width: 2),
+      ),
+      child: Row(
+        children: [
+          Icon(Symbols.warning, color: TerminalColors.red, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Account Warning',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: TerminalColors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RichText(
+                  text: TextSpan(
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      height: 1.4,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Your Hackatime account has been '),
+                      TextSpan(
+                        text: 'banned',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: TerminalColors.red,
+                        ),
+                      ),
+                      const TextSpan(
+                        text:
+                            ' and as a result you have been banned from Boot.\n\n',
+                      ),
+                      const TextSpan(
+                        text:
+                            '• You cannot access anything in Boot until you are unbanned\n',
+                      ),
+                      const TextSpan(
+                        text:
+                            '• Contact the Hackatime Fraud Department if you believe this is a mistake\n\n',
+                      ),
+                      TextSpan(
+                        text: 'Naughty Naughty :(',
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -190,9 +318,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Expanded(
                   child: _buildStatusItem(
                     'Status',
-                    'READY',
-                    Symbols.check_circle,
-                    colorScheme.primary,
+                    _isHackatimeBanned ? 'ERROR' : 'READY',
+                    _isHackatimeBanned ? Symbols.error : Symbols.check_circle,
+                    _isHackatimeBanned
+                        ? TerminalColors.red
+                        : colorScheme.primary,
                     colorScheme,
                     textTheme,
                   ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/SignUp_Service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/supabase/Storage/supabase_storage.dart';
 import 'package:boot_app/services/users/User.dart';
 
 class SignupHackatimePage extends StatefulWidget {
@@ -255,7 +254,10 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
     try {
       SignupService.signUpUser.hackatimeUsername = username;
       SignupService.signUpUser.hackatimeApiKey = apiKey;
-      await SignupService.signUpUserWithHackatime(SignupService.signUpUser);
+      await SignupService.signUpUserWithHackatime(
+        SignupService.signUpUser,
+        context,
+      );
       if (!mounted) return;
       NavigationService.navigateTo(
         context: context,

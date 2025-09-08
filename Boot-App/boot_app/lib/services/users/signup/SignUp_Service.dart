@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import '/services/supabase/auth/Auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/users/User.dart';
@@ -40,13 +41,17 @@ class SignupService {
     }
   }
 
-  static Future<void> signUpUserWithHackatime(SignUpUser user) async {
+  static Future<void> signUpUserWithHackatime(
+    SignUpUser user,
+    BuildContext context,
+  ) async {
     try {
       SignupService.signUpUser.hackatimeApiKey = user.hackatimeApiKey;
       SignupService.signUpUser.hackatimeUsername = user.hackatimeUsername;
       await HackatimeService.initHackatimeUser(
         apiKey: user.hackatimeApiKey,
         username: user.hackatimeUsername,
+        context: context,
       );
     } catch (e) {
       throw Exception('Hackatime setup failed: ${e.toString()}');

@@ -131,8 +131,9 @@ class SupabaseDB {
       final upsertArgs = <String, dynamic>{};
       if (onConflict != null) upsertArgs['onConflict'] = onConflict;
       if (defaultToNull != null) upsertArgs['defaultToNull'] = defaultToNull;
-      if (ignoreDuplicates != null)
+      if (ignoreDuplicates != null) {
         upsertArgs['ignoreDuplicates'] = ignoreDuplicates;
+      }
 
       if (data != null) {
         return await Function.apply(

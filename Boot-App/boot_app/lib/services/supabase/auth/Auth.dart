@@ -6,6 +6,12 @@ import '/services/users/User.dart';
 
 class Authentication {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static final List<String> errorLog = [];
+
+  static Future<void> clearStoredSession() async {
+    await _storage.delete(key: 'supabase_session');
+    await _storage.delete(key: 'supabase_user');
+  }
 
   static Future<void> SignUp(String email, String password) async {
     try {
@@ -21,12 +27,12 @@ class Authentication {
         key: 'supabase_user',
         value: jsonEncode(session.user?.toJson()),
       );
-      //Create user profile
       await UserService.initializeUser(
         id: session.user!.id,
         email: session.user!.email!,
       );
     } catch (e) {
+      errorLog.add('SignUp: ${e.toString()}');
       throw AuthFailure('Sign up failed: ${e.toString()}');
     }
   }
@@ -47,6 +53,7 @@ class Authentication {
       );
       await UserService.setCurrentUser(session.user!.id);
     } catch (e) {
+      errorLog.add('SignIn: ${e.toString()}');
       throw AuthFailure('Sign in failed: ${e.toString()}');
     }
   }
@@ -57,6 +64,7 @@ class Authentication {
       await _storage.delete(key: 'supabase_session');
       await _storage.delete(key: 'supabase_user');
     } catch (e) {
+      errorLog.add('SignOut: ${e.toString()}');
       throw AuthFailure('Sign out failed: ${e.toString()}');
     }
   }
@@ -68,15 +76,14 @@ class Authentication {
         value: jsonEncode(session.toJson()),
       );
     } catch (e) {
+      errorLog.add('Refresh: ${e.toString()}');
       throw AuthFailure('Session refresh failed: ${e.toString()}');
     }
   }
 
   static bool isLoggedIn() {
     final session = SupabaseAuth.supabase.auth.currentSession;
-
     if (session == null) return false;
-
     final expiry = DateTime.fromMillisecondsSinceEpoch(
       session.expiresAt! * 1000,
       isUtc: true,
@@ -93,6 +100,7 @@ class Authentication {
       }
       return null;
     } catch (e) {
+      errorLog.add('GetSavedSession: ${e.toString()}');
       throw AuthFailure('Failed to get saved session: ${e.toString()}');
     }
   }
@@ -106,23 +114,59 @@ class Authentication {
       }
       return null;
     } catch (e) {
+      errorLog.add('GetSavedUser: ${e.toString()}');
       throw AuthFailure('Failed to get saved user: ${e.toString()}');
     }
   }
 
   static Future<bool> restoreStoredSession() async {
+    const tag = '[AuthRestore]';
     try {
-      String? sessionJson = await _storage.read(key: 'supabase_session');
-      if (sessionJson == null) return false;
+      final sessionJson = await _storage.read(key: 'supabase_session');
+      if (sessionJson == null) {
+        print('$tag No stored session');
+        return false;
+      }
+      try {
+        final temp = jsonDecode(sessionJson);
+        final expiresAt = temp['expires_at'];
+        if (expiresAt is int) {
+          final expiry = DateTime.fromMillisecondsSinceEpoch(
+            expiresAt * 1000,
+            isUtc: true,
+          );
+          if (expiry.isBefore(DateTime.now().toUtc())) {
+            print('$tag Stored session expired. Clearing.');
+            await clearStoredSession();
+            return false;
+          }
+        }
+      } catch (_) {}
 
-      // Restore session to Supabase
-      AuthResponse response = await SupabaseAuth.supabase.auth.recoverSession(
+      final response = await SupabaseAuth.supabase.auth.recoverSession(
         sessionJson,
       );
+      if (response.session == null || response.user == null) {
+        print('$tag Null session/user. Clearing.');
+        await clearStoredSession();
+        return false;
+      }
       await UserService.setCurrentUser(response.user!.id);
-      return response.session != null;
+      print('$tag Restored for user ${response.user!.id}');
+      return true;
+    } on AuthException catch (ae) {
+      final lower = ae.message.toLowerCase();
+      if (lower.contains('refresh token') || lower.contains('refresh_token')) {
+        print('$tag Invalid refresh token. Clearing.');
+        await clearStoredSession();
+        return false;
+      }
+      print('$tag AuthException ${ae.message}');
+      errorLog.add('Restore AuthException: ${ae.message}');
+      return false;
     } catch (e) {
-      print('Error restoring session: $e');
+      print('$tag Unexpected error $e');
+      errorLog.add('Restore Unexpected: $e');
       return false;
     }
   }

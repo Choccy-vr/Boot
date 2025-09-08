@@ -76,14 +76,16 @@ class Project {
     if (githubRepo != null) map['github_repo'] = githubRepo;
     if (time != null) map['total_time'] = time;
     if (likes != null) map['total_likes'] = likes;
-    if (lastModified != null)
+    if (lastModified != null) {
       map['updated_at'] = lastModified.toIso8601String();
+    }
     if (awaitingReview != null) map['awaiting_review'] = awaitingReview;
     if (level != null) map['level'] = level;
     if (status != null) map['status'] = status;
     if (reviewed != null) map['reviewed'] = reviewed;
-    if (hackatimeProjects != null)
+    if (hackatimeProjects != null) {
       map['hackatime_projects'] = hackatimeProjects;
+    }
     if (owner != null) map['owner'] = owner;
     return map;
   }

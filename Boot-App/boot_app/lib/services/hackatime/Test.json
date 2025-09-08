@@ -5,14 +5,14 @@
     "is_coding_activity_visible": true,
     "is_other_usage_visible": true,
     "status": "ok",
-    "start": "2015-09-01T23:03:27Z",
-    "end": "2025-09-01T23:59:59Z",
+    "start": "2015-09-07T01:20:02Z",
+    "end": "2025-09-07T23:59:59Z",
     "range": "all_time",
     "human_readable_range": "All Time",
-    "total_seconds": 883016,
-    "daily_average": 241,
-    "human_readable_total": "245h 16m 56s",
-    "human_readable_daily_average": "4m 1s",
+    "total_seconds": 893335,
+    "daily_average": 244,
+    "human_readable_total": "248h 8m 55s",
+    "human_readable_daily_average": "4m 4s",
     "projects": [
       {
         "name": "WavePad",
@@ -20,7 +20,7 @@
         "text": "191h 2m",
         "hours": 191,
         "minutes": 2,
-        "percent": 77.88,
+        "percent": 76.99,
         "digital": "191:02:14"
       },
       {
@@ -29,17 +29,17 @@
         "text": "59h 3m",
         "hours": 59,
         "minutes": 3,
-        "percent": 24.08,
+        "percent": 23.8,
         "digital": "59:03:30"
       },
       {
         "name": "Boot",
-        "total_seconds": 72037,
-        "text": "20h",
-        "hours": 20,
-        "minutes": 0,
-        "percent": 8.16,
-        "digital": "20:00:37"
+        "total_seconds": 82357,
+        "text": "22h 52m",
+        "hours": 22,
+        "minutes": 52,
+        "percent": 9.22,
+        "digital": "22:52:37"
       },
       {
         "name": "Other",
@@ -47,7 +47,7 @@
         "text": "14h 1m",
         "hours": 14,
         "minutes": 1,
-        "percent": 5.72,
+        "percent": 5.65,
         "digital": "14:01:16"
       },
       {
@@ -56,7 +56,7 @@
         "text": "6h 39m",
         "hours": 6,
         "minutes": 39,
-        "percent": 2.71,
+        "percent": 2.68,
         "digital": "06:39:22"
       },
       {
@@ -65,7 +65,7 @@
         "text": "2h 42m",
         "hours": 2,
         "minutes": 42,
-        "percent": 1.1,
+        "percent": 1.09,
         "digital": "02:42:10"
       },
       {
@@ -110,7 +110,7 @@
         "text": "33m",
         "hours": 0,
         "minutes": 33,
-        "percent": 0.23,
+        "percent": 0.22,
         "digital": "00:33:27"
       },
       {
@@ -119,7 +119,7 @@
         "text": "9m",
         "hours": 0,
         "minutes": 9,
-        "percent": 0.07,
+        "percent": 0.06,
         "digital": "00:09:34"
       },
       {

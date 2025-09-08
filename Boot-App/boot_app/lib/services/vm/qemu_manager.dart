@@ -441,11 +441,9 @@ Common locations:
           onTimeout: () => -1,
         );
 
-        if (exitCode != null) {
-          print('VM shut down gracefully with exit code: $exitCode');
-          _currentProcess = null;
-          return true;
-        }
+        print('VM shut down gracefully with exit code: $exitCode');
+        _currentProcess = null;
+        return true;
       } catch (e) {
         print('Monitor quit command failed: $e');
       }
@@ -463,11 +461,9 @@ Common locations:
             onTimeout: () => -1,
           );
 
-          if (exitCode != null) {
-            print('VM powered down with exit code: $exitCode');
-            _currentProcess = null;
-            return true;
-          }
+          print('VM powered down with exit code: $exitCode');
+          _currentProcess = null;
+          return true;
         } catch (e) {
           print('Powerdown command failed: $e');
         }
@@ -485,11 +481,9 @@ Common locations:
             onTimeout: () => -1,
           );
 
-          if (exitCode != null) {
-            print('VM shut down after stdin close with exit code: $exitCode');
-            _currentProcess = null;
-            return true;
-          }
+          print('VM shut down after stdin close with exit code: $exitCode');
+          _currentProcess = null;
+          return true;
         } catch (e) {
           print('Stdin close failed: $e');
         }
@@ -509,11 +503,9 @@ Common locations:
               onTimeout: () => -1,
             );
 
-            if (exitCode != null) {
-              print('VM terminated with SIGTERM, exit code: $exitCode');
-              _currentProcess = null;
-              return true;
-            }
+            print('VM terminated with SIGTERM, exit code: $exitCode');
+            _currentProcess = null;
+            return true;
           }
         } catch (e) {
           print('SIGTERM failed: $e');

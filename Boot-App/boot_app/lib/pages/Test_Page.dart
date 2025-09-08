@@ -265,7 +265,7 @@ class _TestPageState extends State<TestPage> {
 
             // Display Type Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedDisplay,
+              initialValue: _selectedDisplay,
               decoration: InputDecoration(
                 labelText: 'Display Type',
                 labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -310,7 +310,7 @@ class _TestPageState extends State<TestPage> {
               ),
               value: _enableAcceleration,
               onChanged: (value) => setState(() => _enableAcceleration = value),
-              activeColor: colorScheme.primary,
+              activeThumbColor: colorScheme.primary,
             ),
 
             SwitchListTile(
@@ -324,7 +324,7 @@ class _TestPageState extends State<TestPage> {
               ),
               value: _enableNetworking,
               onChanged: (value) => setState(() => _enableNetworking = value),
-              activeColor: colorScheme.primary,
+              activeThumbColor: colorScheme.primary,
             ),
             const SizedBox(height: 16),
 

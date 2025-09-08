@@ -68,6 +68,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     final projects = await HackatimeService.fetchHackatimeProjects(
       userId: UserService.currentUser?.hackatimeID ?? 0,
       apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+      context: context,
     );
     setState(() {
       _hackatimeProjects = projects;
