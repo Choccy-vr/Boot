@@ -1,3 +1,4 @@
+import 'package:boot_app/services/supabase/auth/supabase_auth.dart';
 import 'package:flutter/material.dart';
 import 'theme/terminal_theme.dart';
 import 'pages/Home_Page.dart';

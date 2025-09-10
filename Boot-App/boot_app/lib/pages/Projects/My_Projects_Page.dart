@@ -63,65 +63,7 @@ class _ProjectsPageState extends State<ProjectsPage>
   }
 
   void _openProject(Project project) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-        title: Row(
-          children: [
-            Text(
-              project.title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              project.description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Status: ${project.status}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _getStatusColor(
-                  project.status,
-                  Theme.of(context).colorScheme,
-                ),
-              ),
-            ),
-            Text(
-              'Last modified: ${timeAgoSinceDate(project.lastModified)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Opening ${project.title}...')),
-              );
-            },
-            child: Text('Open Project'),
-          ),
-        ],
-      ),
-    );
+    NavigationService.openProject(project, context);
   }
 
   Widget _buildTerminalHeader(ColorScheme colorScheme, TextTheme textTheme) {

@@ -46,4 +46,26 @@ class ProjectService {
       ),
     );
   }
+
+  static Future<void> updateProject(Project project) async {
+    await SupabaseDB.UpdateData(
+      table: 'projects',
+      column: 'id',
+      value: project.id,
+      data: Project.toRow(
+        title: project.title,
+        description: project.description,
+        imageURL: project.imageURL,
+        githubRepo: project.githubRepo,
+        time: project.time,
+        likes: project.likes,
+        lastModified: project.lastModified,
+        awaitingReview: project.awaitingReview,
+        level: project.level,
+        status: project.status,
+        reviewed: project.reviewed,
+        hackatimeProjects: project.hackatimeProjects,
+      ),
+    );
+  }
 }

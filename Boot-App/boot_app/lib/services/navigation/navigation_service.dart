@@ -1,3 +1,4 @@
+import 'package:boot_app/services/Projects/Project.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import '/animations/Shared_Axis.dart';
@@ -10,8 +11,9 @@ import '/pages/Home_Page.dart';
 import '/pages/Login/SignUp/Signup_Pass_page.dart';
 import '/pages/Login/SignUp/SignUp_Profile_Page.dart';
 import '/pages/Login/SignUp/SignUp_Hackatime_Page.dart';
-import '/pages/Projects/Project_Page.dart';
+import '/pages/Projects/My_Projects_Page.dart';
 import '/pages/Projects/Creation_Page.dart';
+import '/pages/Projects/Project_Page.dart';
 
 enum AppDestination {
   home,
@@ -129,6 +131,15 @@ class NavigationService {
       sharedAxis
           ? SharedAxisPageRoute(child: page, transitionType: transitionType)
           : MaterialPageRoute(builder: (context) => page),
+    );
+  }
+
+  static void openProject(Project project, BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProjectDetailPage(project: project),
+      ),
     );
   }
 }

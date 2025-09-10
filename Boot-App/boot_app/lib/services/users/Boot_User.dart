@@ -1,3 +1,5 @@
+import '/services/Projects/Project.dart';
+
 class Boot_User {
   //identifiers
   final String id;
@@ -19,6 +21,8 @@ class Boot_User {
   //Hackatime
   String hackatimeApiKey;
   int hackatimeID;
+  //Projects
+  List<Project> likedProjects;
   //constructor
   Boot_User({
     required this.id,
@@ -34,6 +38,7 @@ class Boot_User {
     required this.bootCoins,
     required this.hackatimeApiKey,
     required this.hackatimeID,
+    this.likedProjects = const [],
   });
 
   factory Boot_User.fromJson(Map<String, dynamic> json) {
@@ -55,6 +60,7 @@ class Boot_User {
       bootCoins: json['boot_coins'] ?? 0,
       hackatimeApiKey: json['hackatime_api_key'] ?? '',
       hackatimeID: json['hackatime_user'] ?? 0,
+      likedProjects: json['projects_liked'] ?? [],
     );
   }
 
@@ -73,6 +79,7 @@ class Boot_User {
       'boot_coins': bootCoins,
       'hackatime_api_key': hackatimeApiKey,
       'hackatime_user': hackatimeID,
+      'projects_liked': likedProjects,
     };
   }
 }
