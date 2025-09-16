@@ -78,6 +78,30 @@ class SupabaseDB {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> InsertAndReturnData({
+    required String table,
+    Map<String, dynamic>? data,
+    List<Map<String, dynamic>>? bulkData,
+  }) async {
+    // Ensure exactly one parameter is provided
+    if ((data == null && bulkData == null) ||
+        (data != null && bulkData != null)) {
+      throw ArgumentError(
+        'Provide either data or bulkData, but not both or neither',
+      );
+    }
+
+    try {
+      if (data != null) {
+        return await supabase.from(table).insert(data).select();
+      } else {
+        return await supabase.from(table).insert(bulkData!).select();
+      }
+    } catch (e) {
+      throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
   //Update
   static Future<void> UpdateData({
     required String table,
@@ -176,6 +200,22 @@ class SupabaseDB {
       }
     } catch (e) {
       throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
+  //RPC/Function calls
+  static Future<dynamic> CallDBFunction({
+    required String functionName,
+    Map<String, dynamic>? parameters,
+  }) async {
+    try {
+      if (parameters != null) {
+        return await supabase.rpc(functionName, params: parameters);
+      } else {
+        return await supabase.rpc(functionName);
+      }
+    } catch (e) {
+      throw Exception('Function call failed: ${e.toString()}');
     }
   }
 }

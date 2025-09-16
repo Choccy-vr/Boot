@@ -1,5 +1,3 @@
-import '/services/Projects/Project.dart';
-
 class Boot_User {
   //identifiers
   final String id;
@@ -22,7 +20,7 @@ class Boot_User {
   String hackatimeApiKey;
   int hackatimeID;
   //Projects
-  List<Project> likedProjects;
+  List<int> likedProjects;
   //constructor
   Boot_User({
     required this.id,
@@ -42,12 +40,31 @@ class Boot_User {
   });
 
   factory Boot_User.fromJson(Map<String, dynamic> json) {
+    // Handle liked projects coming from different possible keys/types
+    final dynamic likedProjectsRaw = json['projects_liked'] ?? '';
+
+    List<int> likedProjectsParsed = [];
+    if (likedProjectsRaw is List) {
+      for (final e in likedProjectsRaw) {
+        if (e is int) {
+          likedProjectsParsed.add(e);
+        } else if (e is double) {
+          likedProjectsParsed.add(e.toInt());
+        } else if (e is String) {
+          final v = int.tryParse(e);
+          if (v != null) likedProjectsParsed.add(v);
+        }
+      }
+    }
+
     return Boot_User(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       username: json['username'] ?? '',
       bio: json['bio'] ?? '',
-      profilePicture: json['profile_pic_url'] ?? '',
+      // Align with toJson key, but keep fallback for legacy key
+      profilePicture:
+          json['profile_picture_url'] ?? json['profile_pic_url'] ?? '',
       totalProjects: json['total_projects'] ?? 0,
       devlogs: json['total_devlogs'] ?? 0,
       createdAt: json['created_at'] != null
@@ -60,7 +77,7 @@ class Boot_User {
       bootCoins: json['boot_coins'] ?? 0,
       hackatimeApiKey: json['hackatime_api_key'] ?? '',
       hackatimeID: json['hackatime_user'] ?? 0,
-      likedProjects: json['projects_liked'] ?? [],
+      likedProjects: likedProjectsParsed,
     );
   }
 

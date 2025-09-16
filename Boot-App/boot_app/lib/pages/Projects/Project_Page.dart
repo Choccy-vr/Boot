@@ -1,10 +1,19 @@
+//Packages
+import 'dart:io';
+import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
+//Theme Data
 import '/theme/terminal_theme.dart';
+//Services
 import '/services/Projects/Project.dart';
 import '/services/Projects/Project_Service.dart';
 import '/services/supabase/storage/supabase_storage.dart';
+import '/services/supabase/DB/functions/supabase_db_functions.dart';
+import '../../services/devlog/Devlog.dart';
+import '/services/devlog/devlog_service.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -19,18 +28,30 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     with SingleTickerProviderStateMixin {
   AnimationController? _refreshController;
   late Project _project;
+  List<Devlog> _devlogs = [];
   bool _isLoading = false;
+  bool _isHovering = false;
   String owner = "";
+  bool _isLiked = false;
+  bool _showDevlogEditor = false;
+  final TextEditingController _devlogTitleController = TextEditingController();
+  final TextEditingController _devlogDescriptionController =
+      TextEditingController();
+  List<String> _cachedMediaPaths = [];
+  bool _isUploadingMedia = false;
 
   @override
   void initState() {
     super.initState();
     _project = widget.project;
     _loadOwner();
+    _loadDevlogs();
     _refreshController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
+    _getTime();
+    _userLiked();
   }
 
   Future<void> _loadOwner() async {
@@ -40,9 +61,57 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     });
   }
 
+  Future<void> _loadDevlogs() async {
+    try {
+      final devlogs = await DevlogService.getDevlogsByProjectId(
+        _project.id.toString(),
+      );
+      setState(() {
+        _devlogs = devlogs;
+      });
+    } catch (e) {
+      print('Error loading devlogs: $e');
+    }
+  }
+
+  Future<void> _getTime() async {
+    try {
+      final updatedProject = await HackatimeService.getProjectTime(
+        project: _project,
+        userId: UserService.currentUser?.hackatimeID ?? 0,
+        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+        context: context,
+      );
+      setState(() {
+        _project = updatedProject;
+      });
+    } catch (e) {
+      _showErrorSnackbar(context, 'Failed to get project time');
+    }
+  }
+
+  Future<void> _userLiked() async {
+    await UserService.updateCurrentUser();
+    setState(() {
+      _isLiked =
+          UserService.currentUser?.likedProjects.contains(_project.id) ?? false;
+    });
+  }
+
+  void _showErrorSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _refreshController?.dispose();
+    _devlogTitleController.dispose();
+    _devlogDescriptionController.dispose();
     super.dispose();
   }
 
@@ -80,6 +149,849 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       default:
         return colorScheme.onSurfaceVariant;
     }
+  }
+
+  Future<void> _handleLikeProject() async {
+    try {
+      if (_isLiked) {
+        await SupabaseDB.CallDBFunction(
+          functionName: 'decrement_likes',
+          parameters: {'project_id': _project.id},
+        );
+        UserService.currentUser?.likedProjects.remove(_project.id);
+        await UserService.updateUser();
+        setState(() {
+          _project.likes -= 1;
+          _isLiked = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You unliked ${_project.title}.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        await SupabaseDB.CallDBFunction(
+          functionName: 'increment_likes',
+          parameters: {'project_id': _project.id},
+        );
+        print("before ${UserService.currentUser?.likedProjects}");
+        UserService.currentUser?.likedProjects.add(_project.id);
+        print("after ${UserService.currentUser?.likedProjects}");
+        await UserService.updateUser();
+        setState(() {
+          _project.likes += 1;
+          _isLiked = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You liked ${_project.title}!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackbar(context, 'Failed to like/unlike project: $e');
+    }
+  }
+
+  Future<void> _handleOpenGitHubRepo() async {
+    final _url = Uri.parse(_project.githubRepo);
+    if (!await launchUrl(_url)) {
+      throw Exception('Could not launch $_url');
+    }
+  }
+
+  Future<void> _handleCreateDevlog() async {
+    setState(() {
+      _showDevlogEditor = true;
+    });
+  }
+
+  void _closeDevlogEditor() {
+    setState(() {
+      _showDevlogEditor = false;
+      _devlogTitleController.clear();
+      _devlogDescriptionController.clear();
+      _cachedMediaPaths.clear();
+    });
+  }
+
+  Future<void> _handleUploadDevlogMedia() async {
+    setState(() {
+      _isUploadingMedia = true;
+    });
+
+    try {
+      final cachedFilePath = await DevlogService.cacheMediaFilePicker();
+      setState(() {
+        _cachedMediaPaths.add(cachedFilePath);
+        _isUploadingMedia = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isUploadingMedia = false;
+      });
+      // Optionally show error message
+      _showErrorSnackbar(context, 'Failed to upload media: $e');
+    }
+  }
+
+  Future<void> _handleSaveDevlog() async {
+    final newDevlog = await DevlogService.addDevlog(
+      projectID: _project.id,
+      title: _devlogTitleController.text,
+      description: _devlogDescriptionController.text,
+      cachedMediaUrls: _cachedMediaPaths,
+    );
+    setState(() {
+      _devlogs.add(newDevlog);
+    });
+    _closeDevlogEditor();
+  }
+
+  Future<void> _showStatusEditDialog() async {
+    final predefinedStatuses = ['building', 'reviewing', 'voting', 'error'];
+    String? selectedStatus;
+    final TextEditingController customStatusController =
+        TextEditingController();
+    bool useCustomStatus = false;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              title: Row(
+                children: [
+                  Icon(
+                    Symbols.edit,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Edit Project Status',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select a predefined status:',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: predefinedStatuses.map((status) {
+                        final isSelected =
+                            selectedStatus == status && !useCustomStatus;
+                        return InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedStatus = status;
+                              useCustomStatus = false;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? _getStatusColor(
+                                      status,
+                                      Theme.of(context).colorScheme,
+                                    ).withOpacity(0.2)
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? _getStatusColor(
+                                        status,
+                                        Theme.of(context).colorScheme,
+                                      )
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.outline.withOpacity(0.3),
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Text(
+                              status,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: isSelected
+                                        ? _getStatusColor(
+                                            status,
+                                            Theme.of(context).colorScheme,
+                                          )
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Or create a custom status:',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: customStatusController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter custom status...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          useCustomStatus = value.isNotEmpty;
+                          if (useCustomStatus) {
+                            selectedStatus = value;
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      (selectedStatus != null && selectedStatus!.isNotEmpty)
+                      ? () {
+                          Navigator.of(context).pop(selectedStatus);
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                  child: Text('Update Status'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      try {
+        // Update the project status locally
+        setState(() {
+          _project.status = result;
+        });
+
+        // Update the project in the database
+        await ProjectService.updateProject(_project);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Project status updated to "$result"'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        _showErrorSnackbar(context, 'Failed to update status: $e');
+      }
+    }
+  }
+
+  bool _isOwner() {
+    return UserService.currentUser?.id == _project.owner;
+  }
+
+  String _getMediaTypeFromPath(String filePath) {
+    final extension = filePath.toLowerCase().split('.').last;
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return 'image';
+      case 'mp4':
+        return 'video';
+      case 'gif':
+        return 'gif';
+      default:
+        return 'unknown';
+    }
+  }
+
+  Widget _buildDevlogEditor() {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      child: Center(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.85,
+          margin: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              _buildDevlogEditorHeader(),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDevlogMediaSection(),
+                      SizedBox(height: 24),
+                      _buildDevlogTitleField(),
+                      SizedBox(height: 24),
+                      _buildDevlogDescriptionField(),
+                    ],
+                  ),
+                ),
+              ),
+              _buildDevlogEditorFooter(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDevlogEditorHeader() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(14),
+          topRight: Radius.circular(14),
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Symbols.edit_note,
+            color: Theme.of(context).colorScheme.primary,
+            size: 24,
+          ),
+          SizedBox(width: 12),
+          Text(
+            'Create Devlog',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Spacer(),
+          IconButton(
+            onPressed: _closeDevlogEditor,
+            icon: Icon(
+              Symbols.close,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDevlogTitleField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Title',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 8),
+        TextField(
+          controller: _devlogTitleController,
+          decoration: InputDecoration(
+            hintText: 'Enter devlog title...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDevlogMediaSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Media',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Spacer(),
+            if (_cachedMediaPaths.isNotEmpty)
+              Text(
+                '${_cachedMediaPaths.length} file${_cachedMediaPaths.length == 1 ? '' : 's'}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline,
+              style: BorderStyle.solid,
+            ),
+          ),
+          child: _cachedMediaPaths.isEmpty
+              ? _buildMediaUploadArea()
+              : _buildMediaCarousel(),
+        ),
+        if (_cachedMediaPaths.isNotEmpty) ...[
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _handleUploadDevlogMedia,
+                  icon: Icon(Symbols.add, size: 16),
+                  label: Text('Add More'),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _cachedMediaPaths.clear();
+                  });
+                },
+                icon: Icon(Symbols.delete, size: 16),
+                label: Text('Clear All'),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMediaUploadArea() {
+    return InkWell(
+      onTap: _handleUploadDevlogMedia,
+      borderRadius: BorderRadius.circular(12),
+      child: Center(
+        child: _isUploadingMedia
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Uploading...',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Symbols.cloud_upload,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Upload Image, Video, or GIF',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Click to browse files',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildMediaCarousel() {
+    return Padding(
+      padding: EdgeInsets.all(12),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _cachedMediaPaths.length,
+        itemBuilder: (context, index) {
+          return Container(
+            width: 160,
+            margin: EdgeInsets.only(
+              right: index < _cachedMediaPaths.length - 1 ? 12 : 0,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              ),
+            ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    child:
+                        _getMediaTypeFromPath(_cachedMediaPaths[index]) ==
+                            'image'
+                        ? Image.file(
+                            File(_cachedMediaPaths[index]),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.errorContainer,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Symbols.broken_image,
+                                          size: 24,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.error,
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Error',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.error,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                          )
+                        : Container(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer.withOpacity(0.3),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _getMediaTypeFromPath(
+                                              _cachedMediaPaths[index],
+                                            ) ==
+                                            'video'
+                                        ? Symbols.play_circle
+                                        : Symbols.gif,
+                                    size: 32,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    _getMediaTypeFromPath(
+                                              _cachedMediaPaths[index],
+                                            ) ==
+                                            'video'
+                                        ? 'Video'
+                                        : 'GIF',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    _getFileNameFromPath(
+                                      _cachedMediaPaths[index],
+                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                          fontSize: 10,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                // Remove button
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _cachedMediaPaths.removeAt(index);
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Icon(Symbols.close, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
+                // File type indicator
+                Positioned(
+                  bottom: 4,
+                  left: 4,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _getMediaTypeFromPath(
+                        _cachedMediaPaths[index],
+                      ).toUpperCase(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _getFileNameFromPath(String filePath) {
+    return filePath.split('/').last.split('\\').last;
+  }
+
+  Widget _buildDevlogMediaViewer(
+    List<String> mediaUrls,
+    ColorScheme colorScheme,
+  ) {
+    return _DevlogMediaViewer(mediaUrls: mediaUrls, colorScheme: colorScheme);
+  }
+
+  Widget _buildDevlogDescriptionField() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Description',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8),
+          Expanded(
+            child: TextField(
+              controller: _devlogDescriptionController,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              decoration: InputDecoration(
+                hintText:
+                    'Share your development progress, challenges, insights, and learnings...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.all(16),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDevlogEditorFooter() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(14),
+          bottomRight: Radius.circular(14),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outline,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          OutlinedButton(
+            onPressed: _closeDevlogEditor,
+            child: Text('Cancel'),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              side: BorderSide(color: Theme.of(context).colorScheme.outline),
+            ),
+          ),
+          SizedBox(width: 12),
+          ElevatedButton.icon(
+            onPressed: _handleSaveDevlog,
+            icon: Icon(Symbols.save, size: 20),
+            label: Text('Publish Devlog'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTerminalHeader(ColorScheme colorScheme, TextTheme textTheme) {
@@ -126,12 +1038,20 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       setState(() {
         _isLoading = true;
       });
-
+      final supabasePath = '${_project.id}/picture';
       String supabasePrivateUrl =
           await SupabaseStorageService.uploadFileWithPicker(
             bucket: 'Projects',
-            supabasePath: 'project_${_project.id}',
+            supabasePath: supabasePath,
           );
+      if (supabasePrivateUrl == 'User cancelled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload picture: $supabasePrivateUrl'),
+          ),
+        );
+        return;
+      }
 
       String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
         bucket: 'Projects',
@@ -146,8 +1066,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         );
         return;
       }
-
-      _project.imageURL = supabasePublicUrl;
+      setState(() {
+        _project.imageURL = supabasePublicUrl;
+      });
       ProjectService.updateProject(_project);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,10 +1086,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
-  bool _isOwner() {
-    return UserService.currentUser?.id == _project.owner;
-  }
-
   Widget _buildProjectImage(ColorScheme colorScheme) {
     return Container(
       width: double.infinity,
@@ -181,6 +1098,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         borderRadius: BorderRadius.circular(12),
         child: _project.imageURL.isNotEmpty
             ? MouseRegion(
+                onEnter: (_) => setState(() => _isHovering = true),
+                onExit: (_) => setState(() => _isHovering = false),
                 cursor: _isOwner()
                     ? SystemMouseCursors.click
                     : SystemMouseCursors.basic,
@@ -246,7 +1165,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
                     ),
                     // Hover overlay when image is loaded and user is owner
-                    if (_isOwner())
+                    if (_isOwner() && _isHovering)
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
@@ -362,137 +1281,155 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Widget _buildProjectInfo(ColorScheme colorScheme, TextTheme textTheme) {
-    return Card(
-      color: colorScheme.surfaceContainer,
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _project.title,
-                    style: textTheme.headlineMedium?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _project.title,
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(
-                      _project.status,
-                      colorScheme,
-                    ).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _getStatusColor(_project.status, colorScheme),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    _project.status,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: _getStatusColor(_project.status, colorScheme),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _project.description,
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
-                height: 1.5,
               ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(
+                        _project.status,
+                        colorScheme,
+                      ).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _getStatusColor(_project.status, colorScheme),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _project.status,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: _getStatusColor(_project.status, colorScheme),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  /*if (_isOwner()) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _showStatusEditDialog,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          Symbols.edit,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],*/
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _project.description,
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurface,
+              height: 1.5,
             ),
-            const SizedBox(height: 24),
-            _buildProjectStats(colorScheme, textTheme),
-          ],
-        ),
+          ),
+          const SizedBox(height: 32),
+          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Symbols.schedule,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tracked development time: ${_project.readableTime}',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _handleLikeProject,
+                icon: _isLiked
+                    ? Icon(Symbols.favorite, size: 18, fill: 1)
+                    : Icon(Symbols.favorite, size: 18, fill: 0),
+                label: Text('${_project.likes}'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _handleOpenGitHubRepo,
+                icon: Icon(Symbols.folder_data, size: 18),
+                label: Text('Github Repo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          const SizedBox(height: 8),
+          _buildProjectStats(colorScheme, textTheme),
+        ],
       ),
     );
   }
 
   Widget _buildProjectStats(ColorScheme colorScheme, TextTheme textTheme) {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.schedule,
-                label: 'Development Time',
-                value: '${_project.time.toStringAsFixed(1)}h',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.favorite,
-                label: 'Likes',
-                value: '${_project.likes}',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-          ],
+        Expanded(
+          child: _buildStatCard(
+            icon: Symbols.calendar_today,
+            label: 'Created',
+            value: timeAgoSinceDate(_project.createdAt),
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.person,
-                label: 'Owner',
-                value: _project.owner,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.calendar_today,
-                label: 'Created',
-                value: timeAgoSinceDate(_project.createdAt),
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.update,
-                label: 'Last Modified',
-                value: timeAgoSinceDate(_project.lastModified),
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Symbols.trending_up,
-                label: 'Level',
-                value: _project.level,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-            ),
-          ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            icon: Symbols.trending_up,
+            label: 'Level',
+            value: _project.level,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          ),
         ),
       ],
     );
@@ -540,7 +1477,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
-  Widget _buildActionButtons(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildAboutSection(ColorScheme colorScheme, TextTheme textTheme) {
     return Card(
       color: colorScheme.surfaceContainer,
       elevation: 2,
@@ -549,112 +1486,218 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Actions',
-              style: textTheme.titleLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (_project.githubRepo.isNotEmpty)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Opening GitHub repo...')),
-                        );
-                      },
-                      icon: Icon(Symbols.code),
-                      label: Text('View Code'),
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                if (_project.githubRepo.isNotEmpty) const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Testing OS...')));
-                    },
-                    icon: Icon(Symbols.play_arrow),
-                    label: Text('Test OS'),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _project.reviewed
-                        ? null
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Submitting for review...'),
-                              ),
-                            );
-                          },
-                    icon: Icon(
-                      _project.reviewed ? Symbols.check_circle : Symbols.send,
-                    ),
-                    label: Text(
-                      _project.reviewed ? 'Reviewed' : 'Submit Review',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Liked project!')));
-                    },
-                    icon: Icon(Symbols.favorite_border),
-                    label: Text('Like'),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildProjectImage(colorScheme),
+            const SizedBox(height: 24),
+            _buildProjectInfo(colorScheme, textTheme),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _refreshProject() async {
-    if (_refreshController?.isAnimating ?? false) return;
+  Widget _buildDevlogSection(ColorScheme colorScheme, TextTheme textTheme) {
+    return Card(
+      color: colorScheme.surfaceContainer,
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Symbols.edit_note, color: colorScheme.primary, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Development Logs',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (_isOwner())
+                  OutlinedButton.icon(
+                    onPressed: _handleCreateDevlog,
+                    icon: Icon(Symbols.add, size: 18),
+                    label: Text('New Entry'),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      side: BorderSide(color: colorScheme.primary),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-    setState(() {
-      _isLoading = true;
-    });
+            // Display devlogs or empty state
+            if (_devlogs.isNotEmpty) ...[
+              // Display devlogs
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: _devlogs.length,
+                itemBuilder: (context, index) {
+                  final devlog = _devlogs[index];
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 16),
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.outline.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                devlog.title,
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              timeAgoSinceDate(devlog.createdAt),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          devlog.description,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            height: 1.5,
+                          ),
+                        ),
+                        if (devlog.mediaUrls.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _buildDevlogMediaViewer(
+                            devlog.mediaUrls,
+                            colorScheme,
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ] else ...[
+              // Owner section for empty state
+              if (_isOwner()) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.person,
+                            size: 20,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Share Your Development Journey',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Document your progress, challenges, insights, etc. You must make a devlog every 5 hours of work but it is better to make them more frequently!',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _handleCreateDevlog,
+                        icon: Icon(Symbols.edit, size: 20),
+                        label: Text('Write Your First Entry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
 
-    _refreshController?.forward(from: 0);
-
-    // Here you would typically fetch updated project data
-    // For now, we'll just simulate a refresh
-    await Future.delayed(Duration(milliseconds: 1000));
-
-    setState(() {
-      _isLoading = false;
-    });
+              // Empty state
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.outline.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Symbols.article,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No development logs yet',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isOwner()
+                          ? 'Start documenting your development process and share your insights'
+                          : 'Check back later for development updates and insights from ${owner.isNotEmpty ? owner : 'the project owner'}',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -667,8 +1710,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Symbols.terminal, color: colorScheme.primary, size: 20),
-            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 _project.title,
@@ -687,40 +1728,202 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         ),
         backgroundColor: colorScheme.surfaceContainerLow,
         elevation: 1,
-        actions: [
-          AnimatedBuilder(
-            animation: _refreshController!,
-            builder: (context, child) {
-              return Transform.rotate(
-                angle: (_refreshController?.value ?? 0) * 6.28319, // 2 * pi
-                child: child,
-              );
-            },
-            child: IconButton(
-              icon: Icon(Symbols.refresh, color: colorScheme.onSurface),
-              onPressed: _refreshProject,
-              tooltip: 'Refresh',
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTerminalHeader(colorScheme, textTheme),
+                const SizedBox(height: 24),
+                _buildAboutSection(colorScheme, textTheme),
+                const SizedBox(height: 24),
+                _buildDevlogSection(colorScheme, textTheme),
+              ],
             ),
           ),
-          const SizedBox(width: 16),
+          if (_showDevlogEditor) _buildDevlogEditor(),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTerminalHeader(colorScheme, textTheme),
-            const SizedBox(height: 24),
-            _buildProjectImage(colorScheme),
-            const SizedBox(height: 24),
-            _buildProjectInfo(colorScheme, textTheme),
-            const SizedBox(height: 24),
-            _buildActionButtons(colorScheme, textTheme),
-            const SizedBox(height: 24),
-          ],
+    );
+  }
+}
+
+// Separate stateful widget for media viewer
+class _DevlogMediaViewer extends StatefulWidget {
+  final List<String> mediaUrls;
+  final ColorScheme colorScheme;
+
+  const _DevlogMediaViewer({
+    required this.mediaUrls,
+    required this.colorScheme,
+  });
+
+  @override
+  State<_DevlogMediaViewer> createState() => _DevlogMediaViewerState();
+}
+
+class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
+  int currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Media container that adjusts to image size with constraints
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(
+              minHeight: 150,
+              maxHeight: 500,
+              maxWidth: double.infinity,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: widget.colorScheme.outline.withOpacity(0.3),
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Main image with intrinsic dimensions but constrained
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: 150, maxHeight: 500),
+                  child: Image.network(
+                    widget.mediaUrls[currentIndex],
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 200,
+                      width: double.infinity,
+                      color: widget.colorScheme.errorContainer,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Symbols.broken_image,
+                              size: 48,
+                              color: widget.colorScheme.error,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Failed to load media',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: widget.colorScheme.error),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Navigation arrows (only show if multiple images)
+                if (widget.mediaUrls.length > 1) ...[
+                  // Previous arrow
+                  if (currentIndex > 0)
+                    Positioned(
+                      left: 8,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                currentIndex--;
+                              });
+                            },
+                            icon: Icon(
+                              Symbols.chevron_left,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Next arrow
+                  if (currentIndex < widget.mediaUrls.length - 1)
+                    Positioned(
+                      right: 8,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                currentIndex++;
+                              });
+                            },
+                            icon: Icon(
+                              Symbols.chevron_right,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
         ),
-      ),
+
+        // Media indicators and counter (only show if multiple images)
+        if (widget.mediaUrls.length > 1) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Dot indicators
+              ...List.generate(widget.mediaUrls.length, (index) {
+                return Container(
+                  width: 6,
+                  height: 6,
+                  margin: EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index == currentIndex
+                        ? widget.colorScheme.primary
+                        : widget.colorScheme.outline.withOpacity(0.4),
+                  ),
+                );
+              }),
+              const SizedBox(width: 12),
+              // Counter text
+              Text(
+                '${currentIndex + 1}/${widget.mediaUrls.length}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: widget.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

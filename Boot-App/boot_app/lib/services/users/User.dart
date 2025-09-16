@@ -30,6 +30,10 @@ class UserService {
     SupabaseDB.UpsertData(table: 'users', data: currentUser?.toJson());
   }
 
+  static Future<void> updateCurrentUser() async {
+    currentUser = await getUserById(currentUser?.id ?? '');
+  }
+
   static Future<void> initializeUser({
     required String id,
     required String email,
@@ -43,7 +47,6 @@ class UserService {
         'bio': "Nothing Yet",
         'boot_coins': 0,
         'profile_picture_url': '',
-        'total_time_tracked': 0,
         'total_projects': 0,
         'total_devlogs': 0,
         'total_votes': 0,

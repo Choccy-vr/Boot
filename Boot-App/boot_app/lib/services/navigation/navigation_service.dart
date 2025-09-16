@@ -14,6 +14,7 @@ import '/pages/Login/SignUp/SignUp_Hackatime_Page.dart';
 import '/pages/Projects/My_Projects_Page.dart';
 import '/pages/Projects/Creation_Page.dart';
 import '/pages/Projects/Project_Page.dart';
+import '/pages/Explore/Explore_Page.dart';
 
 enum AppDestination {
   home,
@@ -94,12 +95,7 @@ class NavigationService {
         DialogService.showComingSoon(context, 'Vote', textTheme, colorScheme);
         break;
       case AppDestination.explore:
-        DialogService.showComingSoon(
-          context,
-          'Explore',
-          textTheme,
-          colorScheme,
-        );
+        _pushPage(context, const ExplorePage(), sharedAxis, transitionType);
         break;
       case AppDestination.leaderboard:
         DialogService.showComingSoon(

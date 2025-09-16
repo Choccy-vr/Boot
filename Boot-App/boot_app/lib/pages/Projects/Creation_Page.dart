@@ -542,7 +542,6 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       description: _descriptionController.text.trim(),
       imageURL: '',
       githubRepo: _repositoryController.text.trim(),
-      time: 0,
       likes: 0,
       lastModified: DateTime.now(),
       awaitingReview: false,

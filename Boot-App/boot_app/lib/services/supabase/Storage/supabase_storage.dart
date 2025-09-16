@@ -28,6 +28,38 @@ class SupabaseStorageService {
     return supabasePath;
   }
 
+  static Future<List<String>> uploadMultipleFilesWithURL({
+    required List<String> filePaths,
+    required String bucket,
+    required String supabaseDirPath,
+  }) async {
+    List<String> uploadedPaths = [];
+    for (int i = 0; i < filePaths.length; i++) {
+      final filePath = filePaths[i];
+      final file = File(filePath);
+      final fileName = file.uri.pathSegments.last;
+      final fileExtension = fileName.split('.').last;
+      final supabasePath = '$supabaseDirPath/media_${i + 1}.$fileExtension';
+
+      final response = await supabase.storage
+          .from(bucket)
+          .upload(
+            supabasePath,
+            file,
+            fileOptions: const FileOptions(upsert: true),
+          );
+      if (response != '') {
+        final publicUrl = await getPublicUrl(
+          bucket: bucket,
+          supabasePath: supabasePath,
+        );
+        uploadedPaths.add(publicUrl ?? supabasePath);
+      }
+    }
+
+    return uploadedPaths;
+  }
+
   static Future<String?> getPublicUrl({
     required String bucket,
     required String supabasePath,

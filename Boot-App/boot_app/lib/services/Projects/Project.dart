@@ -4,6 +4,7 @@ class Project {
   String imageURL;
   String githubRepo;
   double time;
+  String readableTime;
   int likes;
   final String owner;
   final DateTime createdAt;
@@ -23,6 +24,7 @@ class Project {
     required this.imageURL,
     required this.githubRepo,
     required this.time,
+    required this.readableTime,
     required this.likes,
     required this.owner,
     required this.createdAt,
@@ -40,7 +42,7 @@ class Project {
       description: row['description'] ?? 'No description provided',
       imageURL: row['image_url'] ?? '',
       githubRepo: row['github_repo'] ?? '',
-      time: (row['total_time'] ?? 0.0).toDouble(),
+      time: 0,
       likes: row['total_likes'] ?? 0,
       owner: row['owner'] ?? 'unknown',
       createdAt: DateTime.parse(row['created_at'] ?? DateTime.now().toString()),
@@ -52,6 +54,7 @@ class Project {
       status: row['status'] ?? 'unknown',
       reviewed: row['reviewed'] ?? false,
       hackatimeProjects: row['hackatime_projects'] ?? '',
+      readableTime: '0m',
     );
   }
   static Map<String, dynamic> toRow({
@@ -59,7 +62,6 @@ class Project {
     String? description,
     String? imageURL,
     String? githubRepo,
-    double? time,
     int? likes,
     DateTime? lastModified,
     bool? awaitingReview,
@@ -74,7 +76,6 @@ class Project {
     if (description != null) map['description'] = description;
     if (imageURL != null) map['image_url'] = imageURL;
     if (githubRepo != null) map['github_repo'] = githubRepo;
-    if (time != null) map['total_time'] = time;
     if (likes != null) map['total_likes'] = likes;
     if (lastModified != null) {
       map['updated_at'] = lastModified.toIso8601String();

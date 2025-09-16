@@ -1,3 +1,4 @@
+import 'package:boot_app/services/Projects/Project.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
@@ -96,6 +97,35 @@ class HackatimeService {
     }
   }
 
+  static Future<HackatimeProject> fetchProjectDetails({
+    required List<HackatimeProject> projects,
+    required String projectName,
+  }) async {
+    try {
+      final project = projects.firstWhere(
+        (p) => p.name.toLowerCase() == projectName.toLowerCase(),
+        orElse: () => HackatimeProject(
+          name: 'Not Found',
+          totalSeconds: 0,
+          text: '0m',
+          hours: 0,
+          minutes: 0,
+          digital: '0:00',
+        ),
+      );
+      return project;
+    } catch (e) {
+      return HackatimeProject(
+        name: 'Error',
+        totalSeconds: 0,
+        text: '0m',
+        hours: 0,
+        minutes: 0,
+        digital: '0:00',
+      );
+    }
+  }
+
   static Future<bool> isHackatimeBanned({
     required int userId,
     required String apiKey,
@@ -126,6 +156,39 @@ class HackatimeService {
     } catch (e) {
       _showErrorSnackbar(context, 'Network error checking ban status');
       return false;
+    }
+  }
+
+  static Future<Project> getProjectTime({
+    required Project project,
+    required int userId,
+    required String apiKey,
+    BuildContext? context,
+  }) async {
+    try {
+      final projects = await fetchHackatimeProjects(
+        userId: userId,
+        apiKey: apiKey,
+        context: context,
+      );
+      if (projects.isEmpty) {
+        _showErrorSnackbar(context, 'No Hackatime projects found');
+      }
+      final hackatimeProject = await fetchProjectDetails(
+        projects: projects,
+        projectName: project.hackatimeProjects,
+      );
+      if (hackatimeProject.name == 'Not Found') {
+        _showErrorSnackbar(
+          context,
+          'Project "${project.hackatimeProjects}" not found on Hackatime',
+        );
+      }
+      project.time = hackatimeProject.totalSeconds / 3600.0;
+      project.readableTime = hackatimeProject.text;
+      return project;
+    } catch (e) {
+      throw Exception('Error fetching project time: $e');
     }
   }
 }

@@ -12,12 +12,62 @@ class ProjectService {
     return response.map<Project>((row) => Project.fromRow(row)).toList();
   }
 
+  static Future<List<Project>> getAllProjects({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      // Use SelectData to get all projects and sort manually
+      final response = await SupabaseDB.SelectData(table: 'projects');
+      
+      if (response.isEmpty) return [];
+      
+      final projects = response.map<Project>((row) => Project.fromRow(row)).toList();
+      
+      // Sort by time (if available) or created_at as fallback
+      projects.sort((a, b) {
+        if (a.time > 0 && b.time > 0) {
+          return b.time.compareTo(a.time); // Sort by time descending
+        }
+        return b.createdAt.compareTo(a.createdAt); // Fallback to created_at
+      });
+      
+      // Apply pagination
+      final startIndex = offset;
+      final endIndex = (startIndex + limit).clamp(0, projects.length);
+      
+      if (startIndex >= projects.length) return [];
+      
+      return projects.sublist(startIndex, endIndex);
+    } catch (e) {
+      print('Error fetching all projects: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Project>> getLikedProjects(List<int> likedProjectIds) async {
+    if (likedProjectIds.isEmpty) return [];
+    
+    try {
+      final response = await SupabaseDB.GetMultipleRowData(
+        table: 'projects',
+        column: 'id',
+        columnValue: likedProjectIds.map((id) => id.toString()).toList(),
+      );
+      
+      if (response.isEmpty) return [];
+      return response.map<Project>((row) => Project.fromRow(row)).toList();
+    } catch (e) {
+      print('Error fetching liked projects: $e');
+      return [];
+    }
+  }
+
   static Future<void> createProject({
     required String? title,
     required String? description,
     required String? imageURL,
     required String? githubRepo,
-    required double? time,
     required int? likes,
     required DateTime? lastModified,
     required bool? awaitingReview,
@@ -34,7 +84,6 @@ class ProjectService {
         description: description,
         imageURL: imageURL,
         githubRepo: githubRepo,
-        time: time,
         likes: likes,
         lastModified: lastModified,
         awaitingReview: awaitingReview,
@@ -57,7 +106,6 @@ class ProjectService {
         description: project.description,
         imageURL: project.imageURL,
         githubRepo: project.githubRepo,
-        time: project.time,
         likes: project.likes,
         lastModified: project.lastModified,
         awaitingReview: project.awaitingReview,
