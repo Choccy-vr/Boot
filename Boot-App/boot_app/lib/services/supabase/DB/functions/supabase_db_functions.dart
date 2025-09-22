@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SupabaseDB {
+class SupabaseDBFunctions {
   static final supabase = Supabase.instance.client;
 
   static Future<void> CallDBFunction({
@@ -15,6 +15,27 @@ class SupabaseDB {
       }
     } catch (e) {
       throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
+  static Future<void> CallIncrementFunction({
+    required String table,
+    required String column,
+    required String rowID,
+    required int incrementBy,
+  }) async {
+    try {
+      await supabase.rpc(
+        'increment_field_value',
+        params: {
+          'table_name': table,
+          'field_name': column,
+          'row_id': rowID,
+          'increment_amount': incrementBy,
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to increment column: ${e.toString()}');
     }
   }
 }

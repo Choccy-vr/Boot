@@ -116,7 +116,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 const SizedBox(height: 24),
 
                 // Quick Stats
-                _buildQuickStats(colorScheme, textTheme),
+                //_buildQuickStats(colorScheme, textTheme),
               ],
             ],
           ),
@@ -487,12 +487,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: TerminalColors.cyan,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
-                  onTap: () => NavigationService.navigateTo(
-                    context: context,
-                    destination: AppDestination.profile,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  ),
+                  onTap: () {
+                    UserService.updateCurrentUser();
+                    final user = UserService.currentUser;
+                    if (user != null) {
+                      NavigationService.openProfile(user, context);
+                    }
+                  },
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
                 ),

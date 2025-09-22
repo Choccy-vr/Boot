@@ -154,7 +154,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleLikeProject() async {
     try {
       if (_isLiked) {
-        await SupabaseDB.CallDBFunction(
+        await SupabaseDBFunctions.CallDBFunction(
           functionName: 'decrement_likes',
           parameters: {'project_id': _project.id},
         );
@@ -171,7 +171,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
         );
       } else {
-        await SupabaseDB.CallDBFunction(
+        await SupabaseDBFunctions.CallDBFunction(
           functionName: 'increment_likes',
           parameters: {'project_id': _project.id},
         );
@@ -907,6 +907,63 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     return _DevlogMediaViewer(mediaUrls: mediaUrls, colorScheme: colorScheme);
   }
 
+  Widget _buildDevlogItem(
+    Devlog devlog,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  devlog.title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                timeAgoSinceDate(devlog.createdAt),
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            devlog.description,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface,
+              height: 1.5,
+            ),
+          ),
+          if (devlog.mediaUrls.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildDevlogMediaViewer(
+              devlog.mediaUrls,
+              colorScheme,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildDevlogDescriptionField() {
     return Expanded(
       child: Column(
@@ -1542,56 +1599,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 itemCount: _devlogs.length,
                 itemBuilder: (context, index) {
                   final devlog = _devlogs[index];
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 16),
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colorScheme.outline.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                devlog.title,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              timeAgoSinceDate(devlog.createdAt),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          devlog.description,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            height: 1.5,
-                          ),
-                        ),
-                        if (devlog.mediaUrls.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildDevlogMediaViewer(
-                            devlog.mediaUrls,
-                            colorScheme,
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
+                  return _buildDevlogItem(devlog, colorScheme, textTheme);
                 },
               ),
             ] else ...[

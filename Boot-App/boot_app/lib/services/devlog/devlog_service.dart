@@ -1,4 +1,6 @@
+import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
+import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import 'Devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
@@ -46,6 +48,12 @@ class DevlogService {
         data: {'media_urls': mediaUrls},
         column: 'id',
         value: _tempDevlog.id.toString(),
+      );
+      await SupabaseDBFunctions.CallIncrementFunction(
+        table: 'users',
+        column: 'total_devlogs',
+        rowID: UserService.currentUser?.id ?? '',
+        incrementBy: 1,
       );
       return Devlog.fromJson(updatedDevlog.first);
     } catch (e) {

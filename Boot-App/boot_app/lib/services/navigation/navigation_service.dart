@@ -1,4 +1,6 @@
+import 'package:boot_app/pages/Profile/Profile_Page.dart';
 import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/users/Boot_User.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import '/animations/Shared_Axis.dart';
@@ -136,6 +138,13 @@ class NavigationService {
       MaterialPageRoute(
         builder: (context) => ProjectDetailPage(project: project),
       ),
+    );
+  }
+
+  static void openProfile(Boot_User user, BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProfilePage(user: user)),
     );
   }
 }

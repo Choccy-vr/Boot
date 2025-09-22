@@ -1,3 +1,6 @@
+import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
+import 'package:flutter/material.dart';
+
 import '/services/supabase/DB/supabase_db.dart';
 import 'Boot_User.dart';
 
@@ -64,5 +67,30 @@ class UserService {
     }
 
     currentUser = user;
+  }
+
+  static Future<String> uploadProfilePic(BuildContext context) async {
+    String supabasePrivateUrl =
+        await SupabaseStorageService.uploadFileWithPicker(
+          bucket: 'Profiles',
+          supabasePath: '${UserService.currentUser?.id}/profile_pic',
+        );
+
+    String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
+      bucket: 'Profiles',
+      supabasePath: supabasePrivateUrl,
+    );
+
+    if (supabasePublicUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to get public url for profile picture')),
+      );
+      return '';
+    }
+
+    UserService.currentUser?.profilePicture = supabasePublicUrl;
+    await UserService.updateUser();
+
+    return supabasePublicUrl;
   }
 }

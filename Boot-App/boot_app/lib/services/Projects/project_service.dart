@@ -1,3 +1,5 @@
+import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
+
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/Projects/Project.dart';
 
@@ -19,11 +21,13 @@ class ProjectService {
     try {
       // Use SelectData to get all projects and sort manually
       final response = await SupabaseDB.SelectData(table: 'projects');
-      
+
       if (response.isEmpty) return [];
-      
-      final projects = response.map<Project>((row) => Project.fromRow(row)).toList();
-      
+
+      final projects = response
+          .map<Project>((row) => Project.fromRow(row))
+          .toList();
+
       // Sort by time (if available) or created_at as fallback
       projects.sort((a, b) {
         if (a.time > 0 && b.time > 0) {
@@ -31,13 +35,13 @@ class ProjectService {
         }
         return b.createdAt.compareTo(a.createdAt); // Fallback to created_at
       });
-      
+
       // Apply pagination
       final startIndex = offset;
       final endIndex = (startIndex + limit).clamp(0, projects.length);
-      
+
       if (startIndex >= projects.length) return [];
-      
+
       return projects.sublist(startIndex, endIndex);
     } catch (e) {
       print('Error fetching all projects: $e');
@@ -45,16 +49,18 @@ class ProjectService {
     }
   }
 
-  static Future<List<Project>> getLikedProjects(List<int> likedProjectIds) async {
+  static Future<List<Project>> getLikedProjects(
+    List<int> likedProjectIds,
+  ) async {
     if (likedProjectIds.isEmpty) return [];
-    
+
     try {
       final response = await SupabaseDB.GetMultipleRowData(
         table: 'projects',
         column: 'id',
         columnValue: likedProjectIds.map((id) => id.toString()).toList(),
       );
-      
+
       if (response.isEmpty) return [];
       return response.map<Project>((row) => Project.fromRow(row)).toList();
     } catch (e) {
@@ -93,6 +99,12 @@ class ProjectService {
         hackatimeProjects: hackatimeProjects,
         owner: owner,
       ),
+    );
+    await SupabaseDBFunctions.CallIncrementFunction(
+      table: 'users',
+      column: 'project_count',
+      rowID: owner!,
+      incrementBy: 1,
     );
   }
 
