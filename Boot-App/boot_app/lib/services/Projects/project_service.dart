@@ -1,4 +1,6 @@
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
+import 'package:boot_app/theme/terminal_theme.dart';
+import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/Projects/Project.dart';
@@ -69,6 +71,19 @@ class ProjectService {
     }
   }
 
+  static Future<Project?> getProjectById(int projectId) async {
+    try {
+      final response = await SupabaseDB.GetRowData(
+        table: 'projects',
+        rowID: projectId,
+      );
+      return Project.fromRow(response);
+    } catch (e) {
+      print('Error fetching project by ID $projectId: $e');
+      return null;
+    }
+  }
+
   static Future<void> createProject({
     required String? title,
     required String? description,
@@ -127,5 +142,36 @@ class ProjectService {
         hackatimeProjects: project.hackatimeProjects,
       ),
     );
+  }
+
+  static Future<void> updateStatus({
+    required int projectId,
+    required String newStatus,
+  }) async {
+    await getProjectById(projectId).then((project) async {
+      if (project != null) {
+        project.status = newStatus;
+        await updateProject(project);
+      } else {
+        throw Exception('Project with ID $projectId not found');
+      }
+    });
+  }
+
+  static Color getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'building':
+        return TerminalColors.yellow;
+      case 'voting':
+        return TerminalColors.green;
+      case 'error':
+        return TerminalColors.red;
+      case 'shipped / awaiting review':
+        return TerminalColors.cyan;
+      case 'shipped':
+        return TerminalColors.magenta;
+      default:
+        return TerminalColors.gray;
+    }
   }
 }

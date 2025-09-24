@@ -47,21 +47,6 @@ class _ProjectsPageState extends State<ProjectsPage>
   bool _isGridView = true;
   List<Project> _projects = [];
 
-  Color _getStatusColor(String status, ColorScheme colorScheme) {
-    switch (status.toLowerCase()) {
-      case 'building':
-        return TerminalColors.yellow;
-      case 'reviewing':
-        return TerminalColors.cyan;
-      case 'voting':
-        return TerminalColors.green;
-      case 'error':
-        return TerminalColors.red;
-      default:
-        return colorScheme.onSurfaceVariant;
-    }
-  }
-
   void _openProject(Project project) {
     NavigationService.openProject(project, context);
   }
@@ -253,20 +238,19 @@ class _ProjectsPageState extends State<ProjectsPage>
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(
+                      color: ProjectService.getStatusColor(
                         project.status,
-                        colorScheme,
                       ).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: _getStatusColor(project.status, colorScheme),
+                        color: ProjectService.getStatusColor(project.status),
                         width: 1,
                       ),
                     ),
                     child: Text(
                       project.status,
                       style: textTheme.bodySmall?.copyWith(
-                        color: _getStatusColor(project.status, colorScheme),
+                        color: ProjectService.getStatusColor(project.status),
                         fontSize: 10,
                       ),
                     ),
@@ -338,15 +322,13 @@ class _ProjectsPageState extends State<ProjectsPage>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(
+                            color: ProjectService.getStatusColor(
                               project.status,
-                              colorScheme,
                             ).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: _getStatusColor(
+                              color: ProjectService.getStatusColor(
                                 project.status,
-                                colorScheme,
                               ),
                               width: 1,
                             ),
@@ -354,9 +336,8 @@ class _ProjectsPageState extends State<ProjectsPage>
                           child: Text(
                             project.status,
                             style: textTheme.bodySmall?.copyWith(
-                              color: _getStatusColor(
+                              color: ProjectService.getStatusColor(
                                 project.status,
-                                colorScheme,
                               ),
                             ),
                           ),

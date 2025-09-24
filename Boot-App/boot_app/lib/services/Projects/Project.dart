@@ -3,8 +3,6 @@ class Project {
   String description;
   String imageURL;
   String githubRepo;
-  double time;
-  String readableTime;
   int likes;
   final String owner;
   final DateTime createdAt;
@@ -15,6 +13,10 @@ class Project {
   final int id;
   String status;
   String hackatimeProjects;
+  double timeDevlogs;
+  //not in db
+  String readableTime;
+  double time;
 
   Project({
     required this.title,
@@ -23,8 +25,6 @@ class Project {
     required this.lastModified,
     required this.imageURL,
     required this.githubRepo,
-    required this.time,
-    required this.readableTime,
     required this.likes,
     required this.owner,
     required this.createdAt,
@@ -33,6 +33,9 @@ class Project {
     required this.id,
     required this.status,
     required this.hackatimeProjects,
+    required this.timeDevlogs,
+    this.readableTime = '0s',
+    required this.time,
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -42,7 +45,6 @@ class Project {
       description: row['description'] ?? 'No description provided',
       imageURL: row['image_url'] ?? '',
       githubRepo: row['github_repo'] ?? '',
-      time: 0,
       likes: row['total_likes'] ?? 0,
       owner: row['owner'] ?? 'unknown',
       createdAt: DateTime.parse(row['created_at'] ?? DateTime.now().toString()),
@@ -54,7 +56,9 @@ class Project {
       status: row['status'] ?? 'unknown',
       reviewed: row['reviewed'] ?? false,
       hackatimeProjects: row['hackatime_projects'] ?? '',
-      readableTime: '0m',
+      timeDevlogs: row['total_time_devlogs'] ?? 0.0,
+      readableTime: '0s',
+      time: 0.0,
     );
   }
   static Map<String, dynamic> toRow({
@@ -70,6 +74,7 @@ class Project {
     bool? reviewed,
     String? hackatimeProjects,
     String? owner,
+    double? timeDevlogs,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -88,6 +93,7 @@ class Project {
       map['hackatime_projects'] = hackatimeProjects;
     }
     if (owner != null) map['owner'] = owner;
+    if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
     return map;
   }
 }

@@ -5,6 +5,8 @@ class Devlog {
   String title;
   String description;
   List<String> mediaUrls;
+  final double time;
+  final String timeReadable;
 
   Devlog({
     required this.id,
@@ -13,6 +15,8 @@ class Devlog {
     required this.title,
     required this.description,
     this.mediaUrls = const [],
+    required this.time,
+    required this.timeReadable,
   });
 
   factory Devlog.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class Devlog {
               ?.map((url) => url.toString())
               .toList() ??
           [],
+      time: (json['time_tracked'] as num?)?.toDouble() ?? 0.0,
+      timeReadable: (json['time_tracked_readable'])?.toString() ?? '',
     );
   }
 }

@@ -16,7 +16,7 @@ class ExplorePage extends StatefulWidget {
 class _ExplorePageState extends State<ExplorePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // All Projects tab state
   List<Project> _allProjects = [];
   bool _isLoadingAllProjects = false;
@@ -24,7 +24,7 @@ class _ExplorePageState extends State<ExplorePage>
   int _currentPage = 0;
   final int _pageSize = 20;
   final ScrollController _allProjectsScrollController = ScrollController();
-  
+
   // Liked Projects tab state
   List<Project> _likedProjects = [];
   bool _isLoadingLikedProjects = false;
@@ -35,7 +35,7 @@ class _ExplorePageState extends State<ExplorePage>
     _tabController = TabController(length: 2, vsync: this);
     _loadAllProjects();
     _loadLikedProjects();
-    
+
     _allProjectsScrollController.addListener(() {
       if (_allProjectsScrollController.position.pixels >=
           _allProjectsScrollController.position.maxScrollExtent - 200) {
@@ -53,7 +53,7 @@ class _ExplorePageState extends State<ExplorePage>
 
   Future<void> _loadAllProjects() async {
     if (_isLoadingAllProjects) return;
-    
+
     setState(() {
       _isLoadingAllProjects = true;
     });
@@ -63,7 +63,7 @@ class _ExplorePageState extends State<ExplorePage>
         limit: _pageSize,
         offset: 0,
       );
-      
+
       setState(() {
         _allProjects = projects;
         _currentPage = 0;
@@ -80,7 +80,7 @@ class _ExplorePageState extends State<ExplorePage>
 
   Future<void> _loadMoreProjects() async {
     if (_isLoadingAllProjects || !_hasMoreProjects) return;
-    
+
     setState(() {
       _isLoadingAllProjects = true;
     });
@@ -91,7 +91,7 @@ class _ExplorePageState extends State<ExplorePage>
         limit: _pageSize,
         offset: nextPage * _pageSize,
       );
-      
+
       setState(() {
         _allProjects.addAll(projects);
         _currentPage = nextPage;
@@ -108,7 +108,7 @@ class _ExplorePageState extends State<ExplorePage>
 
   Future<void> _loadLikedProjects() async {
     if (_isLoadingLikedProjects) return;
-    
+
     setState(() {
       _isLoadingLikedProjects = true;
     });
@@ -116,7 +116,7 @@ class _ExplorePageState extends State<ExplorePage>
     try {
       final likedProjectIds = UserService.currentUser?.likedProjects ?? [];
       final projects = await ProjectService.getLikedProjects(likedProjectIds);
-      
+
       setState(() {
         _likedProjects = projects;
         _isLoadingLikedProjects = false;
@@ -172,11 +172,7 @@ class _ExplorePageState extends State<ExplorePage>
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(
-              Symbols.explore,
-              color: colorScheme.primary,
-              size: 28,
-            ),
+            Icon(Symbols.explore, color: colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Text(
               'Explore Projects',
@@ -192,14 +188,8 @@ class _ExplorePageState extends State<ExplorePage>
         bottom: TabBar(
           controller: _tabController,
           tabs: [
-            Tab(
-              icon: Icon(Symbols.public),
-              text: 'All Projects',
-            ),
-            Tab(
-              icon: Icon(Symbols.favorite),
-              text: 'Liked Projects',
-            ),
+            Tab(icon: Icon(Symbols.public), text: 'All Projects'),
+            Tab(icon: Icon(Symbols.favorite), text: 'Liked Projects'),
           ],
           labelColor: colorScheme.primary,
           unselectedLabelColor: colorScheme.onSurfaceVariant,
@@ -236,37 +226,37 @@ class _ExplorePageState extends State<ExplorePage>
               ),
             )
           : _allProjects.isEmpty
-              ? _buildEmptyState(
-                  icon: Symbols.search_off,
-                  title: 'No Projects Found',
-                  subtitle: 'There are no projects to explore yet.',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                )
-              : ListView.builder(
-                  controller: _allProjectsScrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _allProjects.length) {
-                      // Loading indicator for pagination
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                      );
-                    }
-                    
-                    return _buildProjectCard(
-                      _allProjects[index],
-                      colorScheme,
-                      textTheme,
-                    );
-                  },
-                ),
+          ? _buildEmptyState(
+              icon: Symbols.search_off,
+              title: 'No Projects Found',
+              subtitle: 'There are no projects to explore yet.',
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            )
+          : ListView.builder(
+              controller: _allProjectsScrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _allProjects.length) {
+                  // Loading indicator for pagination
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  );
+                }
+
+                return _buildProjectCard(
+                  _allProjects[index],
+                  colorScheme,
+                  textTheme,
+                );
+              },
+            ),
     );
   }
 
@@ -290,24 +280,24 @@ class _ExplorePageState extends State<ExplorePage>
               ),
             )
           : _likedProjects.isEmpty
-              ? _buildEmptyState(
-                  icon: Symbols.favorite_border,
-                  title: 'No Liked Projects',
-                  subtitle: 'Projects you like will appear here.',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _likedProjects.length,
-                  itemBuilder: (context, index) {
-                    return _buildProjectCard(
-                      _likedProjects[index],
-                      colorScheme,
-                      textTheme,
-                    );
-                  },
-                ),
+          ? _buildEmptyState(
+              icon: Symbols.favorite_border,
+              title: 'No Liked Projects',
+              subtitle: 'Projects you like will appear here.',
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _likedProjects.length,
+              itemBuilder: (context, index) {
+                return _buildProjectCard(
+                  _likedProjects[index],
+                  colorScheme,
+                  textTheme,
+                );
+              },
+            ),
     );
   }
 
@@ -324,11 +314,7 @@ class _ExplorePageState extends State<ExplorePage>
         Center(
           child: Column(
             children: [
-              Icon(
-                icon,
-                size: 72,
-                color: colorScheme.onSurfaceVariant,
-              ),
+              Icon(icon, size: 72, color: colorScheme.onSurfaceVariant),
               const SizedBox(height: 24),
               Text(
                 title,
@@ -448,16 +434,14 @@ class _ExplorePageState extends State<ExplorePage>
                   const SizedBox(width: 8),
                   _buildInfoChip(
                     icon: Symbols.schedule,
-                    label: project.time > 0 ? '${project.time.toStringAsFixed(1)}h' : '0h',
+                    label: project.time > 0
+                        ? '${project.time.toStringAsFixed(1)}h'
+                        : '0h',
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
                   const SizedBox(width: 8),
-                  _buildStatusChip(
-                    project.status,
-                    colorScheme,
-                    textTheme,
-                  ),
+                  _buildStatusChip(project.status, colorScheme, textTheme),
                   const Spacer(),
                   Text(
                     _timeAgoSinceDate(project.createdAt),
@@ -485,18 +469,12 @@ class _ExplorePageState extends State<ExplorePage>
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withOpacity(0.3),
-        ),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text(
             label,
@@ -516,31 +494,14 @@ class _ExplorePageState extends State<ExplorePage>
     TextTheme textTheme,
   ) {
     Color statusColor;
-    switch (status.toLowerCase()) {
-      case 'building':
-        statusColor = TerminalColors.yellow;
-        break;
-      case 'reviewing':
-        statusColor = TerminalColors.cyan;
-        break;
-      case 'voting':
-        statusColor = TerminalColors.green;
-        break;
-      case 'error':
-        statusColor = TerminalColors.red;
-        break;
-      default:
-        statusColor = colorScheme.onSurfaceVariant;
-    }
+    statusColor = ProjectService.getStatusColor(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: statusColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: statusColor.withOpacity(0.3),
-        ),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
       ),
       child: Text(
         status,
@@ -556,7 +517,7 @@ class _ExplorePageState extends State<ExplorePage>
     final now = DateTime.now().toUtc();
     final utcDate = date.isUtc ? date : date.toUtc();
     final difference = now.difference(utcDate);
-    
+
     if (difference.inSeconds < 60) {
       return 'just now';
     } else if (difference.inMinutes < 60) {

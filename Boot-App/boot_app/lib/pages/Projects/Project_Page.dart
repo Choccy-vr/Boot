@@ -1,6 +1,7 @@
 //Packages
 import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
+import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -136,21 +137,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
-  Color _getStatusColor(String status, ColorScheme colorScheme) {
-    switch (status.toLowerCase()) {
-      case 'building':
-        return TerminalColors.yellow;
-      case 'reviewing':
-        return TerminalColors.cyan;
-      case 'voting':
-        return TerminalColors.green;
-      case 'error':
-        return TerminalColors.red;
-      default:
-        return colorScheme.onSurfaceVariant;
-    }
-  }
-
   Future<void> _handleLikeProject() async {
     try {
       if (_isLiked) {
@@ -251,6 +237,235 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _closeDevlogEditor();
   }
 
+  bool _isOwner() {
+    return UserService.currentUser?.id == _project.owner;
+  }
+
+  Future<void> _showShipConfirmationDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Symbols.directions_boat, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Ship Your Project'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Before shipping your project, please ensure:',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildRequirementItem(
+                  'Project is in a working/testable state',
+                  colorScheme,
+                  textTheme,
+                ),
+                _buildRequirementItem(
+                  'Added significant features or many smaller improvements',
+                  colorScheme,
+                  textTheme,
+                ),
+                _buildRequirementItem(
+                  'Ready for community review',
+                  colorScheme,
+                  textTheme,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(0.5),
+                    ),
+                  ),
+                  child: Text(
+                    'Once shipped, your project will be submitted for community review and voting.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleShipProject();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Symbols.directions_boat, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Ship It!'),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRequirementItem(
+    String text,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Symbols.check_circle, color: colorScheme.primary, size: 16),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: textTheme.bodyMedium)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleShipProject() async {
+    try {
+      await ShipService.addShip(
+        project: _project.id,
+        time: _project.timeDevlogs,
+      );
+
+      _showShipSuccessDialog();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to ship project: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showShipSuccessDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Symbols.celebration, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Congratulations!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Symbols.rocket_launch,
+                      size: 48,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Your project has been shipped!',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your project is now available for the community to review and vote on. Good luck!',
+                      style: textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Reload the page by refreshing the project data
+                _reloadProjectData();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+              ),
+              child: Text('Awesome!'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _reloadProjectData() {
+    // Refresh the project data to reflect the new status
+    setState(() {
+      _project.status = 'Shipped / Awaiting Review';
+    });
+  }
+
+  String _getMediaTypeFromPath(String filePath) {
+    final extension = filePath.toLowerCase().split('.').last;
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return 'image';
+      case 'mp4':
+        return 'video';
+      case 'gif':
+        return 'gif';
+      default:
+        return 'unknown';
+    }
+  }
+
   Future<void> _showStatusEditDialog() async {
     final predefinedStatuses = ['building', 'reviewing', 'voting', 'error'];
     String? selectedStatus;
@@ -317,9 +532,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? _getStatusColor(
+                                  ? ProjectService.getStatusColor(
                                       status,
-                                      Theme.of(context).colorScheme,
                                     ).withOpacity(0.2)
                                   : Theme.of(
                                       context,
@@ -327,10 +541,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
-                                    ? _getStatusColor(
-                                        status,
-                                        Theme.of(context).colorScheme,
-                                      )
+                                    ? ProjectService.getStatusColor(status)
                                     : Theme.of(
                                         context,
                                       ).colorScheme.outline.withOpacity(0.3),
@@ -342,10 +553,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: isSelected
-                                        ? _getStatusColor(
-                                            status,
-                                            Theme.of(context).colorScheme,
-                                          )
+                                        ? ProjectService.getStatusColor(status)
                                         : Theme.of(
                                             context,
                                           ).colorScheme.onSurface,
@@ -448,26 +656,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       } catch (e) {
         _showErrorSnackbar(context, 'Failed to update status: $e');
       }
-    }
-  }
-
-  bool _isOwner() {
-    return UserService.currentUser?.id == _project.owner;
-  }
-
-  String _getMediaTypeFromPath(String filePath) {
-    final extension = filePath.toLowerCase().split('.').last;
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-        return 'image';
-      case 'mp4':
-        return 'video';
-      case 'gif':
-        return 'gif';
-      default:
-        return 'unknown';
     }
   }
 
@@ -907,63 +1095,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     return _DevlogMediaViewer(mediaUrls: mediaUrls, colorScheme: colorScheme);
   }
 
-  Widget _buildDevlogItem(
-    Devlog devlog,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  devlog.title,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                timeAgoSinceDate(devlog.createdAt),
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            devlog.description,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface,
-              height: 1.5,
-            ),
-          ),
-          if (devlog.mediaUrls.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildDevlogMediaViewer(
-              devlog.mediaUrls,
-              colorScheme,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildDevlogDescriptionField() {
     return Expanded(
       child: Column(
@@ -1360,25 +1491,25 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(
+                      color: ProjectService.getStatusColor(
                         _project.status,
-                        colorScheme,
                       ).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _getStatusColor(_project.status, colorScheme),
+                        color: ProjectService.getStatusColor(_project.status),
                         width: 1,
                       ),
                     ),
                     child: Text(
                       _project.status,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: _getStatusColor(_project.status, colorScheme),
+                        color: ProjectService.getStatusColor(_project.status),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  /*if (_isOwner()) ...[
+                  if (UserService.currentUser?.id ==
+                      '7f18c57b-ca6f-4812-aac7-a2fb6cc10362') ...[
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: _showStatusEditDialog,
@@ -1396,7 +1527,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ),
                       ),
                     ),
-                  ],*/
+                  ],
                 ],
               ),
             ],
@@ -1546,8 +1677,82 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             _buildProjectImage(colorScheme),
             const SizedBox(height: 24),
             _buildProjectInfo(colorScheme, textTheme),
+            if (_isOwner()) ...[
+              const SizedBox(height: 16),
+              _buildOwnerActions(colorScheme, textTheme),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOwnerActions(ColorScheme colorScheme, TextTheme textTheme) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: _project.status.toLowerCase().contains('shipped')
+                        ? null
+                        : () => _showShipConfirmationDialog(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _project.status.toLowerCase().contains('shipped')
+                          ? colorScheme.outline
+                          : null,
+                      foregroundColor:
+                          _project.status.toLowerCase().contains('shipped')
+                          ? colorScheme.onSurfaceVariant
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Symbols.directions_boat, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          _project.status.toLowerCase().contains('shipped')
+                              ? 'Already Shipped'
+                              : 'Ship Project',
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_project.status.toLowerCase().contains('shipped')) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message:
+                          'You cannot ship again until your first ship is completed',
+                      child: Icon(
+                        Symbols.info,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              ElevatedButton(
+                onPressed: () {},
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.error,
+                  foregroundColor: colorScheme.onError,
+                ),
+                child: Text('Delete Project'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1599,7 +1804,56 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 itemCount: _devlogs.length,
                 itemBuilder: (context, index) {
                   final devlog = _devlogs[index];
-                  return _buildDevlogItem(devlog, colorScheme, textTheme);
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 16),
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.outline.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                devlog.title,
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              timeAgoSinceDate(devlog.createdAt),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          devlog.description,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            height: 1.5,
+                          ),
+                        ),
+                        if (devlog.mediaUrls.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _buildDevlogMediaViewer(
+                            devlog.mediaUrls,
+                            colorScheme,
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
                 },
               ),
             ] else ...[
