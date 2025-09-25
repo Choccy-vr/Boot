@@ -2,18 +2,18 @@
 import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
-import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/services/users/user.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 //Theme Data
-import '/theme/terminal_theme.dart';
+
 //Services
-import '/services/Projects/Project.dart';
+import '/services/Projects/project.dart';
 import '/services/Projects/Project_Service.dart';
 import '/services/supabase/storage/supabase_storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
-import '../../services/devlog/Devlog.dart';
+import '../../services/devlog/devlog.dart';
 import '/services/devlog/devlog_service.dart';
 
 class ProjectDetailPage extends StatefulWidget {
@@ -71,7 +71,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _devlogs = devlogs;
       });
     } catch (e) {
-      print('Error loading devlogs: $e');
+      // Error loading devlogs: $e
     }
   }
 
@@ -83,10 +83,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
         context: context,
       );
+      if (!mounted) return;
       setState(() {
         _project = updatedProject;
       });
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackbar(context, 'Failed to get project time');
     }
   }
@@ -140,16 +142,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleLikeProject() async {
     try {
       if (_isLiked) {
-        await SupabaseDBFunctions.CallDBFunction(
+        await SupabaseDBFunctions.callDbFunction(
           functionName: 'decrement_likes',
           parameters: {'project_id': _project.id},
         );
         UserService.currentUser?.likedProjects.remove(_project.id);
         await UserService.updateUser();
+        if (!mounted) return;
         setState(() {
           _project.likes -= 1;
           _isLiked = false;
         });
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('You unliked ${_project.title}.'),
@@ -157,19 +161,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
         );
       } else {
-        await SupabaseDBFunctions.CallDBFunction(
+        await SupabaseDBFunctions.callDbFunction(
           functionName: 'increment_likes',
           parameters: {'project_id': _project.id},
         );
-        print("before ${UserService.currentUser?.likedProjects}");
         UserService.currentUser?.likedProjects.add(_project.id);
-        print("after ${UserService.currentUser?.likedProjects}");
         await UserService.updateUser();
+        if (!mounted) return;
         setState(() {
           _project.likes += 1;
           _isLiked = true;
         });
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('You liked ${_project.title}!'),
@@ -178,14 +182,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         );
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackbar(context, 'Failed to like/unlike project: $e');
     }
   }
 
   Future<void> _handleOpenGitHubRepo() async {
-    final _url = Uri.parse(_project.githubRepo);
-    if (!await launchUrl(_url)) {
-      throw Exception('Could not launch $_url');
+    final url = Uri.parse(_project.githubRepo);
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
     }
   }
 
@@ -219,6 +224,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       setState(() {
         _isUploadingMedia = false;
       });
+      if (!mounted) return;
       // Optionally show error message
       _showErrorSnackbar(context, 'Failed to upload media: $e');
     }
@@ -288,10 +294,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.5),
+                      color: colorScheme.primary.withValues(alpha: 0.5),
                     ),
                   ),
                   child: Text(
@@ -363,6 +369,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
       _showShipSuccessDialog();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to ship project: $e'),
@@ -394,7 +401,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -534,7 +541,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                               color: isSelected
                                   ? ProjectService.getStatusColor(
                                       status,
-                                    ).withOpacity(0.2)
+                                    ).withValues(alpha: 0.2)
                                   : Theme.of(
                                       context,
                                     ).colorScheme.surfaceContainerLow,
@@ -542,9 +549,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                               border: Border.all(
                                 color: isSelected
                                     ? ProjectService.getStatusColor(status)
-                                    : Theme.of(
-                                        context,
-                                      ).colorScheme.outline.withOpacity(0.3),
+                                    : Theme.of(context).colorScheme.outline
+                                          .withValues(alpha: 0.3),
                                 width: isSelected ? 2 : 1,
                               ),
                             ),
@@ -647,6 +653,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         // Update the project in the database
         await ProjectService.updateProject(_project);
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Project status updated to "$result"'),
@@ -654,6 +661,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
         );
       } catch (e) {
+        if (!mounted) return;
         _showErrorSnackbar(context, 'Failed to update status: $e');
       }
     }
@@ -661,7 +669,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Widget _buildDevlogEditor() {
     return Container(
-      color: Colors.black.withOpacity(0.7),
+      color: Colors.black.withValues(alpha: 0.7),
       child: Center(
         child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
@@ -924,14 +932,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
               ),
             ),
             child: Stack(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Container(
+                  child: SizedBox(
                     width: double.infinity,
                     height: double.infinity,
                     child:
@@ -975,9 +985,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 ),
                           )
                         : Container(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer.withOpacity(0.3),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withValues(alpha: 0.3),
                             child: Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1040,7 +1051,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: InkWell(
@@ -1061,7 +1072,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1160,11 +1171,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         children: [
           OutlinedButton(
             onPressed: _closeDevlogEditor,
-            child: Text('Cancel'),
             style: OutlinedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               side: BorderSide(color: Theme.of(context).colorScheme.outline),
             ),
+            child: Text('Cancel'),
           ),
           SizedBox(width: 12),
           ElevatedButton.icon(
@@ -1232,6 +1243,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             bucket: 'Projects',
             supabasePath: supabasePath,
           );
+      if (!mounted) return;
       if (supabasePrivateUrl == 'User cancelled') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1245,6 +1257,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         bucket: 'Projects',
         supabasePath: supabasePrivateUrl,
       );
+      if (!mounted) return;
 
       if (supabasePublicUrl == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1258,6 +1271,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _project.imageURL = supabasePublicUrl;
       });
       ProjectService.updateProject(_project);
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1266,6 +1280,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to upload picture: $e')));
@@ -1357,7 +1372,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: InkWell(
@@ -1493,7 +1508,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     decoration: BoxDecoration(
                       color: ProjectService.getStatusColor(
                         _project.status,
-                      ).withOpacity(0.2),
+                      ).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: ProjectService.getStatusColor(_project.status),
@@ -1517,7 +1532,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       child: Container(
                         padding: EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer.withOpacity(0.5),
+                          color: colorScheme.primaryContainer.withValues(
+                            alpha: 0.5,
+                          ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
@@ -1541,7 +1558,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ),
           ),
           const SizedBox(height: 32),
-          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          Divider(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+            thickness: 1,
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1589,7 +1609,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ],
           ),
           const SizedBox(height: 8),
-          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          Divider(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+            thickness: 1,
+          ),
           const SizedBox(height: 8),
           _buildProjectStats(colorScheme, textTheme),
         ],
@@ -1635,7 +1658,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1693,7 +1716,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Divider(color: colorScheme.outline.withOpacity(0.3), thickness: 1),
+          Divider(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+            thickness: 1,
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1811,7 +1837,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       color: colorScheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: colorScheme.outline.withOpacity(0.3),
+                        color: colorScheme.outline.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Column(
@@ -1863,10 +1889,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.3),
+                      color: colorScheme.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -1924,7 +1950,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   color: colorScheme.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: colorScheme.outline.withOpacity(0.3),
+                    color: colorScheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(
@@ -1932,7 +1958,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     Icon(
                       Symbols.article,
                       size: 64,
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -1948,7 +1976,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           ? 'Start documenting your development process and share your insights'
                           : 'Check back later for development updates and insights from ${owner.isNotEmpty ? owner : 'the project owner'}',
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.8,
+                        ),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -2046,7 +2076,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: widget.colorScheme.outline.withOpacity(0.3),
+                color: widget.colorScheme.outline.withValues(alpha: 0.3),
               ),
             ),
             child: Stack(
@@ -2097,7 +2127,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
+                            color: Colors.black.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: IconButton(
@@ -2128,7 +2158,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
+                            color: Colors.black.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: IconButton(
@@ -2169,7 +2199,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                     shape: BoxShape.circle,
                     color: index == currentIndex
                         ? widget.colorScheme.primary
-                        : widget.colorScheme.outline.withOpacity(0.4),
+                        : widget.colorScheme.outline.withValues(alpha: 0.4),
                   ),
                 );
               }),

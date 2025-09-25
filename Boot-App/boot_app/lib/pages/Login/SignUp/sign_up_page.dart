@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import '../../../services/navigation/navigation_service.dart';
-import '/services/users/signup/SignUp_Service.dart';
+import '/services/users/signup/sign_up_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -206,3 +206,6 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 }
+
+
+

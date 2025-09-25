@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/supabase/auth/Auth.dart';
+import '/services/supabase/auth/auth.dart';
 import '../../services/navigation/navigation_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -186,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      await Authentication.SignIn(email, password);
+      await Authentication.signIn(email, password);
       if (!mounted) return;
       NavigationService.navigateTo(
         context: context,

@@ -1,4 +1,4 @@
-class Boot_User {
+class BootUser {
   //identifiers
   final String id;
   final String email;
@@ -22,7 +22,7 @@ class Boot_User {
   //Projects
   List<int> likedProjects;
   //constructor
-  Boot_User({
+  BootUser({
     required this.id,
     required this.email,
     required this.username,
@@ -39,7 +39,7 @@ class Boot_User {
     this.likedProjects = const [],
   });
 
-  factory Boot_User.fromJson(Map<String, dynamic> json) {
+  factory BootUser.fromJson(Map<String, dynamic> json) {
     // Handle liked projects coming from different possible keys/types
     final dynamic likedProjectsRaw = json['projects_liked'] ?? '';
 
@@ -57,7 +57,7 @@ class Boot_User {
       }
     }
 
-    return Boot_User(
+    return BootUser(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       username: json['username'] ?? '',

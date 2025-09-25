@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
-import '/services/users/signup/SignUp_Service.dart';
+import '/services/users/signup/sign_up_service.dart';
 
-class SignUp_Pass_Page extends StatefulWidget {
-  const SignUp_Pass_Page({super.key});
+class SignUpPassPage extends StatefulWidget {
+  const SignUpPassPage({super.key});
 
   @override
-  State<SignUp_Pass_Page> createState() => _SignUp_Pass_PageState();
+  State<SignUpPassPage> createState() => _SignUpPassPageState();
 }
 
-class _SignUp_Pass_PageState extends State<SignUp_Pass_Page> {
+class _SignUpPassPageState extends State<SignUpPassPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();

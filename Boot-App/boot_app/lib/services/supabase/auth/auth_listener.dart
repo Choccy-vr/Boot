@@ -1,6 +1,6 @@
 import 'supabase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'Auth.dart';
+import 'auth.dart';
 import 'dart:async';
 
 class AuthListener {
@@ -15,20 +15,20 @@ class AuthListener {
 
       switch (event) {
         case AuthChangeEvent.signedIn:
-          print('User signed in');
+          // User signed in
           break;
 
         case AuthChangeEvent.tokenRefreshed:
           if (session != null) {
-            Authentication.RefreshSession(session);
+            Authentication.refreshSession(session);
           }
           break;
 
         case AuthChangeEvent.signedOut:
-          print('User signed out or session expired');
+          // User signed out or session expired
           break;
         default:
-          print('Unknown auth event');
+          // Unknown auth event
           break;
       }
     });

@@ -4,7 +4,7 @@ class SupabaseDB {
   static final supabase = Supabase.instance.client;
 
   //Select/Get
-  static Future<List<Map<String, dynamic>>> SelectData({
+  static Future<List<Map<String, dynamic>>> selectData({
     List<String>? columns,
     required String table,
   }) async {
@@ -18,7 +18,7 @@ class SupabaseDB {
     }
   }
 
-  static Future<Map<String, dynamic>> GetDataValue({
+  static Future<Map<String, dynamic>> getDataValue({
     required String table,
     required String column,
     required dynamic value,
@@ -30,7 +30,7 @@ class SupabaseDB {
     }
   }
 
-  static Future<Map<String, dynamic>> GetRowData({
+  static Future<Map<String, dynamic>> getRowData({
     required String table,
     required dynamic rowID,
   }) async {
@@ -41,7 +41,7 @@ class SupabaseDB {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> GetMultipleRowData({
+  static Future<List<Map<String, dynamic>>> getMultipleRowData({
     required String table,
     required String column,
     required List<dynamic> columnValue,
@@ -54,7 +54,7 @@ class SupabaseDB {
   }
 
   //Insert
-  static Future<void> InsertData({
+  static Future<void> insertData({
     required String table,
     Map<String, dynamic>? data,
     List<Map<String, dynamic>>? bulkData,
@@ -78,7 +78,7 @@ class SupabaseDB {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> InsertAndReturnData({
+  static Future<List<Map<String, dynamic>>> insertAndReturnData({
     required String table,
     Map<String, dynamic>? data,
     List<Map<String, dynamic>>? bulkData,
@@ -103,7 +103,7 @@ class SupabaseDB {
   }
 
   //Update
-  static Future<void> UpdateData({
+  static Future<void> updateData({
     required String table,
     required Map<String, dynamic> data,
     required String column,
@@ -116,7 +116,7 @@ class SupabaseDB {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> UpdateAndReturnData({
+  static Future<List<Map<String, dynamic>>> updateAndReturnData({
     required String table,
     required Map<String, dynamic> data,
     required String column,
@@ -135,7 +135,7 @@ class SupabaseDB {
   }
 
   //Upsert
-  static Future<List<Map<String, dynamic>>> UpsertData({
+  static Future<List<Map<String, dynamic>>> upsertData({
     required String table,
     String? onConflict,
     bool? defaultToNull,
@@ -178,7 +178,7 @@ class SupabaseDB {
   }
 
   //Delete
-  static Future<void> DeleteData({
+  static Future<void> deleteData({
     required String table,
     required String column,
     dynamic value,
@@ -204,7 +204,7 @@ class SupabaseDB {
   }
 
   //RPC/Function calls
-  static Future<dynamic> CallDBFunction({
+  static Future<dynamic> callDbFunction({
     required String functionName,
     Map<String, dynamic>? parameters,
   }) async {

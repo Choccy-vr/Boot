@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 
 class Authentication {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  static Future<void> SignUp(String email, String password) async {
+  static Future<void> signUp(String email, String password) async {
     try {
       AuthResponse session = await SupabaseAuth.signUp(email, password);
       if (session.session == null || session.user == null) {
@@ -31,7 +31,7 @@ class Authentication {
     }
   }
 
-  static Future<void> SignIn(String email, String password) async {
+  static Future<void> signIn(String email, String password) async {
     try {
       AuthResponse session = await SupabaseAuth.signIn(email, password);
       if (session.session == null || session.user == null) {
@@ -51,7 +51,7 @@ class Authentication {
     }
   }
 
-  static Future<void> SignOut() async {
+  static Future<void> signOut() async {
     try {
       await SupabaseAuth.signOut();
       await _storage.delete(key: 'supabase_session');
@@ -61,7 +61,7 @@ class Authentication {
     }
   }
 
-  static Future<void> RefreshSession(Session session) async {
+  static Future<void> refreshSession(Session session) async {
     try {
       await _storage.write(
         key: 'supabase_session',
@@ -122,7 +122,7 @@ class Authentication {
       await UserService.setCurrentUser(response.user!.id);
       return response.session != null;
     } catch (e) {
-      print('Error restoring session: $e');
+      // Error restoring session: $e
       return false;
     }
   }

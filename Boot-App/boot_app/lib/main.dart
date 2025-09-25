@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'theme/terminal_theme.dart';
-import 'pages/Home_Page.dart';
-import 'pages/Login/Login_Page.dart';
+import 'pages/home_page.dart';
+import 'pages/Login/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'services/supabase/auth/Auth.dart';
+import 'services/supabase/auth/auth.dart';
 import 'services/supabase/auth/auth_listener.dart';
+import 'services/logger.dart';
 
 const supabaseUrl = 'https://zbtphhtuaovleoxkoemt.supabase.co';
 const supabaseKey =
@@ -12,6 +13,7 @@ const supabaseKey =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLogger.init();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   AuthListener.startListening();
   runApp(const MainApp());

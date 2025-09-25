@@ -3,11 +3,11 @@ import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
-import '/services/Projects/Project.dart';
+import '/services/Projects/project.dart';
 
 class ProjectService {
   static Future<List<Project>> getProjects(String userID) async {
-    final response = await SupabaseDB.GetMultipleRowData(
+    final response = await SupabaseDB.getMultipleRowData(
       table: 'projects',
       column: 'owner',
       columnValue: [userID],
@@ -21,8 +21,8 @@ class ProjectService {
     int offset = 0,
   }) async {
     try {
-      // Use SelectData to get all projects and sort manually
-      final response = await SupabaseDB.SelectData(table: 'projects');
+      // Use selectData to get all projects and sort manually
+      final response = await SupabaseDB.selectData(table: 'projects');
 
       if (response.isEmpty) return [];
 
@@ -46,7 +46,7 @@ class ProjectService {
 
       return projects.sublist(startIndex, endIndex);
     } catch (e) {
-      print('Error fetching all projects: $e');
+      // Error fetching all projects: $e
       return [];
     }
   }
@@ -57,7 +57,7 @@ class ProjectService {
     if (likedProjectIds.isEmpty) return [];
 
     try {
-      final response = await SupabaseDB.GetMultipleRowData(
+      final response = await SupabaseDB.getMultipleRowData(
         table: 'projects',
         column: 'id',
         columnValue: likedProjectIds.map((id) => id.toString()).toList(),
@@ -66,20 +66,20 @@ class ProjectService {
       if (response.isEmpty) return [];
       return response.map<Project>((row) => Project.fromRow(row)).toList();
     } catch (e) {
-      print('Error fetching liked projects: $e');
+      // Error fetching liked projects: $e
       return [];
     }
   }
 
   static Future<Project?> getProjectById(int projectId) async {
     try {
-      final response = await SupabaseDB.GetRowData(
+      final response = await SupabaseDB.getRowData(
         table: 'projects',
         rowID: projectId,
       );
       return Project.fromRow(response);
     } catch (e) {
-      print('Error fetching project by ID $projectId: $e');
+      // Error fetching project by ID $projectId: $e
       return null;
     }
   }
@@ -98,7 +98,7 @@ class ProjectService {
     required String? hackatimeProjects,
     required String? owner,
   }) async {
-    await SupabaseDB.InsertData(
+    await SupabaseDB.insertData(
       table: 'projects',
       data: Project.toRow(
         title: title,
@@ -115,7 +115,7 @@ class ProjectService {
         owner: owner,
       ),
     );
-    await SupabaseDBFunctions.CallIncrementFunction(
+    await SupabaseDBFunctions.callIncrementFunction(
       table: 'users',
       column: 'project_count',
       rowID: owner!,
@@ -124,7 +124,7 @@ class ProjectService {
   }
 
   static Future<void> updateProject(Project project) async {
-    await SupabaseDB.UpdateData(
+    await SupabaseDB.updateData(
       table: 'projects',
       column: 'id',
       value: project.id,

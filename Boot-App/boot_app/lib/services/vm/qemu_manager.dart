@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import '../logger.dart';
 
 class CrossPlatformQemuManager {
   Process? _currentProcess;
@@ -92,7 +93,7 @@ class CrossPlatformQemuManager {
   Future<QemuInstallationStatus> checkQemuInstallation() async {
     try {
       String executable = qemuExecutable;
-      print('Checking QEMU at: $executable');
+      AppLogger.debug('Checking QEMU at: $executable');
 
       ProcessResult result = await Process.run(executable, [
         '--version',
@@ -101,15 +102,15 @@ class CrossPlatformQemuManager {
       if (result.exitCode == 0) {
         String version = result.stdout.toString().trim();
         String versionLine = version.split('\n').first;
-        print('QEMU found: $versionLine');
+        AppLogger.info('QEMU found: $versionLine');
         return QemuInstallationStatus.installed(versionLine);
       } else {
         String error = result.stderr.toString();
-        print('QEMU version check failed: $error');
+        AppLogger.warning('QEMU version check failed: $error');
         return QemuInstallationStatus.notWorking(error);
       }
     } catch (e) {
-      print('Error checking QEMU: $e');
+      AppLogger.error('Error checking QEMU: $e');
       if (e is ProcessException) {
         if (e.errorCode == 2 || e.message.contains('not found')) {
           return QemuInstallationStatus.notFound();
@@ -163,14 +164,14 @@ Common locations:
 
     if (_currentProcess != null) {
       _lastError = 'VM already running! PID: ${_currentProcess!.pid}';
-      print(_lastError);
+      AppLogger.warning(_lastError);
       return false;
     }
 
     // Validate inputs
     if (isoPath.trim().isEmpty) {
       _lastError = 'ISO path cannot be empty';
-      print(_lastError);
+      AppLogger.warning(_lastError);
       return false;
     }
 
@@ -178,7 +179,7 @@ Common locations:
     File isoFile = File(isoPath);
     if (!await isoFile.exists()) {
       _lastError = 'ISO file not found: $isoPath';
-      print(_lastError);
+      AppLogger.warning(_lastError);
       return false;
     }
 
@@ -187,19 +188,21 @@ Common locations:
       int fileSize = await isoFile.length();
       if (fileSize == 0) {
         _lastError = 'ISO file is empty: $isoPath';
-        print(_lastError);
+        AppLogger.warning(_lastError);
         return false;
       }
-      print('ISO file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+      AppLogger.info(
+        'ISO file size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB',
+      );
     } catch (e) {
       _lastError = 'Cannot read ISO file: $e';
-      print(_lastError);
+      AppLogger.error(_lastError);
       return false;
     }
 
     // Validate QEMU executable
     String executable = qemuExecutable;
-    print('Using QEMU executable: $executable');
+    AppLogger.debug('Using QEMU executable: $executable');
 
     // Check if it's just a command name or full path
     if (!executable.contains(Platform.pathSeparator)) {
@@ -212,22 +215,22 @@ Common locations:
         );
         if (which.exitCode != 0) {
           _lastError = 'QEMU executable not found in PATH: $executable';
-          print(_lastError);
+          AppLogger.error(_lastError);
           return false;
         } else {
           String foundPath = which.stdout.toString().trim().split('\n').first;
-          print('QEMU found in PATH at: $foundPath');
+          AppLogger.info('QEMU found in PATH at: $foundPath');
         }
       } catch (e) {
         _lastError = 'Error checking QEMU in PATH: $e';
-        print(_lastError);
+        AppLogger.error(_lastError);
         return false;
       }
     } else {
       // It's a full path, check if file exists
       if (!await File(executable).exists()) {
         _lastError = 'QEMU executable not found at path: $executable';
-        print(_lastError);
+        AppLogger.error(_lastError);
         return false;
       }
     }
@@ -235,7 +238,7 @@ Common locations:
     // Validate memory format
     if (!RegExp(r'^\d+$').hasMatch(memoryMB)) {
       _lastError = 'Invalid memory format: $memoryMB (should be number only)';
-      print(_lastError);
+      AppLogger.warning(_lastError);
       return false;
     }
 
@@ -243,7 +246,7 @@ Common locations:
     if (!RegExp(r'^\d+$').hasMatch(cpuCores)) {
       _lastError =
           'Invalid CPU cores format: $cpuCores (should be number only)';
-      print(_lastError);
+      AppLogger.warning(_lastError);
       return false;
     }
 
@@ -271,12 +274,16 @@ Common locations:
         List<String> accelArgs = platformAcceleration;
         if (accelArgs.isNotEmpty) {
           args.addAll(accelArgs);
-          print('Hardware acceleration enabled: ${accelArgs.join(' ')}');
+          AppLogger.info(
+            'Hardware acceleration enabled: ${accelArgs.join(' ')}',
+          );
         } else {
-          print('Hardware acceleration not available on this platform');
+          AppLogger.info(
+            'Hardware acceleration not available on this platform',
+          );
         }
       } catch (e) {
-        print(
+        AppLogger.warning(
           'Hardware acceleration not available, using software emulation: $e',
         );
       }
@@ -288,7 +295,9 @@ Common locations:
         : displayType;
     List<String> displayArgs = getDisplayArgs(finalDisplayType);
     args.addAll(displayArgs);
-    print('Display type: $finalDisplayType (${displayArgs.join(' ')})');
+    AppLogger.debug(
+      'Display type: $finalDisplayType (${displayArgs.join(' ')})',
+    );
 
     // Add networking if requested
     if (enableNetworking) {
@@ -298,7 +307,7 @@ Common locations:
         '-netdev',
         'user,id=net0',
       ]);
-      print('Networking enabled with user-mode networking');
+      AppLogger.info('Networking enabled with user-mode networking');
     }
 
     // Add some useful defaults for OS development
@@ -317,10 +326,10 @@ Common locations:
     });
 
     try {
-      print('Starting QEMU VM...');
-      print('Executable: $executable');
-      print('Arguments: ${args.join(' ')}');
-      print('Full command: $executable ${args.join(' ')}');
+      AppLogger.info('Starting QEMU VM...');
+      AppLogger.debug('Executable: $executable');
+      AppLogger.debug('Arguments: ${args.join(' ')}');
+      AppLogger.debug('Full command: $executable ${args.join(' ')}');
 
       // Start the process
       _currentProcess = await Process.start(
@@ -330,27 +339,25 @@ Common locations:
       );
 
       // Set up stream handling
-      bool hasOutput = false;
 
       // Handle stdout (this includes monitor output)
       _currentProcess!.stdout
           .transform(utf8.decoder)
           .listen(
             (data) {
-              hasOutput = true;
               String cleanData = data.trim();
               if (cleanData.isNotEmpty) {
                 // Filter out QEMU monitor prompt
                 if (!cleanData.startsWith('(qemu)') && cleanData != 'QEMU') {
-                  print('QEMU stdout: $cleanData');
+                  AppLogger.debug('QEMU stdout: $cleanData');
                 }
               }
             },
             onError: (error) {
-              print('QEMU stdout error: $error');
+              AppLogger.warning('QEMU stdout error: $error');
             },
             onDone: () {
-              print('QEMU stdout stream closed');
+              AppLogger.debug('QEMU stdout stream closed');
             },
           );
 
@@ -359,10 +366,9 @@ Common locations:
           .transform(utf8.decoder)
           .listen(
             (data) {
-              hasOutput = true;
               String cleanData = data.trim();
               if (cleanData.isNotEmpty) {
-                print('QEMU stderr: $cleanData');
+                AppLogger.debug('QEMU stderr: $cleanData');
                 // Capture error for user feedback
                 if (_lastError.isEmpty && cleanData.contains('error')) {
                   _lastError = cleanData;
@@ -370,20 +376,20 @@ Common locations:
               }
             },
             onError: (error) {
-              print('QEMU stderr error: $error');
+              AppLogger.warning('QEMU stderr error: $error');
             },
             onDone: () {
-              print('QEMU stderr stream closed');
+              AppLogger.debug('QEMU stderr stream closed');
             },
           );
 
       // Handle process exit
       _currentProcess!.exitCode.then((exitCode) {
-        print('QEMU process exited with code: $exitCode');
+        AppLogger.info('QEMU process exited with code: $exitCode');
         if (exitCode == 0) {
-          print('VM shut down normally');
+          AppLogger.info('VM shut down normally');
         } else {
-          print('VM exited with error code: $exitCode');
+          AppLogger.warning('VM exited with error code: $exitCode');
           if (_lastError.isEmpty) {
             _lastError = 'VM exited with error code: $exitCode';
           }
@@ -398,10 +404,10 @@ Common locations:
       try {
         // Try to get the PID - if this throws, process has died
         int pid = _currentProcess!.pid;
-        print('QEMU VM started successfully with PID: $pid');
+        AppLogger.info('QEMU VM started successfully with PID: $pid');
         return true;
       } catch (e) {
-        print('QEMU process died immediately: $e');
+        AppLogger.error('QEMU process died immediately: $e');
         if (_lastError.isEmpty) {
           _lastError = 'QEMU process crashed on startup: $e';
         }
@@ -410,7 +416,7 @@ Common locations:
       }
     } catch (e) {
       _lastError = 'Failed to start QEMU process: $e';
-      print(_lastError);
+      AppLogger.error(_lastError);
       _currentProcess = null;
       return false;
     }
@@ -419,39 +425,39 @@ Common locations:
   // Stop the VM gracefully - FIXED VERSION
   Future<bool> stopVM() async {
     if (_currentProcess == null) {
-      print('No VM is currently running');
+      AppLogger.info('No VM is currently running');
       return false;
     }
 
     try {
       int pid = _currentProcess!.pid;
-      print('Stopping QEMU VM (PID: $pid)...');
+      AppLogger.info('Stopping QEMU VM (PID: $pid)...');
 
       // Method 1: Send 'quit' command to QEMU monitor
       try {
-        print('Sending quit command to QEMU monitor...');
+        AppLogger.debug('Sending quit command to QEMU monitor...');
         _currentProcess!.stdin.writeln('quit');
         await _currentProcess!.stdin.flush();
-        print('Quit command sent to QEMU monitor');
+        AppLogger.debug('Quit command sent to QEMU monitor');
 
         // Wait for graceful shutdown
-        print('Waiting for VM to shut down gracefully...');
+        AppLogger.debug('Waiting for VM to shut down gracefully...');
         int? exitCode = await _currentProcess!.exitCode.timeout(
           Duration(seconds: 5),
           onTimeout: () => -1,
         );
 
-        print('VM shut down gracefully with exit code: $exitCode');
+        AppLogger.info('VM shut down gracefully with exit code: $exitCode');
         _currentProcess = null;
         return true;
       } catch (e) {
-        print('Monitor quit command failed: $e');
+        AppLogger.warning('Monitor quit command failed: $e');
       }
 
       // Method 2: Try system_powerdown command
       if (_currentProcess != null) {
         try {
-          print('Trying system_powerdown command...');
+          AppLogger.debug('Trying system_powerdown command...');
           _currentProcess!.stdin.writeln('system_powerdown');
           await _currentProcess!.stdin.flush();
 
@@ -461,18 +467,18 @@ Common locations:
             onTimeout: () => -1,
           );
 
-          print('VM powered down with exit code: $exitCode');
+          AppLogger.info('VM powered down with exit code: $exitCode');
           _currentProcess = null;
           return true;
         } catch (e) {
-          print('Powerdown command failed: $e');
+          AppLogger.warning('Powerdown command failed: $e');
         }
       }
 
       // Method 3: Close stdin to signal shutdown
       if (_currentProcess != null) {
         try {
-          print('Closing stdin to signal shutdown...');
+          AppLogger.debug('Closing stdin to signal shutdown...');
           await _currentProcess!.stdin.close();
 
           // Wait for shutdown
@@ -481,20 +487,22 @@ Common locations:
             onTimeout: () => -1,
           );
 
-          print('VM shut down after stdin close with exit code: $exitCode');
+          AppLogger.info(
+            'VM shut down after stdin close with exit code: $exitCode',
+          );
           _currentProcess = null;
           return true;
         } catch (e) {
-          print('Stdin close failed: $e');
+          AppLogger.warning('Stdin close failed: $e');
         }
       }
 
       // Method 4: Send SIGTERM
       if (_currentProcess != null) {
         try {
-          print('VM still running, sending SIGTERM...');
+          AppLogger.info('VM still running, sending SIGTERM...');
           bool killed = _currentProcess!.kill(ProcessSignal.sigterm);
-          print('SIGTERM sent: $killed');
+          AppLogger.debug('SIGTERM sent: $killed');
 
           if (killed) {
             // Wait for process to exit
@@ -503,21 +511,21 @@ Common locations:
               onTimeout: () => -1,
             );
 
-            print('VM terminated with SIGTERM, exit code: $exitCode');
+            AppLogger.info('VM terminated with SIGTERM, exit code: $exitCode');
             _currentProcess = null;
             return true;
           }
         } catch (e) {
-          print('SIGTERM failed: $e');
+          AppLogger.warning('SIGTERM failed: $e');
         }
       }
 
       // Method 5: Force kill with SIGKILL (last resort)
       if (_currentProcess != null) {
         try {
-          print('VM still running, using SIGKILL (force kill)...');
+          AppLogger.warning('VM still running, using SIGKILL (force kill)...');
           bool killed = _currentProcess!.kill(ProcessSignal.sigkill);
-          print('SIGKILL sent: $killed');
+          AppLogger.debug('SIGKILL sent: $killed');
 
           if (killed) {
             // Wait for process to be killed
@@ -525,22 +533,24 @@ Common locations:
               int exitCode = await _currentProcess!.exitCode.timeout(
                 Duration(seconds: 2),
               );
-              print('VM force killed, exit code: $exitCode');
+              AppLogger.info('VM force killed, exit code: $exitCode');
             } catch (e) {
-              print('Force kill timeout, but process should be dead: $e');
+              AppLogger.warning(
+                'Force kill timeout, but process should be dead: $e',
+              );
             }
           }
         } catch (e) {
-          print('SIGKILL failed: $e');
+          AppLogger.warning('SIGKILL failed: $e');
         }
       }
 
       // Clean up regardless
       _currentProcess = null;
-      print('VM stop procedure completed');
+      AppLogger.info('VM stop procedure completed');
       return true;
     } catch (e) {
-      print('Error during VM stop procedure: $e');
+      AppLogger.error('Error during VM stop procedure: $e');
       _currentProcess = null;
       return false;
     }
@@ -549,28 +559,28 @@ Common locations:
   // Alternative stop method for troubleshooting
   Future<bool> forceStopVM() async {
     if (_currentProcess == null) {
-      print('No VM is currently running');
+      AppLogger.info('No VM is currently running');
       return false;
     }
 
     try {
       int pid = _currentProcess!.pid;
-      print('Force stopping QEMU VM (PID: $pid)...');
+      AppLogger.info('Force stopping QEMU VM (PID: $pid)...');
 
       // Skip graceful shutdown and go straight to SIGKILL
       bool killed = _currentProcess!.kill(ProcessSignal.sigkill);
-      print('SIGKILL sent: $killed');
+      AppLogger.debug('SIGKILL sent: $killed');
 
       if (killed) {
         try {
           int exitCode = await _currentProcess!.exitCode.timeout(
             Duration(seconds: 5),
           );
-          print('VM force stopped with exit code: $exitCode');
+          AppLogger.info('VM force stopped with exit code: $exitCode');
           _currentProcess = null;
           return true;
         } catch (e) {
-          print('Timeout waiting for force stop: $e');
+          AppLogger.warning('Timeout waiting for force stop: $e');
           _currentProcess = null;
           return true; // Assume it worked
         }
@@ -578,7 +588,7 @@ Common locations:
 
       return false;
     } catch (e) {
-      print('Error force stopping VM: $e');
+      AppLogger.error('Error force stopping VM: $e');
       _currentProcess = null;
       return false;
     }

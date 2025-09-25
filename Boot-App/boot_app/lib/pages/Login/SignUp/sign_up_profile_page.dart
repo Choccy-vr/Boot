@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
-import '/services/users/signup/SignUp_Service.dart';
+import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/supabase/Storage/supabase_storage.dart';
-import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/services/users/user.dart';
 
-class SignUp_Profile_Page extends StatefulWidget {
-  const SignUp_Profile_Page({super.key});
+class SignUpProfilePage extends StatefulWidget {
+  const SignUpProfilePage({super.key});
 
   @override
-  State<SignUp_Profile_Page> createState() => _SignUp_Profile_PageState();
+  State<SignUpProfilePage> createState() => _SignUpProfilePageState();
 }
 
-class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
+class _SignUpProfilePageState extends State<SignUpProfilePage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   bool _isLoading = false;
@@ -236,11 +236,13 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
       );
 
       if (supabasePublicUrl == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to get public url for profile picture'),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to get public url for profile picture'),
+            ),
+          );
+        }
         return;
       }
 
@@ -250,16 +252,20 @@ class _SignUp_Profile_PageState extends State<SignUp_Profile_Page> {
         _imageLoadError = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile picture uploaded successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile picture uploaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload profile picture: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload profile picture: $e')),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }

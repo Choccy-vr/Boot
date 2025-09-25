@@ -1,29 +1,29 @@
-import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/Projects/project.dart';
 import 'package:boot_app/services/Projects/Project_Service.dart';
-import 'package:boot_app/services/ships/Boot_Ship.dart';
+import 'package:boot_app/services/ships/boot_ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 
 class ShipService {
   static Future<Ship> getShipById(String id) async {
     try {
-      final response = await SupabaseDB.GetRowData(table: 'ships', rowID: id);
+      final response = await SupabaseDB.getRowData(table: 'ships', rowID: id);
       return Ship.fromJson(response);
     } catch (e) {
-      print('Error getting ship by ID $id: $e');
+      // Error getting ship by ID $id: $e
       throw Exception('Error getting ship by ID $id: $e');
     }
   }
 
   static Future<List<Ship>> getShipsByProject(String projectId) async {
     try {
-      final response = await SupabaseDB.GetMultipleRowData(
+      final response = await SupabaseDB.getMultipleRowData(
         table: 'ships',
         column: 'project',
         columnValue: [projectId],
       );
       return response.map<Ship>((row) => Ship.fromJson(row)).toList();
     } catch (e) {
-      print('Error getting ships by project $projectId: $e');
+      // Error getting ships by project $projectId: $e
       return [];
     }
   }
@@ -35,14 +35,14 @@ class ShipService {
 
     try {
       final projectIds = projects.map((p) => p.id).toList();
-      final response = await SupabaseDB.GetMultipleRowData(
+      final response = await SupabaseDB.getMultipleRowData(
         table: 'ships',
         column: 'project',
         columnValue: projectIds,
       );
       return response.map<Ship>((row) => Ship.fromJson(row)).toList();
     } catch (e) {
-      print('Error getting ships from projects: $e');
+      // Error getting ships from projects: $e
       return [];
     }
   }
@@ -53,21 +53,18 @@ class ShipService {
     bool approved = false,
   }) async {
     try {
-      final response = await SupabaseDB.InsertAndReturnData(
+      final response = await SupabaseDB.insertAndReturnData(
         table: 'ships',
         data: {'project': project, 'time': time, 'approved': approved},
       );
       final newShip = Ship.fromJson(response.first);
-      if (newShip == null) {
-        throw Exception('Error adding ship: Response parsing failed');
-      }
       await ProjectService.updateStatus(
         projectId: project,
         newStatus: 'Shipped / Awaiting Review',
       );
       return newShip;
     } catch (e) {
-      print('Error adding ship: $e');
+      // Error adding ship: $e
       throw Exception('Error adding ship: $e');
     }
   }

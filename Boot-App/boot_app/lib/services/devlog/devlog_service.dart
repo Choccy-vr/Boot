@@ -1,8 +1,7 @@
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
-import 'package:boot_app/services/users/User.dart';
-import 'package:flutter/material.dart';
-import 'Devlog.dart';
+import 'package:boot_app/services/users/user.dart';
+import 'devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -10,14 +9,14 @@ import 'dart:io';
 class DevlogService {
   static Future<List<Devlog>> getDevlogsByProjectId(String projectId) async {
     try {
-      final response = await SupabaseDB.GetMultipleRowData(
+      final response = await SupabaseDB.getMultipleRowData(
         table: 'devlogs',
         column: 'project',
         columnValue: [projectId],
       );
       return (response as List).map((json) => Devlog.fromJson(json)).toList();
     } catch (e) {
-      print('Error getting devlogs for project $projectId: $e');
+      // Error getting devlogs for project $projectId: $e
       return [];
     }
   }
@@ -29,7 +28,7 @@ class DevlogService {
     List<String> cachedMediaUrls = const [],
   }) async {
     try {
-      final response = await SupabaseDB.InsertAndReturnData(
+      final response = await SupabaseDB.insertAndReturnData(
         table: 'devlogs',
         data: {
           'project': projectID,
@@ -37,19 +36,19 @@ class DevlogService {
           'description': description,
         },
       );
-      final _tempDevlog = Devlog.fromJson(response.first);
+      final tempDevlog = Devlog.fromJson(response.first);
       final mediaUrls = await SupabaseStorageService.uploadMultipleFilesWithURL(
         filePaths: cachedMediaUrls,
         bucket: 'Devlogs',
-        supabaseDirPath: '$projectID/devlog_${_tempDevlog.id}',
+        supabaseDirPath: '$projectID/devlog_${tempDevlog.id}',
       );
-      final updatedDevlog = await SupabaseDB.UpdateAndReturnData(
+      final updatedDevlog = await SupabaseDB.updateAndReturnData(
         table: 'devlogs',
         data: {'media_urls': mediaUrls},
         column: 'id',
-        value: _tempDevlog.id.toString(),
+        value: tempDevlog.id.toString(),
       );
-      await SupabaseDBFunctions.CallIncrementFunction(
+      await SupabaseDBFunctions.callIncrementFunction(
         table: 'users',
         column: 'total_devlogs',
         rowID: UserService.currentUser?.id ?? '',
@@ -57,7 +56,7 @@ class DevlogService {
       );
       return Devlog.fromJson(updatedDevlog.first);
     } catch (e) {
-      print('Error adding devlog: $e');
+      // Error adding devlog: $e
       throw Exception('Error adding devlog: $e');
     }
   }

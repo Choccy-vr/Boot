@@ -1,9 +1,9 @@
-import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/Projects/project.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 
 class HackatimeService {
   static void _showErrorSnackbar(BuildContext? context, String message) {
@@ -53,13 +53,18 @@ class HackatimeService {
             : int.tryParse(userIdValue.toString()) ?? 0;
         UserService.updateUser();
       } else {
-        _showErrorSnackbar(
-          context,
-          _getErrorMessage(response.statusCode, 'Failed to initialize user'),
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showErrorSnackbar(
+            context,
+            _getErrorMessage(response.statusCode, 'Failed to initialize user'),
+          ),
         );
       }
     } catch (e) {
-      _showErrorSnackbar(context, 'Network error during initialization');
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) =>
+            _showErrorSnackbar(context, 'Network error during initialization'),
+      );
     }
   }
 
@@ -85,14 +90,18 @@ class HackatimeService {
           return HackatimeProject.fromJson(project);
         }).toList();
       } else {
-        _showErrorSnackbar(
-          context,
-          _getErrorMessage(response.statusCode, 'Failed to load projects'),
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showErrorSnackbar(
+            context,
+            _getErrorMessage(response.statusCode, 'Failed to load projects'),
+          ),
         );
         return [];
       }
     } catch (e) {
-      _showErrorSnackbar(context, 'Network error loading projects');
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showErrorSnackbar(context, 'Network error loading projects'),
+      );
       return [];
     }
   }
@@ -147,14 +156,18 @@ class HackatimeService {
         if (trustLevel == 'red' && userId != 4258) return true;
         return false;
       } else {
-        _showErrorSnackbar(
-          context,
-          _getErrorMessage(response.statusCode, 'Failed to check ban status'),
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showErrorSnackbar(
+            context,
+            _getErrorMessage(response.statusCode, 'Failed to check ban status'),
+          ),
         );
         return false;
       }
     } catch (e) {
-      _showErrorSnackbar(context, 'Network error checking ban status');
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showErrorSnackbar(context, 'Network error checking ban status'),
+      );
       return false;
     }
   }
@@ -172,16 +185,20 @@ class HackatimeService {
         context: context,
       );
       if (projects.isEmpty) {
-        _showErrorSnackbar(context, 'No Hackatime projects found');
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showErrorSnackbar(context, 'No Hackatime projects found'),
+        );
       }
       final hackatimeProject = await fetchProjectDetails(
         projects: projects,
         projectName: project.hackatimeProjects,
       );
       if (hackatimeProject.name == 'Not Found') {
-        _showErrorSnackbar(
-          context,
-          'Project "${project.hackatimeProjects}" not found on Hackatime',
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showErrorSnackbar(
+            context,
+            'Project "${project.hackatimeProjects}" not found on Hackatime',
+          ),
         );
       }
       project.time = hackatimeProject.totalSeconds / 3600.0;

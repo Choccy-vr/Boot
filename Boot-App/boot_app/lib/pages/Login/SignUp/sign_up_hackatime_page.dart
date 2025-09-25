@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
-import '/services/users/signup/SignUp_Service.dart';
+import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/services/users/user.dart';
 
 class SignupHackatimePage extends StatefulWidget {
   const SignupHackatimePage({super.key});
@@ -13,7 +13,7 @@ class SignupHackatimePage extends StatefulWidget {
 
 class _SignupHackatimePageState extends State<SignupHackatimePage> {
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _APIController = TextEditingController();
+  final TextEditingController _apiController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -140,7 +140,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
             child: Column(
               children: [
                 TextField(
-                  controller: _APIController,
+                  controller: _apiController,
                   enabled: !_isLoading,
                   onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   decoration: InputDecoration(
@@ -231,7 +231,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
 
   Future<void> _handleSignUp() async {
     final username = _usernameController.text.trim();
-    final apiKey = _APIController.text.trim();
+    final apiKey = _apiController.text.trim();
 
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -278,7 +278,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
   @override
   void dispose() {
     _usernameController.dispose();
-    _APIController.dispose();
+    _apiController.dispose();
     super.dispose();
   }
 }

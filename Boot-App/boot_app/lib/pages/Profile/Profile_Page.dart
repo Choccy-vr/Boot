@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/users/Boot_User.dart';
-import '/services/Projects/Project.dart';
+import '/services/users/boot_user.dart';
+import '/services/Projects/project.dart';
 import '/services/Projects/project_service.dart';
-import '/services/devlog/Devlog.dart';
+import '/services/devlog/devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/services/navigation/navigation_service.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 
 class ProfilePage extends StatefulWidget {
-  final Boot_User user;
+  final BootUser user;
 
   const ProfilePage({super.key, required this.user});
 
@@ -70,10 +70,8 @@ class _ProfilePageState extends State<ProfilePage> {
         final devlogs = await DevlogService.getDevlogsByProjectId(
           project.id.toString(),
         );
-        print('devlogs: $devlogs');
         allDevlogs.addAll(devlogs);
       }
-      print('allDevlogs: $allDevlogs');
 
       // Sort devlogs by creation date (newest first)
       allDevlogs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -699,7 +697,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: InkWell(
         onTap: () => _navigateToProjectFromDevlog(devlog),
@@ -756,7 +754,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: Center(
         child: Column(
@@ -892,10 +890,12 @@ class _ProfilePageState extends State<ProfilePage> {
   void _handleProfilePictureEdit() async {
     try {
       final profilePic = await UserService.uploadProfilePic(context);
+      if (!mounted) return;
       setState(() {
         widget.user.profilePicture = profilePic;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to upload profile picture: $e'),
@@ -935,10 +935,12 @@ class _ProfilePageState extends State<ProfilePage> {
         await UserService.updateUser();
       }
 
+      if (!mounted) return;
       setState(() {
         _isEditingBio = false;
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Bio updated successfully!'),
@@ -946,6 +948,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update bio: $e'),
@@ -958,15 +961,12 @@ class _ProfilePageState extends State<ProfilePage> {
   void _navigateToProjectFromDevlog(Devlog devlog) {
     // Find the project that contains this devlog
     try {
-      print('Looking for project with ID: ${devlog.projectId}');
-      print('Available projects: ${_userProjects.map((p) => p.id).toList()}');
-
       final project = _userProjects.firstWhere(
         (project) => project.id.toString() == devlog.projectId.toString(),
       );
       NavigationService.openProject(project, context);
     } catch (e) {
-      print('Error finding project: $e');
+      // Error finding project: $e
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

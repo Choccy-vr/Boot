@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '/theme/terminal_theme.dart';
-import '/services/Projects/Project.dart';
+import '/services/Projects/project.dart';
 import '/services/Projects/project_service.dart';
-import '/services/users/User.dart';
-import '/pages/Projects/Project_Page.dart';
+import '/services/users/user.dart';
+import '/pages/Projects/project_page.dart';
 
 class ExplorePage extends StatefulWidget {
-  const ExplorePage({Key? key}) : super(key: key);
+  const ExplorePage({super.key});
 
   @override
   State<ExplorePage> createState() => _ExplorePageState();
@@ -469,7 +468,7 @@ class _ExplorePageState extends State<ExplorePage>
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -499,9 +498,9 @@ class _ExplorePageState extends State<ExplorePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
       ),
       child: Text(
         status,

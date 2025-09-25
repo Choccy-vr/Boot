@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '/services/supabase/auth/Auth.dart';
+import '/services/supabase/auth/auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 import '/services/hackatime/hackatime_service.dart';
 
 class SignupService {
@@ -17,7 +17,7 @@ class SignupService {
 
   static Future<void> signUp(SignUpUser user) async {
     try {
-      await Authentication.SignUp(user.email, user.password);
+      await Authentication.signUp(user.email, user.password);
     } catch (e) {
       throw Exception('Sign up failed: ${e.toString()}');
     }
@@ -25,7 +25,7 @@ class SignupService {
 
   static Future<void> createProfile(SignUpUser user) async {
     try {
-      await SupabaseDB.UpdateData(
+      await SupabaseDB.updateData(
         table: 'users',
         column: 'id',
         value: UserService.currentUser?.id,

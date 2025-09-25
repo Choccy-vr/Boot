@@ -3,7 +3,7 @@ import 'dart:io';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 import '/services/hackatime/hackatime_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -36,10 +36,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _checkHackatimeBanStatus() async {
     if (UserService.currentUser?.hackatimeID != null &&
         UserService.currentUser?.hackatimeApiKey != null) {
-      print(
-        'Checking Hackatime ban status for user ID: ${UserService.currentUser!.hackatimeID}',
-      );
-      print('Using API Key: ${UserService.currentUser!.hackatimeApiKey}');
       final isBanned = await HackatimeService.isHackatimeBanned(
         userId: UserService.currentUser!.hackatimeID,
         apiKey: UserService.currentUser!.hackatimeApiKey,
@@ -50,8 +46,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           _isHackatimeBanned = isBanned;
         });
       }
-    } else {
-      print('Hackatime ID or API Key is null, skipping ban check.');
     }
   }
 
@@ -68,9 +62,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return;
     }
     if (attempt >= 10) {
-      print(
-        '[HackatimeBan] Gave up waiting for credentials (attempts=$attempt)',
-      );
+      // Gave up waiting for credentials (attempts=$attempt)
       return;
     }
     await Future.delayed(const Duration(milliseconds: 200));
@@ -133,7 +125,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: TerminalColors.red.withOpacity(0.1),
+        color: TerminalColors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: TerminalColors.red, width: 2),
       ),
@@ -563,99 +555,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickStats(ColorScheme colorScheme, TextTheme textTheme) {
-    return Card(
-      color: colorScheme.surfaceContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Symbols.analytics, color: colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Quick Stats',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    'Total Projects',
-                    '1,247',
-                    Symbols.folder,
-                    colorScheme.primary,
-                    colorScheme,
-                    textTheme,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Active Builders',
-                    '89',
-                    Symbols.group,
-                    colorScheme.secondary,
-                    colorScheme,
-                    textTheme,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Votes Cast',
-                    '5,602',
-                    Symbols.how_to_vote,
-                    Colors.purple,
-                    colorScheme,
-                    textTheme,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: textTheme.labelLarge?.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
     );
   }
 }

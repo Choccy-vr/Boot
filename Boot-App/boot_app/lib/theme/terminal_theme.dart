@@ -123,7 +123,7 @@ ThemeData buildTerminalTheme() {
             ),
           ).copyWith(
             overlayColor: WidgetStateProperty.all(
-              TerminalColors.green.withOpacity(0.1),
+              TerminalColors.green.withValues(alpha: 0.1),
             ),
           ),
     ),
@@ -142,7 +142,7 @@ ThemeData buildTerminalTheme() {
             ),
           ).copyWith(
             overlayColor: WidgetStateProperty.all(
-              TerminalColors.cyan.withOpacity(0.1),
+              TerminalColors.cyan.withValues(alpha: 0.1),
             ),
           ),
     ),
@@ -171,8 +171,8 @@ ThemeData buildTerminalTheme() {
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         foregroundColor: TerminalColors.white,
-        highlightColor: TerminalColors.green.withOpacity(0.2),
-        hoverColor: TerminalColors.green.withOpacity(0.1),
+        highlightColor: TerminalColors.green.withValues(alpha: 0.2),
+        hoverColor: TerminalColors.green.withValues(alpha: 0.1),
       ),
     ),
 
@@ -261,7 +261,7 @@ ThemeData buildTerminalTheme() {
       activeTrackColor: TerminalColors.green,
       inactiveTrackColor: TerminalColors.gray,
       thumbColor: TerminalColors.green,
-      overlayColor: TerminalColors.green.withOpacity(0.2),
+      overlayColor: TerminalColors.green.withValues(alpha: 0.2),
       valueIndicatorColor: TerminalColors.green,
       valueIndicatorTextStyle: TextStyle(
         color: TerminalColors.black,
@@ -344,7 +344,7 @@ ThemeData buildTerminalTheme() {
     // List Tile Theme
     listTileTheme: ListTileThemeData(
       tileColor: Colors.transparent,
-      selectedTileColor: TerminalColors.green.withOpacity(0.1),
+      selectedTileColor: TerminalColors.green.withValues(alpha: 0.1),
       iconColor: TerminalColors.lightGray,
       textColor: TerminalColors.white,
       selectedColor: TerminalColors.green,

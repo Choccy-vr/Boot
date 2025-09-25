@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/theme/terminal_theme.dart';
 import '/services/Projects/project_service.dart';
-import '/services/users/User.dart';
+import '/services/users/user.dart';
 import '/services/navigation/navigation_service.dart';
-import '/services/Projects/Project.dart';
+import '/services/Projects/project.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -240,7 +239,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                     decoration: BoxDecoration(
                       color: ProjectService.getStatusColor(
                         project.status,
-                      ).withOpacity(0.2),
+                      ).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: ProjectService.getStatusColor(project.status),
@@ -324,7 +323,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                           decoration: BoxDecoration(
                             color: ProjectService.getStatusColor(
                               project.status,
-                            ).withOpacity(0.2),
+                            ).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: ProjectService.getStatusColor(

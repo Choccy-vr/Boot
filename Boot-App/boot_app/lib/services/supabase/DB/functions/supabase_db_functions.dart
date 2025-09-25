@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseDBFunctions {
   static final supabase = Supabase.instance.client;
 
-  static Future<void> CallDBFunction({
+  static Future<void> callDbFunction({
     required String functionName,
     Map<String, dynamic>? parameters,
   }) async {
@@ -18,7 +18,7 @@ class SupabaseDBFunctions {
     }
   }
 
-  static Future<void> CallIncrementFunction({
+  static Future<void> callIncrementFunction({
     required String table,
     required String column,
     required String rowID,

@@ -2,18 +2,18 @@ import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
 import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
-import 'Boot_User.dart';
+import 'boot_user.dart';
 
 class UserService {
-  static Boot_User? currentUser;
+  static BootUser? currentUser;
 
-  static Future<Boot_User?> getUserById(String id) async {
+  static Future<BootUser?> getUserById(String id) async {
     try {
-      final response = await SupabaseDB.GetRowData(table: 'users', rowID: id);
-      return Boot_User.fromJson(response);
+      final response = await SupabaseDB.getRowData(table: 'users', rowID: id);
+      return BootUser.fromJson(response);
     } catch (e) {
       // User not found or other database error
-      print('Error getting user by ID $id: $e');
+      // Error getting user by ID $id: $e
       return null;
     }
   }
@@ -30,7 +30,7 @@ class UserService {
   }
 
   static Future<void> updateUser() async {
-    SupabaseDB.UpsertData(table: 'users', data: currentUser?.toJson());
+    SupabaseDB.upsertData(table: 'users', data: currentUser?.toJson());
   }
 
   static Future<void> updateCurrentUser() async {
@@ -41,7 +41,7 @@ class UserService {
     required String id,
     required String email,
   }) async {
-    await SupabaseDB.InsertData(
+    await SupabaseDB.insertData(
       table: 'users',
       data: {
         'id': id,
@@ -82,8 +82,12 @@ class UserService {
     );
 
     if (supabasePublicUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to get public url for profile picture')),
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get public url for profile picture'),
+          ),
+        ),
       );
       return '';
     }
