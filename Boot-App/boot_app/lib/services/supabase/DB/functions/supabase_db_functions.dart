@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseDBFunctions {
@@ -13,7 +14,8 @@ class SupabaseDBFunctions {
       } else {
         await supabase.rpc(functionName, params: parameters);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Function $functionName failed', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -34,7 +36,12 @@ class SupabaseDBFunctions {
           'increment_amount': incrementBy,
         },
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to increment $table.$column for row $rowID by $incrementBy',
+        e,
+        stack,
+      );
       throw Exception('Failed to increment column: ${e.toString()}');
     }
   }

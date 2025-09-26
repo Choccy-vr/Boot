@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -11,9 +12,8 @@ class UserService {
     try {
       final response = await SupabaseDB.getRowData(table: 'users', rowID: id);
       return BootUser.fromJson(response);
-    } catch (e) {
-      // User not found or other database error
-      // Error getting user by ID $id: $e
+    } catch (e, stack) {
+      AppLogger.error('Error getting user by ID $id', e, stack);
       return null;
     }
   }
@@ -82,6 +82,10 @@ class UserService {
     );
 
     if (supabasePublicUrl == null) {
+      AppLogger.warning(
+        'Failed to resolve public URL for uploaded profile picture '
+        'for user ${UserService.currentUser?.id}',
+      );
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

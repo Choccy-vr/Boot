@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
 import 'package:boot_app/services/users/user.dart';
@@ -15,8 +16,8 @@ class DevlogService {
         columnValue: [projectId],
       );
       return (response as List).map((json) => Devlog.fromJson(json)).toList();
-    } catch (e) {
-      // Error getting devlogs for project $projectId: $e
+    } catch (e, stack) {
+      AppLogger.error('Error getting devlogs for project $projectId', e, stack);
       return [];
     }
   }
@@ -55,8 +56,8 @@ class DevlogService {
         incrementBy: 1,
       );
       return Devlog.fromJson(updatedDevlog.first);
-    } catch (e) {
-      // Error adding devlog: $e
+    } catch (e, stack) {
+      AppLogger.error('Error adding devlog for project $projectID', e, stack);
       throw Exception('Error adding devlog: $e');
     }
   }

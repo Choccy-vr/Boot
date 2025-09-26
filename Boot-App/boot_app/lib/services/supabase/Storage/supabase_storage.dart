@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,6 +23,9 @@ class SupabaseStorageService {
           fileOptions: const FileOptions(upsert: true),
         );
     if (response == '') {
+      AppLogger.error(
+        'Upload failed for $supabasePath in bucket $bucket (single pick)',
+      );
       return 'Upload failed';
     }
 
@@ -54,6 +58,10 @@ class SupabaseStorageService {
           supabasePath: supabasePath,
         );
         uploadedPaths.add(publicUrl ?? supabasePath);
+      } else {
+        AppLogger.error(
+          'Upload failed for $supabasePath in bucket $bucket (multi-upload)',
+        );
       }
     }
 
@@ -67,11 +75,13 @@ class SupabaseStorageService {
     try {
       final response = supabase.storage.from(bucket).getPublicUrl(supabasePath);
       return response;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to get public URL for $supabasePath in bucket $bucket',
+        e,
+        stack,
+      );
       throw Exception('Failed to get public URL: ${e.toString()}');
     }
   }
 }
-
-
-

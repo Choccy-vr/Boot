@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthFailure implements Exception {
@@ -14,8 +15,10 @@ class SupabaseAuth {
     try {
       return await supabase.auth.signUp(email: email, password: password);
     } on AuthException catch (e) {
+      AppLogger.warning('Supabase sign up failed: ${e.message}');
       throw AuthFailure(e.message);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error during Supabase sign up', e, stack);
       throw AuthFailure('Unexpected error during sign up. Please try again.');
     }
   }
@@ -27,8 +30,10 @@ class SupabaseAuth {
         password: password,
       );
     } on AuthException catch (e) {
+      AppLogger.warning('Supabase sign in failed: ${e.message}');
       throw AuthFailure(e.message);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error during Supabase sign in', e, stack);
       throw AuthFailure('Unexpected error during sign in. Please try again.');
     }
   }
@@ -37,8 +42,10 @@ class SupabaseAuth {
     try {
       await supabase.auth.signOut();
     } on AuthException catch (e) {
+      AppLogger.warning('Supabase sign out failed: ${e.message}');
       throw AuthFailure(e.message);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Unexpected error during Supabase sign out', e, stack);
       throw AuthFailure('Unexpected error during sign out. Please try again.');
     }
   }
@@ -47,14 +54,17 @@ class SupabaseAuth {
     try {
       return await supabase.auth.refreshSession();
     } on AuthException catch (e) {
+      AppLogger.warning('Supabase session refresh failed: ${e.message}');
       throw AuthFailure(e.message);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Unexpected error during Supabase session refresh',
+        e,
+        stack,
+      );
       throw AuthFailure(
         'Unexpected error during session refresh. Please try again.',
       );
     }
   }
 }
-
-
-

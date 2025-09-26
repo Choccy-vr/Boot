@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '/services/misc/logger.dart';
 import '/services/users/user.dart';
 
 class Authentication {
@@ -26,7 +27,8 @@ class Authentication {
         id: session.user!.id,
         email: session.user!.email!,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Sign up failed for $email', e, stack);
       throw AuthFailure('Sign up failed: ${e.toString()}');
     }
   }
@@ -46,7 +48,8 @@ class Authentication {
         value: jsonEncode(session.user?.toJson()),
       );
       await UserService.setCurrentUser(session.user!.id);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Sign in failed for $email', e, stack);
       throw AuthFailure('Sign in failed: ${e.toString()}');
     }
   }
@@ -56,7 +59,8 @@ class Authentication {
       await SupabaseAuth.signOut();
       await _storage.delete(key: 'supabase_session');
       await _storage.delete(key: 'supabase_user');
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Sign out failed', e, stack);
       throw AuthFailure('Sign out failed: ${e.toString()}');
     }
   }
@@ -67,7 +71,8 @@ class Authentication {
         key: 'supabase_session',
         value: jsonEncode(session.toJson()),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Session refresh failed', e, stack);
       throw AuthFailure('Session refresh failed: ${e.toString()}');
     }
   }
@@ -92,7 +97,8 @@ class Authentication {
         return Session.fromJson(sessionMap);
       }
       return null;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Failed to get saved session', e, stack);
       throw AuthFailure('Failed to get saved session: ${e.toString()}');
     }
   }
@@ -105,7 +111,8 @@ class Authentication {
         return User.fromJson(userMap);
       }
       return null;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Failed to get saved user', e, stack);
       throw AuthFailure('Failed to get saved user: ${e.toString()}');
     }
   }
@@ -121,8 +128,8 @@ class Authentication {
       );
       await UserService.setCurrentUser(response.user!.id);
       return response.session != null;
-    } catch (e) {
-      // Error restoring session: $e
+    } catch (e, stack) {
+      AppLogger.error('Error restoring saved session', e, stack);
       return false;
     }
   }

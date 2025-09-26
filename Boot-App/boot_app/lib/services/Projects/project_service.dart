@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
@@ -45,8 +46,8 @@ class ProjectService {
       if (startIndex >= projects.length) return [];
 
       return projects.sublist(startIndex, endIndex);
-    } catch (e) {
-      // Error fetching all projects: $e
+    } catch (e, stack) {
+      AppLogger.error('Error fetching all projects', e, stack);
       return [];
     }
   }
@@ -65,8 +66,8 @@ class ProjectService {
 
       if (response.isEmpty) return [];
       return response.map<Project>((row) => Project.fromRow(row)).toList();
-    } catch (e) {
-      // Error fetching liked projects: $e
+    } catch (e, stack) {
+      AppLogger.error('Error fetching liked projects', e, stack);
       return [];
     }
   }
@@ -78,8 +79,8 @@ class ProjectService {
         rowID: projectId,
       );
       return Project.fromRow(response);
-    } catch (e) {
-      // Error fetching project by ID $projectId: $e
+    } catch (e, stack) {
+      AppLogger.error('Error fetching project by ID $projectId', e, stack);
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import 'package:boot_app/services/Projects/project.dart';
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
@@ -53,6 +54,9 @@ class HackatimeService {
             : int.tryParse(userIdValue.toString()) ?? 0;
         UserService.updateUser();
       } else {
+        AppLogger.warning(
+          'Hackatime init failed for $username with status ${response.statusCode}: ${response.body}',
+        );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(
             context,
@@ -60,7 +64,12 @@ class HackatimeService {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Network error during Hackatime initialization',
+        e,
+        stack,
+      );
       WidgetsBinding.instance.addPostFrameCallback(
         (_) =>
             _showErrorSnackbar(context, 'Network error during initialization'),
@@ -90,6 +99,9 @@ class HackatimeService {
           return HackatimeProject.fromJson(project);
         }).toList();
       } else {
+        AppLogger.warning(
+          'Hackatime project fetch failed for user $userId with status ${response.statusCode}: ${response.body}',
+        );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(
             context,
@@ -98,7 +110,12 @@ class HackatimeService {
         );
         return [];
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Network error loading Hackatime projects for user $userId',
+        e,
+        stack,
+      );
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _showErrorSnackbar(context, 'Network error loading projects'),
       );
@@ -123,7 +140,12 @@ class HackatimeService {
         ),
       );
       return project;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error fetching Hackatime project details for $projectName',
+        e,
+        stack,
+      );
       return HackatimeProject(
         name: 'Error',
         totalSeconds: 0,
@@ -156,6 +178,9 @@ class HackatimeService {
         if (trustLevel == 'red' && userId != 4258) return true;
         return false;
       } else {
+        AppLogger.warning(
+          'Hackatime ban check failed for user $userId with status ${response.statusCode}: ${response.body}',
+        );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(
             context,
@@ -164,7 +189,12 @@ class HackatimeService {
         );
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Network error checking Hackatime ban status for user $userId',
+        e,
+        stack,
+      );
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _showErrorSnackbar(context, 'Network error checking ban status'),
       );
@@ -185,6 +215,7 @@ class HackatimeService {
         context: context,
       );
       if (projects.isEmpty) {
+        AppLogger.warning('Hackatime projects list empty for user $userId');
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(context, 'No Hackatime projects found'),
         );
@@ -194,6 +225,9 @@ class HackatimeService {
         projectName: project.hackatimeProjects,
       );
       if (hackatimeProject.name == 'Not Found') {
+        AppLogger.warning(
+          'Hackatime project ${project.hackatimeProjects} not found for user $userId',
+        );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(
             context,
@@ -204,7 +238,12 @@ class HackatimeService {
       project.time = hackatimeProject.totalSeconds / 3600.0;
       project.readableTime = hackatimeProject.text;
       return project;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error fetching Hackatime project time for ${project.id} (${project.hackatimeProjects})',
+        e,
+        stack,
+      );
       throw Exception('Error fetching project time: $e');
     }
   }

@@ -1,4 +1,5 @@
 import 'package:boot_app/pages/Profile/profile_page.dart';
+import 'package:boot_app/pages/Vote/vote_page.dart';
 import 'package:boot_app/services/Projects/project.dart';
 import 'package:boot_app/services/users/boot_user.dart';
 import 'package:flutter/material.dart';
@@ -89,7 +90,7 @@ class NavigationService {
         );
         break;
       case AppDestination.vote:
-        DialogService.showComingSoon(context, 'Vote', textTheme, colorScheme);
+        _pushPage(context, VotePage(projects: []), sharedAxis, transitionType);
         break;
       case AppDestination.explore:
         _pushPage(context, const ExplorePage(), sharedAxis, transitionType);

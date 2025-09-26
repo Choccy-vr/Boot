@@ -6,7 +6,9 @@ class Ship {
   final bool approved;
   final String reviewer;
   final String comment;
+  final double multiplier;
   final int earned;
+  final List<String> voters;
 
   Ship({
     required this.id,
@@ -16,7 +18,9 @@ class Ship {
     this.approved = false,
     this.reviewer = '',
     this.comment = '',
+    this.multiplier = 1.0,
     this.earned = 0,
+    this.voters = const [],
   });
 
   factory Ship.fromJson(Map<String, dynamic> json) {
@@ -30,10 +34,13 @@ class Ship {
       approved: json['approved'] ?? false,
       reviewer: json['reviewer'] ?? '',
       comment: json['comment'] ?? '',
+      multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
       earned: json['earned'] ?? 0,
+      voters:
+          (json['voters'] as List<dynamic>?)
+              ?.map((voter) => voter.toString())
+              .toList() ??
+          [],
     );
   }
 }
-
-
-

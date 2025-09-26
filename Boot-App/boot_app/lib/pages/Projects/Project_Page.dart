@@ -38,7 +38,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   final TextEditingController _devlogTitleController = TextEditingController();
   final TextEditingController _devlogDescriptionController =
       TextEditingController();
-  List<String> _cachedMediaPaths = [];
+  final List<String> _cachedMediaPaths = [];
   bool _isUploadingMedia = false;
 
   @override

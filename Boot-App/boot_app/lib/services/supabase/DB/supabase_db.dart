@@ -1,3 +1,4 @@
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseDB {
@@ -13,7 +14,8 @@ class SupabaseDB {
         return await supabase.from(table).select();
       }
       return await supabase.from(table).select(columns.join(', '));
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Error selecting data from $table', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -25,7 +27,12 @@ class SupabaseDB {
   }) async {
     try {
       return await supabase.from(table).select().eq(column, value).single();
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error getting data value from $table where $column = $value',
+        e,
+        stack,
+      );
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -36,7 +43,12 @@ class SupabaseDB {
   }) async {
     try {
       return await supabase.from(table).select().eq('id', rowID).single();
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error getting row data from $table for id $rowID',
+        e,
+        stack,
+      );
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -48,7 +60,12 @@ class SupabaseDB {
   }) async {
     try {
       return await supabase.from(table).select().inFilter(column, columnValue);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error getting multiple row data from $table for $column',
+        e,
+        stack,
+      );
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -73,7 +90,8 @@ class SupabaseDB {
       } else {
         await supabase.from(table).insert(bulkData!);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Error inserting data into $table', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -97,7 +115,8 @@ class SupabaseDB {
       } else {
         return await supabase.from(table).insert(bulkData!).select();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Error inserting data into $table with return', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -111,7 +130,8 @@ class SupabaseDB {
   }) async {
     try {
       await supabase.from(table).update(data).eq(column, value);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Error updating $table where $column = $value', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -129,7 +149,12 @@ class SupabaseDB {
           .eq(column, value)
           .select();
       return response;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error updating data and returning from $table',
+        e,
+        stack,
+      );
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -172,7 +197,8 @@ class SupabaseDB {
           upsertArgs.map((k, v) => MapEntry(Symbol(k), v)),
         ).select();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Error upserting data into $table', e, stack);
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -198,7 +224,12 @@ class SupabaseDB {
       } else {
         await supabase.from(table).delete().inFilter(column, values!);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error deleting data from $table where $column',
+        e,
+        stack,
+      );
       throw Exception('Unexpected error: ${e.toString()}');
     }
   }
@@ -214,7 +245,8 @@ class SupabaseDB {
       } else {
         return await supabase.rpc(functionName);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('Function call $functionName failed', e, stack);
       throw Exception('Function call failed: ${e.toString()}');
     }
   }

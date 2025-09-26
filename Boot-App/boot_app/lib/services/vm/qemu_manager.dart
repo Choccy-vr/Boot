@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
-import '../logger.dart';
+import '../misc/logger.dart';
 
 class CrossPlatformQemuManager {
   Process? _currentProcess;
