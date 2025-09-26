@@ -1,7 +1,9 @@
 import 'package:boot_app/pages/Profile/profile_page.dart';
 import 'package:boot_app/pages/Vote/vote_page.dart';
 import 'package:boot_app/services/Projects/project.dart';
+import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/users/boot_user.dart';
+import 'package:boot_app/services/users/user.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import '/animations/shared_axis.dart';
@@ -90,7 +92,7 @@ class NavigationService {
         );
         break;
       case AppDestination.vote:
-        _pushPage(context, VotePage(projects: []), sharedAxis, transitionType);
+        navigateToVote(context);
         break;
       case AppDestination.explore:
         _pushPage(context, const ExplorePage(), sharedAxis, transitionType);
@@ -141,6 +143,16 @@ class NavigationService {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ProfilePage(user: user)),
+    );
+  }
+
+  static Future<void> navigateToVote(BuildContext context) async {
+    final _ships = await ShipService.getShipsForVote(
+      currentUserId: UserService.currentUser?.id ?? '',
+    );
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => VotePage(projects: [_ships])),
     );
   }
 }

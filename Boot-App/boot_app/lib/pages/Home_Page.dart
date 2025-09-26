@@ -428,12 +428,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: colorScheme.tertiary,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
-                  onTap: () => NavigationService.navigateTo(
-                    context: context,
-                    destination: AppDestination.vote,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  ),
+                  onTap: () => NavigationService.navigateToVote(context),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
                 ),

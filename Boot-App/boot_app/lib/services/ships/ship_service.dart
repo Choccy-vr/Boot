@@ -1,14 +1,11 @@
-import 'dart:math';
-
 import 'package:boot_app/services/Projects/project.dart';
 import 'package:boot_app/services/Projects/Project_Service.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/ships/boot_ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
+import 'package:flutter/material.dart';
 
 class ShipService {
-  static final _random = Random();
-
   static Future<Ship> getShipById(String id) async {
     try {
       final response = await SupabaseDB.getRowData(table: 'ships', rowID: id);
@@ -75,104 +72,86 @@ class ShipService {
   }
 
   static Future<List<Map<Ship, Project>>> getShipsForVote({
-    required String currentUserId,
-    int desiredCount = 2,
+    required String
+    currentUserId, // Keep for potential future use, though not needed for matchmaking now
   }) async {
     try {
-      final response = await SupabaseDB.supabase
-          .from('ships')
-          .select()
-          .eq('approved', true)
-          .eq('earned', 0);
-      final ships = response.map<Ship>((row) => Ship.fromJson(row)).toList();
+      // 1. Call the Supabase Edge Function to get a match.
+      // This replaces all the previous client-side logic.
+      final response = await SupabaseDB.supabase.functions.invoke(
+        'matchmake-pub',
+        body: {'name': 'Functions'},
+      );
 
-      // Remove ships where the current user has already voted
-      final eligibleShips = ships
-          .where((ship) => !ship.voters.contains(currentUserId))
-          .toList();
-      if (eligibleShips.isEmpty) {
+      // 2. Handle errors or cases where no match was found.
+      if (response.data == null || response.data is! List) {
+        AppLogger.warning(
+          'Matchmaking function returned no data or invalid format.',
+        );
         return [];
       }
 
-      // Fetch projects for the eligible ships (deduplicate project requests)
-      final projectIds = eligibleShips
-          .map((ship) => ship.project)
-          .toSet()
-          .toList();
-      final projectResults = await Future.wait(
-        projectIds.map((projectId) => ProjectService.getProjectById(projectId)),
-      );
+      final List<dynamic> shipData = response.data;
+      if (shipData.length < 2) {
+        AppLogger.warning('Matchmaking function returned fewer than 2 ships.');
+        return [];
+      }
 
-      final projectById = <int, Project>{};
-      for (var i = 0; i < projectIds.length; i++) {
-        final project = projectResults[i];
+      // 3. Parse the ship data returned from the function.
+      final selectedShips = shipData
+          .map((data) => Ship.fromJson(data as Map<String, dynamic>))
+          .toList();
+
+      // 4. Fetch the corresponding project for each ship.
+      final results = <Map<Ship, Project>>[];
+      for (final ship in selectedShips) {
+        final project = await ProjectService.getProjectById(ship.project);
         if (project != null) {
-          projectById[projectIds[i]] = project;
+          results.add({ship: project});
+        } else {
+          // If a project isn't found, log it but don't stop the process.
+          AppLogger.error(
+            'Could not find project with ID ${ship.project} for a matched ship.',
+          );
         }
       }
 
-      if (projectById.isEmpty) {
-        return [];
-      }
-
-      // Group ships by project category (using project level as category proxy)
-      final shipsByCategory = <String, List<Ship>>{};
-      for (final ship in eligibleShips) {
-        final project = projectById[ship.project];
-        if (project == null) continue;
-        final category =
-            (project.level.isNotEmpty ? project.level : 'uncategorized')
-                .toLowerCase();
-        shipsByCategory.putIfAbsent(category, () => <Ship>[]).add(ship);
-      }
-
-      if (shipsByCategory.isEmpty) {
-        return [];
-      }
-
-      final nonEmptyCategories = shipsByCategory.entries
-          .where((entry) => entry.value.isNotEmpty)
-          .toList();
-
-      if (nonEmptyCategories.isEmpty) {
-        return [];
-      }
-
-      final categoryShips = List<Ship>.from(
-        nonEmptyCategories[_random.nextInt(nonEmptyCategories.length)].value,
-      );
-
-      if (categoryShips.length <= desiredCount) {
-        categoryShips.shuffle(_random);
-        return categoryShips
-            .map((ship) => {ship: projectById[ship.project]!})
-            .toList();
-      }
-
-      categoryShips.shuffle(_random);
-      final anchorShip = categoryShips.first;
-      final remaining = categoryShips.skip(1).toList()
-        ..sort(
-          (a, b) => (a.time - anchorShip.time).abs().compareTo(
-            (b.time - anchorShip.time).abs(),
-          ),
-        );
-
-      final selectedShips = <Ship>[anchorShip];
-      for (final ship in remaining) {
-        if (selectedShips.length >= desiredCount) break;
-        selectedShips.add(ship);
-      }
-      return selectedShips
-          .map((ship) => {ship: projectById[ship.project]!})
-          .toList();
+      // 5. Return the final list, ensuring we have a valid pair.
+      return results.length == 2 ? results : [];
     } catch (e, stack) {
       AppLogger.error(
-        'Error getting ships for vote for user $currentUserId',
+        'Error calling matchmaking function for user $currentUserId',
         e,
         stack,
       );
       return [];
+    }
+  }
+
+  static Future<void> recordVote({
+    required Ship winner,
+    required Ship loser,
+    required BuildContext context,
+  }) async {
+    try {
+      await SupabaseDB.supabase.functions.invoke(
+        'update_multipliers',
+        body: {'winner_id': winner.id, 'loser_id': loser.id},
+      );
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error recording vote for winner ${winner.id} and loser ${loser.id}',
+        e,
+        stack,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recording vote: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 }
