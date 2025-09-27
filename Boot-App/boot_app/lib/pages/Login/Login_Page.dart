@@ -49,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@hackathon',
+                'boot-terminal ~ Unknown-User@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

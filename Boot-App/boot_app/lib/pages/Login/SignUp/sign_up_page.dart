@@ -51,7 +51,7 @@ class _SignUpPageState extends State<SignUpPage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@hackathon',
+                'boot-terminal ~ Unknown-User@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -69,7 +69,7 @@ class _SignUpPageState extends State<SignUpPage> {
           const SizedBox(height: 8),
 
           Text(
-            'Boot is a hackathon where teens from around the world make their own OSes',
+            'Boot is a ysws where teens from around the world make their own OSes',
             style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: 16),
@@ -206,6 +206,3 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 }
-
-
-

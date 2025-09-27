@@ -365,6 +365,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       await ShipService.addShip(
         project: _project.id,
         time: _project.timeDevlogs,
+        // TODO: IMPORTANT: REMOVE AFTER TESTING
+        approved: true,
       );
 
       _showShipSuccessDialog();
@@ -1208,7 +1210,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           Row(
             children: [
               Text(
-                'boot@hackathon:~/projects/${_project.title.toLowerCase().replaceAll(' ', '_')}',
+                'boot@ysws:~/projects/${_project.title.toLowerCase().replaceAll(' ', '_')}',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

@@ -205,7 +205,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Row(
             children: [
               Text(
-                'boot-terminal ~ ${UserService.currentUser?.username}@hackathon',
+                'boot-terminal ~ ${UserService.currentUser?.username}@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

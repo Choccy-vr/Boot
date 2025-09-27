@@ -65,7 +65,7 @@ class _ProjectsPageState extends State<ProjectsPage>
           Row(
             children: [
               Text(
-                'boot@hackathon:~/projects',
+                'boot@ysws:~/projects',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

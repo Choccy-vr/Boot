@@ -57,7 +57,7 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@hackathon',
+                'boot-terminal ~ Unknown-User@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

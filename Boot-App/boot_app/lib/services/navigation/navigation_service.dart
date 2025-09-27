@@ -55,7 +55,13 @@ class NavigationService {
         _pushPage(context, const ProjectsPage(), sharedAxis, transitionType);
         break;
       case AppDestination.test:
-        _pushPage(context, const TestPage(), sharedAxis, transitionType);
+        DialogService.showComingSoon(
+          context,
+          'Test OS',
+          textTheme,
+          colorScheme,
+        );
+        //_pushPage(context, const TestPage(), sharedAxis, transitionType);
         break;
       case AppDestination.login:
         _pushPage(context, const LoginPage(), sharedAxis, transitionType);
@@ -106,12 +112,7 @@ class NavigationService {
         );
         break;
       case AppDestination.profile:
-        DialogService.showComingSoon(
-          context,
-          'Profile',
-          textTheme,
-          colorScheme,
-        );
+        openProfile(UserService.currentUser!, context);
         break;
     }
   }

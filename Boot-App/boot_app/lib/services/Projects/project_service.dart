@@ -118,7 +118,7 @@ class ProjectService {
     );
     await SupabaseDBFunctions.callIncrementFunction(
       table: 'users',
-      column: 'project_count',
+      column: 'total_projects',
       rowID: owner!,
       incrementBy: 1,
     );

@@ -109,7 +109,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           Row(
             children: [
               Text(
-                'boot@hackathon:~/projects',
+                'boot@ysws:~/projects',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -604,6 +604,3 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
   }
 }
-
-
-

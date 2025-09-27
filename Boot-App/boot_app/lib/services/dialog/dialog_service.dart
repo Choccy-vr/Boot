@@ -23,7 +23,7 @@ class DialogService {
           ],
         ),
         content: Text(
-          'This feature is under development for Boot Hackathon Winter 2025.\n\nStay tuned for updates!',
+          'This feature is under development for Boot YSWS Winter 2025.\n\nStay tuned for updates!',
           style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
         ),
         actions: [
@@ -39,6 +39,3 @@ class DialogService {
     );
   }
 }
-
-
-
