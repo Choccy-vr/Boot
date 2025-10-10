@@ -14,6 +14,8 @@ class Project {
   String status;
   String hackatimeProjects;
   double timeDevlogs;
+  String isoUrl;
+  String qemuCMD;
   //not in db
   String readableTime;
   double time;
@@ -36,6 +38,8 @@ class Project {
     required this.timeDevlogs,
     this.readableTime = '0s',
     required this.time,
+    this.isoUrl = '',
+    this.qemuCMD = '',
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -59,6 +63,8 @@ class Project {
       timeDevlogs: row['total_time_devlogs'] ?? 0.0,
       readableTime: '0s',
       time: 0.0,
+      isoUrl: row['ISO_url'] ?? '',
+      qemuCMD: row['qemu_cmd'] ?? '',
     );
   }
   static Map<String, dynamic> toRow({
@@ -75,6 +81,8 @@ class Project {
     String? hackatimeProjects,
     String? owner,
     double? timeDevlogs,
+    String? isoUrl,
+    String? qemuCMD,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -94,9 +102,8 @@ class Project {
     }
     if (owner != null) map['owner'] = owner;
     if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
+    if (isoUrl != null) map['ISO_url'] = isoUrl;
+    if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
     return map;
   }
 }
-
-
-
