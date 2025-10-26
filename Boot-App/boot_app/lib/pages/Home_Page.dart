@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _scheduleHackatimeBanCheck() {
     // Try up to 10 times (~2s total) for user credentials to load.
-    _attemptHackatimeBanCheck(0);
+    _attemptHackatimeBanCheck(5);
   }
 
   void _attemptHackatimeBanCheck(int attempt) async {
@@ -205,7 +205,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Row(
             children: [
               Text(
-                'boot-terminal ~ ${UserService.currentUser?.username}@ysws',
+                'boot ~ ${UserService.currentUser?.username}@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -252,7 +252,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
           const SizedBox(height: 8),
           Text(
-            'Build your OS. Winter 2025.',
+            'Build your OS, Get Hardware to run it.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -287,16 +287,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
             Row(
               children: [
-                Expanded(
-                  child: _buildStatusItem(
-                    'Platform',
-                    Platform.operatingSystem.toUpperCase(),
-                    Symbols.computer,
-                    colorScheme.primary,
-                    colorScheme,
-                    textTheme,
-                  ),
-                ),
                 Expanded(
                   child: _buildStatusItem(
                     'User',
@@ -417,18 +407,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
-                  maxWidth:
-                      (constraints.maxWidth - (12 * (columns - 1))) / columns,
-                ),
-                _buildNavigationCard(
-                  title: 'VOTE',
-                  subtitle: 'Vote on projects',
-                  icon: Symbols.how_to_vote,
-                  command: './vote.sh',
-                  color: colorScheme.tertiary,
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () => NavigationService.navigateToVote(context),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
                 ),

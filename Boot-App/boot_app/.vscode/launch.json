@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "Flutter",
+        "type": "dart",
+        "request": "launch",
+        "program": "lib/main.dart"
+    },
+    {
+      "name": "Flutter Web (Chrome, port 59054)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--web-port",
+        "59054",
+        "--web-hostname",
+        "localhost"
+      ]
+    },
+    {
+      "name": "Flutter Web (Edge, port 59054)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "edge",
+      "toolArgs": [
+        "--web-port",
+        "59054",
+        "--web-hostname",
+        "localhost"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,4 @@
 import 'package:boot_app/pages/Profile/profile_page.dart';
-import 'package:boot_app/pages/Vote/vote_page.dart';
-import 'package:boot_app/pages/test_vm_page.dart';
 import 'package:boot_app/services/Projects/project.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/users/boot_user.dart';
@@ -27,7 +25,6 @@ enum AppDestination {
   home,
   project,
   test,
-  vote,
   explore,
   leaderboard,
   profile,
@@ -57,7 +54,7 @@ class NavigationService {
         _pushPage(context, const ProjectsPage(), sharedAxis, transitionType);
         break;
       case AppDestination.test:
-        _pushPage(context, const TestVmPage(), sharedAxis, transitionType);
+        _pushPage(context, const TestPage(), sharedAxis, transitionType);
         break;
       case AppDestination.login:
         _pushPage(context, const LoginPage(), sharedAxis, transitionType);
@@ -92,9 +89,6 @@ class NavigationService {
           sharedAxis,
           transitionType,
         );
-        break;
-      case AppDestination.vote:
-        navigateToVote(context);
         break;
       case AppDestination.explore:
         _pushPage(context, const ExplorePage(), sharedAxis, transitionType);
@@ -140,16 +134,6 @@ class NavigationService {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ProfilePage(user: user)),
-    );
-  }
-
-  static Future<void> navigateToVote(BuildContext context) async {
-    final _ships = await ShipService.getShipsForVote(
-      currentUserId: UserService.currentUser?.id ?? '',
-    );
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => VotePage(projects: [_ships])),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '/services/supabase/auth/auth.dart';
 import '/services/navigation/navigation_service.dart';
 
@@ -49,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@ysws',
+                'boot ~ Unknown-User@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),
@@ -141,6 +142,35 @@ class _LoginPageState extends State<LoginPage> {
                     ),
             ),
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton(
+              onPressed: _isLoading ? null : _handleSlackLogin,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: colorScheme.outline),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/slack_logo.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Continue with Slack',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           SizedBox(height: 26),
           TextButton(
             onPressed: _isLoading
@@ -199,6 +229,28 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleSlackLogin() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await Authentication.signInWithSlack();
+      if (!mounted) return;
+      NavigationService.navigateTo(
+        context: context,
+        destination: AppDestination.home,
+        colorScheme: Theme.of(context).colorScheme,
+        textTheme: Theme.of(context).textTheme,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Slack login failed: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

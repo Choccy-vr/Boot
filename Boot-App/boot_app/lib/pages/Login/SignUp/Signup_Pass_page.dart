@@ -52,7 +52,7 @@ class _SignUpPassPageState extends State<SignUpPassPage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ Unknown-User@ysws',
+                'boot ~ Unknown-User@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

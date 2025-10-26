@@ -54,6 +54,15 @@ class Authentication {
     }
   }
 
+  static Future<void> signInWithSlack() async {
+    try {
+      await SupabaseAuth.signInWithOAuth(OAuthProvider.slackOidc);
+    } catch (e, stack) {
+      AppLogger.error('OAuth sign in failed for slack', e, stack);
+      throw AuthFailure('OAuth sign in failed: ${e.toString()}');
+    }
+  }
+
   static Future<void> signOut() async {
     try {
       await SupabaseAuth.signOut();

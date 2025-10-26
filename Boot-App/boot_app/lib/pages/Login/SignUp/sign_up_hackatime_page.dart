@@ -54,7 +54,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
           Row(
             children: [
               Text(
-                'boot-terminal ~ ${UserService.currentUser?.username}@ysws',
+                'boot ~ ${UserService.currentUser?.username}@ysws',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.primary,
                 ),

@@ -175,7 +175,7 @@ class HackatimeService {
             ? jsonDecode(response.body)
             : {};
         final String? trustLevel = decoded['trust_level'];
-        if (trustLevel == 'red' && userId != 4258) return true;
+        if (trustLevel == 'red') return true;
         return false;
       } else {
         AppLogger.warning(

@@ -28,16 +28,12 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   final Map<String, String> _osTypes = {
     'scratch': 'From Scratch (LFS, Buildroot, etc.)',
-    'base': 'Base Distro (Debian, Ubuntu, etc.)',
-    'consumer': 'Consumer Base (Ubuntu, RPiOS, etc.)',
-    'modification': 'Modify (Theme & Package existing OS)',
+    'base': 'Based On Another Distro (Debian, Ubuntu, etc.)',
   };
 
   final Map<String, String> _architectures = {
     'x86_64': 'x86-64 (64-bit)',
     'x86': 'x86 (32-bit)',
-    'arm64': 'ARM64 (EXPERIMENTAL)',
-    'arm': 'ARM 32-bit (EXPERIMENTAL)',
   };
   List<HackatimeProject> _hackatimeProjects = [
     HackatimeProject(

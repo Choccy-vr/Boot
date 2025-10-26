@@ -1,3 +1,4 @@
+import 'package:boot_app/services/supabase/auth/supabase_auth.dart';
 import 'package:flutter/material.dart';
 import 'theme/terminal_theme.dart';
 import 'pages/home_page.dart';
@@ -16,6 +17,7 @@ void main() async {
   AppLogger.init();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   AuthListener.startListening();
+  await SupabaseAuth.redirectCheck();
   runApp(const MainApp());
 }
 

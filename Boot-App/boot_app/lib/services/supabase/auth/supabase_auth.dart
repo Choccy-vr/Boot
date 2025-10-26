@@ -1,5 +1,7 @@
+import 'package:universal_html/html.dart' as html;
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'auth.dart';
 
 class AuthFailure implements Exception {
   final String message;
@@ -35,6 +37,81 @@ class SupabaseAuth {
     } catch (e, stack) {
       AppLogger.error('Unexpected error during Supabase sign in', e, stack);
       throw AuthFailure('Unexpected error during sign in. Please try again.');
+    }
+  }
+
+  static Future<void> signInWithOAuth(OAuthProvider provider) async {
+    try {
+      // Ensure redirect goes back to the same origin/path so PKCE verifier matches
+      final base = Uri.base;
+      final cleanRedirect = Uri(
+        scheme: base.scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: base.path,
+      ).toString();
+      await supabase.auth.signInWithOAuth(provider, redirectTo: cleanRedirect);
+    } on AuthException catch (e) {
+      AppLogger.warning('Supabase OAuth sign in failed: ${e.message}');
+      throw AuthFailure(e.message);
+    } catch (e, stack) {
+      AppLogger.error(
+        'Unexpected error during Supabase OAuth sign in',
+        e,
+        stack,
+      );
+      throw AuthFailure(
+        'Unexpected error during OAuth sign in. Please try again.',
+      );
+    }
+  }
+
+  static Future<void> redirectCheck() async {
+    final uri = Uri.base; // current URL
+    if (uri.queryParameters.containsKey('code') ||
+        uri.queryParameters.containsKey('access_token')) {
+      try {
+        // Only attempt exchange if we don't already have a session
+        if (Supabase.instance.client.auth.currentSession == null) {
+          await Supabase.instance.client.auth.getSessionFromUrl(
+            uri,
+            storeSession: true,
+          );
+        }
+
+        // Persist session so app routing that relies on storage works
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          await Authentication.refreshSession(session);
+        }
+        final redirectUri = Uri(
+          scheme: uri.scheme,
+          host: uri.host,
+          port: uri.hasPort ? uri.port : null,
+          path: uri.path,
+        );
+
+        try {
+          html.window.history.replaceState(
+            null,
+            'Auth',
+            redirectUri.toString(),
+          );
+          // Navigate to the cleaned URL so the app can pick up the new session
+          try {
+            html.window.location.replace(redirectUri.toString());
+          } catch (_) {
+            // fallback to reload if replace is not allowed
+            try {
+              html.window.location.reload();
+            } catch (_) {}
+          }
+        } catch (_) {
+          // ignore if not running on web
+        }
+      } catch (e) {
+        AppLogger.warning('OAuth sign-in error: $e');
+      }
     }
   }
 
