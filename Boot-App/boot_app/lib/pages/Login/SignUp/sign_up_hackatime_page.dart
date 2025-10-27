@@ -142,6 +142,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
                 TextField(
                   controller: _apiController,
                   enabled: !_isLoading,
+                  maxLength: 36,
                   onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   decoration: InputDecoration(
                     labelText: 'API Key',
@@ -159,6 +160,7 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
                   enabled: !_isLoading,
                   maxLines: 4,
                   minLines: 3,
+                  maxLength: 64,
                   onSubmitted: (_) => _handleSignUp(),
                   decoration: InputDecoration(
                     labelText: 'Hackatime Username',
@@ -245,6 +247,17 @@ class _SignupHackatimePageState extends State<SignupHackatimePage> {
     if (apiKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter your hackatime API key')),
+      );
+      return;
+    }
+
+    // Validate API key format (UUID-like)
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    if (!uuidRegex.hasMatch(apiKey)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('API key must be a valid UUID format')),
       );
       return;
     }

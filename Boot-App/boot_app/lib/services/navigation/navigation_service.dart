@@ -1,11 +1,9 @@
 import 'package:boot_app/pages/Profile/profile_page.dart';
 import 'package:boot_app/services/Projects/project.dart';
-import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/users/boot_user.dart';
 import 'package:boot_app/services/users/user.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '/animations/shared_axis.dart';
 import '/services/dialog/dialog_service.dart';
 

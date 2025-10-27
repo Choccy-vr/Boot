@@ -10,9 +10,20 @@ class SupabaseStorageService {
     required String bucket,
     required String supabasePath,
   }) async {
-    final result = await FilePicker.platform.pickFiles();
+    // Restrict to common image types by default and handle cancel gracefully
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
+      allowMultiple: false,
+      withData: false,
+    );
     if (result == null || result.files.isEmpty) {
       return 'User cancelled';
+    }
+    final ext = (result.files.single.extension ?? '').toLowerCase();
+    const allowed = ['png', 'jpg', 'jpeg', 'webp'];
+    if (!allowed.contains(ext)) {
+      throw Exception('Unsupported file type: .$ext');
     }
     final file = File(result.files.single.path!);
     final response = await supabase.storage

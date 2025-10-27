@@ -63,9 +63,19 @@ class DevlogService {
   }
 
   static Future<String> cacheMediaFilePicker() async {
-    final result = await FilePicker.platform.pickFiles();
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
+      allowMultiple: false,
+      withData: false,
+    );
     if (result == null || result.files.isEmpty) {
       return 'User cancelled';
+    }
+    final ext = (result.files.single.extension ?? '').toLowerCase();
+    const allowed = ['png', 'jpg', 'jpeg', 'webp'];
+    if (!allowed.contains(ext)) {
+      throw Exception('Unsupported file type: .$ext');
     }
     final file = File(result.files.single.path!);
     return file.path;

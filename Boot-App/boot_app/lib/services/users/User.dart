@@ -76,6 +76,10 @@ class UserService {
           supabasePath: '${UserService.currentUser?.id}/profile_pic',
         );
 
+    if (supabasePrivateUrl == 'User cancelled') {
+      return '';
+    }
+
     String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
       bucket: 'Profiles',
       supabasePath: supabasePrivateUrl,
@@ -96,9 +100,11 @@ class UserService {
       return '';
     }
 
-    UserService.currentUser?.profilePicture = supabasePublicUrl;
+    // Bust cache for consumers that use the URL directly
+    UserService.currentUser?.profilePicture =
+        '$supabasePublicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     await UserService.updateUser();
 
-    return supabasePublicUrl;
+    return UserService.currentUser?.profilePicture ?? supabasePublicUrl;
   }
 }

@@ -34,6 +34,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _isHovering = false;
   String owner = "";
   bool _isLiked = false;
+  bool _isLiking = false;
   bool _showDevlogEditor = false;
   final TextEditingController _devlogTitleController = TextEditingController();
   final TextEditingController _devlogDescriptionController =
@@ -94,11 +95,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Future<void> _userLiked() async {
-    await UserService.updateCurrentUser();
-    setState(() {
-      _isLiked =
-          UserService.currentUser?.likedProjects.contains(_project.id) ?? false;
-    });
+    try {
+      setState(() {
+        _isLiked =
+            UserService.currentUser?.likedProjects.contains(_project.id) ??
+            false;
+      });
+    } catch (_) {}
   }
 
   void _showErrorSnackbar(BuildContext context, String message) {
@@ -140,25 +143,22 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Future<void> _handleLikeProject() async {
+    if (_isLiking) return;
     try {
+      setState(() => _isLiking = true);
       if (_isLiked) {
         await SupabaseDBFunctions.callDbFunction(
           functionName: 'decrement_likes',
           parameters: {'project_id': _project.id},
         );
         UserService.currentUser?.likedProjects.remove(_project.id);
-        await UserService.updateUser();
-        if (!mounted) return;
         setState(() {
-          _project.likes -= 1;
+          _project.likes = (_project.likes - 1).clamp(0, 1 << 31);
           _isLiked = false;
         });
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You unliked ${_project.title}.'),
-            backgroundColor: Colors.orange,
-          ),
+          SnackBar(content: Text('You unliked ${_project.title}.')),
         );
       } else {
         await SupabaseDBFunctions.callDbFunction(
@@ -166,24 +166,20 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           parameters: {'project_id': _project.id},
         );
         UserService.currentUser?.likedProjects.add(_project.id);
-        await UserService.updateUser();
-        if (!mounted) return;
         setState(() {
           _project.likes += 1;
           _isLiked = true;
         });
-
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You liked ${_project.title}!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('You liked ${_project.title}!')));
       }
     } catch (e) {
       if (!mounted) return;
       _showErrorSnackbar(context, 'Failed to like/unlike project: $e');
+    } finally {
+      if (mounted) setState(() => _isLiking = false);
     }
   }
 
@@ -216,10 +212,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
     try {
       final cachedFilePath = await DevlogService.cacheMediaFilePicker();
-      setState(() {
-        _cachedMediaPaths.add(cachedFilePath);
-        _isUploadingMedia = false;
-      });
+      if (cachedFilePath != 'User cancelled') {
+        setState(() {
+          _cachedMediaPaths.add(cachedFilePath);
+          _isUploadingMedia = false;
+        });
+      } else {
+        setState(() {
+          _isUploadingMedia = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _isUploadingMedia = false;
@@ -488,13 +490,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
               title: Row(
                 children: [
                   Icon(
                     Symbols.edit,
                     color: Theme.of(context).colorScheme.primary,
-                    size: 24,
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -770,6 +770,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         SizedBox(height: 8),
         TextField(
           controller: _devlogTitleController,
+          maxLength: 80,
           decoration: InputDecoration(
             hintText: 'Enter devlog title...',
             border: OutlineInputBorder(
@@ -1125,6 +1126,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             child: TextField(
               controller: _devlogDescriptionController,
               maxLines: null,
+              maxLength: 500,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
               decoration: InputDecoration(
@@ -1270,7 +1272,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return;
       }
       setState(() {
-        _project.imageURL = supabasePublicUrl;
+        _project.imageURL =
+            '$supabasePublicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
       });
       ProjectService.updateProject(_project);
       if (!mounted) return;
@@ -1586,7 +1589,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: _handleLikeProject,
+                onPressed: _isLiking ? null : _handleLikeProject,
                 icon: _isLiked
                     ? Icon(Symbols.favorite, size: 18, fill: 1)
                     : Icon(Symbols.favorite, size: 18, fill: 0),

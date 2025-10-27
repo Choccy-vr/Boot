@@ -130,6 +130,7 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
                 TextField(
                   controller: _usernameController,
                   enabled: !_isLoading,
+                  maxLength: 24,
                   onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   decoration: InputDecoration(
                     labelText: 'Username',
@@ -147,6 +148,7 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
                   enabled: !_isLoading,
                   maxLines: 4,
                   minLines: 3,
+                  maxLength: 160,
                   onSubmitted: (_) => _handleSignUp(),
                   decoration: InputDecoration(
                     labelText: 'Bio',
@@ -230,6 +232,11 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
             supabasePath: '${UserService.currentUser?.id}/profile_pic',
           );
 
+      if (supabasePrivateUrl == 'User cancelled') {
+        // Silently ignore cancels
+        return;
+      }
+
       String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
         bucket: 'Profiles',
         supabasePath: supabasePrivateUrl,
@@ -248,7 +255,9 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
 
       SignupService.signUpUser.profilePictureUrl = supabasePublicUrl;
       setState(() {
-        profilePicUrl = supabasePublicUrl;
+        // Bust cache by appending a timestamp query param (public URL is stable)
+        profilePicUrl =
+            '$supabasePublicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
         _imageLoadError = false;
       });
 
@@ -282,10 +291,24 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
       return;
     }
 
+    if (username.length > 24) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Username must be 24 characters or less')),
+      );
+      return;
+    }
+
     if (bio.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Please enter your bio')));
+      return;
+    }
+
+    if (bio.length > 160) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bio must be 160 characters or less')),
+      );
       return;
     }
 
