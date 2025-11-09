@@ -13,7 +13,7 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/supabase/Storage/supabase_storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
-import '../../services/devlog/devlog.dart';
+import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/theme/responsive.dart';
 
