@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
@@ -83,33 +84,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Terminal Header
-              _buildTerminalHeader(colorScheme, textTheme),
-              const SizedBox(height: 24),
-
-              // Error Box for Hackatime Ban
-              if (_isHackatimeBanned) ...[
-                _buildHackatimeBanWarning(colorScheme, textTheme),
-                const SizedBox(height: 24),
+          child: Padding(
+            padding: Responsive.pagePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTerminalHeader(colorScheme, textTheme),
+                SizedBox(height: Responsive.spacing(context)),
+                if (_isHackatimeBanned) ...[
+                  _buildHackatimeBanWarning(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
+                ],
+                _buildSystemStatus(colorScheme, textTheme),
+                SizedBox(height: Responsive.spacing(context)),
+                if (!_isHackatimeBanned)
+                  _buildNavigationGrid(colorScheme, textTheme),
               ],
-
-              // System Status
-              _buildSystemStatus(colorScheme, textTheme),
-              const SizedBox(height: 24),
-
-              if (!_isHackatimeBanned) ...[
-                // Main Navigation Grid
-                _buildNavigationGrid(colorScheme, textTheme),
-                const SizedBox(height: 24),
-
-                // Quick Stats
-                //_buildQuickStats(colorScheme, textTheme),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -273,21 +264,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 Icon(Symbols.monitor_heart, color: colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'System Status',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    'System Status',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatusItem(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final children = [
+                  _buildStatusItem(
                     'User',
                     UserService.currentUser?.username ?? 'Unknown',
                     Symbols.person,
@@ -295,9 +288,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     colorScheme,
                     textTheme,
                   ),
-                ),
-                Expanded(
-                  child: _buildStatusItem(
+                  _buildStatusItem(
                     'Status',
                     _isHackatimeBanned ? 'ERROR' : 'READY',
                     _isHackatimeBanned ? Symbols.error : Symbols.check_circle,
@@ -307,8 +298,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     colorScheme,
                     textTheme,
                   ),
-                ),
-              ],
+                ];
+                if (constraints.maxWidth < Responsive.small) {
+                  return Column(
+                    children: [
+                      for (var i = 0; i < children.length; i++) ...[
+                        children[i],
+                        if (i < children.length - 1) const SizedBox(height: 16),
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: children[0]),
+                    const SizedBox(width: 16),
+                    Expanded(child: children[1]),
+                  ],
+                );
+              },
             ),
           ],
         ),

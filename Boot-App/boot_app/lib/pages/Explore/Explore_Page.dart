@@ -4,6 +4,7 @@ import '/services/Projects/project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/users/user.dart';
 import '/pages/Projects/project_page.dart';
+import '/theme/responsive.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -234,13 +235,13 @@ class _ExplorePageState extends State<ExplorePage>
             )
           : ListView.builder(
               controller: _allProjectsScrollController,
-              padding: const EdgeInsets.all(16),
+              padding: Responsive.pagePadding(context),
               itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == _allProjects.length) {
                   // Loading indicator for pagination
                   return Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(Responsive.spacing(context)),
                     child: Center(
                       child: CircularProgressIndicator(
                         color: colorScheme.primary,
@@ -287,7 +288,7 @@ class _ExplorePageState extends State<ExplorePage>
               textTheme: textTheme,
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: Responsive.pagePadding(context),
               itemCount: _likedProjects.length,
               itemBuilder: (context, index) {
                 return _buildProjectCard(
@@ -345,7 +346,7 @@ class _ExplorePageState extends State<ExplorePage>
     return Card(
       color: colorScheme.surfaceContainer,
       elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: Responsive.spacing(context)),
       child: InkWell(
         onTap: () => _navigateToProject(project),
         borderRadius: BorderRadius.circular(12),

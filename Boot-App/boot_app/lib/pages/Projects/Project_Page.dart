@@ -15,6 +15,7 @@ import '/services/supabase/storage/supabase_storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/devlog.dart';
 import '/services/devlog/devlog_service.dart';
+import '/theme/responsive.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -2029,14 +2030,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: Responsive.pagePadding(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildTerminalHeader(colorScheme, textTheme),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.spacing(context)),
                 _buildAboutSection(colorScheme, textTheme),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.spacing(context)),
                 _buildDevlogSection(colorScheme, textTheme),
               ],
             ),

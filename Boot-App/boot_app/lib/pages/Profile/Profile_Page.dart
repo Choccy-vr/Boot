@@ -7,6 +7,7 @@ import '/services/devlog/devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/user.dart';
+import '/theme/responsive.dart';
 
 class ProfilePage extends StatefulWidget {
   final BootUser user;
@@ -115,44 +116,62 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left Column - Profile Info
-            SizedBox(
-              width: 320,
-              child: Column(
-                children: [
-                  // Profile Card
-                  _buildProfileCard(colorScheme, textTheme),
-                  const SizedBox(height: 16),
+        padding: Responsive.pagePadding(context),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= Responsive.medium;
 
-                  // Stats Card
-                  _buildCompactStatsCard(colorScheme, textTheme),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 24),
-
-            // Right Column - Content Feed
-            Expanded(
-              flex: 2,
-              child: Column(
+            if (isWide) {
+              // Wide layout: side-by-side
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Projects Section
+                  // Left Column - Profile Info
+                  SizedBox(
+                    width: Responsive.value(
+                      context: context,
+                      smallValue: 280.0,
+                      mediumValue: 320.0,
+                      largeValue: 360.0,
+                    ),
+                    child: Column(
+                      children: [
+                        _buildProfileCard(colorScheme, textTheme),
+                        SizedBox(height: Responsive.spacing(context)),
+                        _buildCompactStatsCard(colorScheme, textTheme),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: Responsive.spacing(context) * 1.5),
+                  // Right Column - Content Feed
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTopProjectsSection(colorScheme, textTheme),
+                        SizedBox(height: Responsive.spacing(context)),
+                        _buildRecentDevlogsSection(colorScheme, textTheme),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              // Narrow layout: stacked
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildProfileCard(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
+                  _buildCompactStatsCard(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
                   _buildTopProjectsSection(colorScheme, textTheme),
-                  const SizedBox(height: 24),
-
-                  // Recent Devlogs Section
+                  SizedBox(height: Responsive.spacing(context)),
                   _buildRecentDevlogsSection(colorScheme, textTheme),
                 ],
-              ),
-            ),
-          ],
+              );
+            }
+          },
         ),
       ),
     );

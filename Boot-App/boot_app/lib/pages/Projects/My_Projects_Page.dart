@@ -4,6 +4,7 @@ import '/services/Projects/project_service.dart';
 import '/services/users/user.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/Projects/project.dart';
+import '/theme/responsive.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -142,27 +143,32 @@ class _ProjectsPageState extends State<ProjectsPage>
   Widget _buildProjectsGrid(ColorScheme colorScheme, TextTheme textTheme) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        int columns;
-        double cardWidth;
-
-        if (constraints.maxWidth > 1200) {
-          columns = 4;
-        } else if (constraints.maxWidth > 800) {
-          columns = 3;
-        } else if (constraints.maxWidth > 600) {
-          columns = 2;
-        } else {
-          columns = 1;
-        }
-
-        cardWidth = (constraints.maxWidth - (16 * (columns - 1))) / columns;
+        const spacing = 16.0;
+        final columns = Responsive.columnsForWidth(
+          maxWidth: constraints.maxWidth,
+          maxColumns: 4,
+          minTileWidth: 280,
+        );
+        final cardWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+        final baseHeight = Responsive.value<double>(
+          context: context,
+          smallValue: 140,
+          mediumValue: 150,
+          largeValue: 160,
+          extraLargeValue: 170,
+        );
+        final imageHeight = cardWidth * 9 / 16;
+        final estimatedHeight = imageHeight + baseHeight;
+        final aspectRatio = cardWidth / estimatedHeight;
 
         return GridView.builder(
+          padding: EdgeInsets.zero,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: cardWidth > 300 ? 1.2 : 1.0,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
           ),
           itemCount: _projects.length,
           itemBuilder: (context, index) {
@@ -199,16 +205,26 @@ class _ProjectsPageState extends State<ProjectsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: 200,
-                child: Image.network(
-                  project.imageURL,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Symbols.broken_image,
-                    size: 48,
-                    color: colorScheme.onSurfaceVariant,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      project.imageURL,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Icon(
+                          Symbols.broken_image,
+                          size: 48,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -474,13 +490,13 @@ class _ProjectsPageState extends State<ProjectsPage>
           const SizedBox(width: 16),
         ],
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16),
+      body: Padding(
+        padding: Responsive.pagePadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTerminalHeader(colorScheme, textTheme),
-            const SizedBox(height: 24),
+            SizedBox(height: Responsive.spacing(context)),
             Expanded(child: _buildProjectsContent(colorScheme, textTheme)),
           ],
         ),
