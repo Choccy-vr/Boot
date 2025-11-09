@@ -3,7 +3,7 @@ import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/supabase/Storage/supabase_storage.dart';
-import 'package:boot_app/services/users/user.dart';
+import 'package:boot_app/services/users/User.dart';
 
 class SignUpProfilePage extends StatefulWidget {
   const SignUpProfilePage({super.key});

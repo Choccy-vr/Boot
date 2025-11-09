@@ -3,7 +3,7 @@ import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
 
 class HomePage extends StatefulWidget {

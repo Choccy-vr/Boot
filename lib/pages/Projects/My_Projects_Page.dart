@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/Projects/project_service.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
-import '/services/Projects/project.dart';
+import '/services/Projects/Project.dart';
 import '/theme/responsive.dart';
 
 class ProjectsPage extends StatefulWidget {

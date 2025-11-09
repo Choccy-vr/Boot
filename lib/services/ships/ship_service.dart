@@ -1,7 +1,7 @@
-import 'package:boot_app/services/Projects/project.dart';
-import 'package:boot_app/services/Projects/Project_Service.dart';
+import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/misc/logger.dart';
-import 'package:boot_app/services/ships/boot_ship.dart';
+import 'package:boot_app/services/ships/Boot_Ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:flutter/material.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '/services/supabase/auth/auth.dart';
+import '/services/supabase/auth/Auth.dart';
 import '/services/navigation/navigation_service.dart';
 
 class LoginPage extends StatefulWidget {

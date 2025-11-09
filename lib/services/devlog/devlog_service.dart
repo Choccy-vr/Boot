@@ -1,8 +1,8 @@
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
-import 'package:boot_app/services/users/user.dart';
-import 'devlog.dart';
+import 'package:boot_app/services/users/User.dart';
+import 'Devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
