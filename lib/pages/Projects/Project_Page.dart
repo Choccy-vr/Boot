@@ -2,16 +2,16 @@
 import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
-import 'package:boot_app/services/users/user.dart';
+import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 //Theme Data
 
 //Services
-import '/services/Projects/project.dart';
-import '/services/Projects/Project_Service.dart';
-import '/services/supabase/storage/supabase_storage.dart';
+import '/services/Projects/Project.dart';
+import '/services/Projects/project_service.dart';
+import '/services/supabase/Storage/supabase_storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/devlog.dart';
 import '/services/devlog/devlog_service.dart';

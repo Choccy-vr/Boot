@@ -1,6 +1,6 @@
 import 'supabase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'auth.dart';
+import 'Auth.dart';
 import 'dart:async';
 
 class AuthListener {

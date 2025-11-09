@@ -1,7 +1,7 @@
 import 'package:universal_html/html.dart' as html;
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'auth.dart';
+import 'Auth.dart';
 
 class AuthFailure implements Exception {
   final String message;

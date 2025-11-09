@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/users/boot_user.dart';
-import '/services/Projects/project.dart';
+import '/services/users/Boot_User.dart';
+import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
-import '/services/devlog/devlog.dart';
+import '/services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/services/navigation/navigation_service.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 import '/theme/responsive.dart';
 
 class ProfilePage extends StatefulWidget {
