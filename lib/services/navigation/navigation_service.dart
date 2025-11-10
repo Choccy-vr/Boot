@@ -52,7 +52,7 @@ class NavigationService {
         _pushPage(context, const ProjectsPage(), sharedAxis, transitionType);
         break;
       case AppDestination.test:
-        _pushPage(context, const TestPage(), sharedAxis, transitionType);
+        DialogService.showComingSoon(context, 'Test', textTheme, colorScheme);
         break;
       case AppDestination.login:
         _pushPage(context, const LoginPage(), sharedAxis, transitionType);
