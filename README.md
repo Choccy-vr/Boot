@@ -1,9 +1,5 @@
 # Boot
-Boot is a hackathon where teens from around the world come together to build their own operating systems — from the ground up or from something already great.
+Boot is a ysws where teens from around the world come together to build their own operating systems. Either from scratch or base it on an existing OS.
+Then get hardware to run your OS.
 
-Whether you're going completely custom with LFS or Buildroot, or remixing a distro like Ubuntu into something entirely your own, the choice is yours. 
-
-Throughout the event, participants will make, test, and vote on each other’s OSes. Oh — and there might be some sweet prizes along the way (Maybe lol).
-
-Put simply?
-Build your OS. Get prizes.
+Make an OS, Get hardware to run it!
