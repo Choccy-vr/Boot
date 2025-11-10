@@ -5,6 +5,8 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
+import '/services/Projects/Project.dart';
+import '/services/Projects/project_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +20,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late Animation<int> _typewriterAnimation;
   final String _welcomeText = "Welcome to Boot";
   bool _isHackatimeBanned = false;
+  List<Project> _userProjects = [];
+  bool _isLoadingProjects = true;
 
   @override
   void initState() {
@@ -31,6 +35,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     _typewriterController.forward();
     _scheduleHackatimeBanCheck();
+    _loadUserProjects();
+  }
+
+  Future<void> _loadUserProjects() async {
+    final userId = UserService.currentUser?.id;
+    if (userId == null) {
+      setState(() => _isLoadingProjects = false);
+      return;
+    }
+
+    try {
+      final projects = await ProjectService.getProjects(userId);
+      if (mounted) {
+        setState(() {
+          _userProjects = projects;
+          _isLoadingProjects = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingProjects = false);
+      }
+    }
   }
 
   Future<void> _checkHackatimeBanStatus() async {
@@ -62,7 +89,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return;
     }
     if (attempt >= 10) {
-      // Gave up waiting for credentials (attempts=$attempt)
+      // Gave up waiting
       return;
     }
     await Future.delayed(const Duration(milliseconds: 200));
@@ -95,10 +122,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   _buildHackatimeBanWarning(colorScheme, textTheme),
                   SizedBox(height: Responsive.spacing(context)),
                 ],
-                _buildSystemStatus(colorScheme, textTheme),
-                SizedBox(height: Responsive.spacing(context)),
-                if (!_isHackatimeBanned)
+                Row(
+                  children: [
+                    Expanded(child: _buildSystemStatus(colorScheme, textTheme)),
+                  ],
+                ),
+                SizedBox(height: Responsive.spacing(context) * 1.5),
+                if (!_isHackatimeBanned) ...[
                   _buildNavigationGrid(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context) * 1.5),
+                  _buildBottomSection(colorScheme, textTheme),
+                ],
               ],
             ),
           ),
@@ -353,17 +387,232 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildBottomSection(ColorScheme colorScheme, TextTheme textTheme) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 800;
+
+        if (isWide) {
+          // Side-by-side layout for wide screens
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildMyOSesColumn(colorScheme, textTheme)),
+            ],
+          );
+        } else {
+          // Stacked layout for narrow screens
+          return Column(children: [_buildMyOSesColumn(colorScheme, textTheme)]);
+        }
+      },
+    );
+  }
+
+  Widget _buildMyOSesColumn(ColorScheme colorScheme, TextTheme textTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Symbols.memory, color: colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'My OSes',
+              style: textTheme.headlineSmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_isLoadingProjects)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_userProjects.isEmpty)
+          Card(
+            color: colorScheme.surfaceContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Symbols.add_circle,
+                      size: 48,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No projects yet',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Start building your OS!',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 180,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _userProjects.length,
+              itemBuilder: (context, index) {
+                final project = _userProjects[index];
+                return _buildProjectCard(project, colorScheme, textTheme);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildProjectCard(
+    Project project,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 12),
+      child: Card(
+        color: colorScheme.surfaceContainer,
+        elevation: 2,
+        child: InkWell(
+          onTap: () => NavigationService.openProject(project, context),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Symbols.terminal,
+                        color: colorScheme.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            project.title,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            project.level.toUpperCase(),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: Text(
+                    project.description,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Symbols.favorite, size: 16, color: TerminalColors.red),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${project.likes}',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ProjectService.getStatusColor(
+                          project.status,
+                        ).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: ProjectService.getStatusColor(project.status),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        project.status.toUpperCase(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: ProjectService.getStatusColor(project.status),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNavigationGrid(ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '> Available Commands',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.primary,
-            fontFamily: 'JetBrainsMono',
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          children: [
+            Icon(Symbols.terminal, color: colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'Available Commands',
+              style: textTheme.headlineSmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
