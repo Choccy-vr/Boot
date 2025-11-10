@@ -3,7 +3,7 @@ import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
 import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
-import 'boot_user.dart';
+import 'Boot_User.dart';
 
 class UserService {
   static BootUser? currentUser;

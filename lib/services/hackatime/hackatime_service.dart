@@ -1,10 +1,10 @@
-import 'package:boot_app/services/Projects/project.dart';
+import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 
 class HackatimeService {
   static void _showErrorSnackbar(BuildContext? context, String message) {

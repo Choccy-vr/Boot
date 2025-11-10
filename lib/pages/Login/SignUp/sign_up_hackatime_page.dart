@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import 'package:boot_app/services/users/user.dart';
+import 'package:boot_app/services/users/User.dart';
 
 class SignupHackatimePage extends StatefulWidget {
   const SignupHackatimePage({super.key});

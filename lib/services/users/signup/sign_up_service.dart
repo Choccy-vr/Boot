@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '/services/supabase/auth/auth.dart';
+import '/services/supabase/auth/Auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
 
 class SignupService {

@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/services/misc/logger.dart';
-import '/services/users/user.dart';
+import '/services/users/User.dart';
 
 class Authentication {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();

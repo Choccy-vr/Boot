@@ -4,7 +4,7 @@ import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
-import '/services/Projects/project.dart';
+import '/services/Projects/Project.dart';
 
 class ProjectService {
   static Future<List<Project>> getProjects(String userID) async {

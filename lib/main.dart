@@ -1,10 +1,10 @@
 import 'package:boot_app/services/supabase/auth/supabase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:boot_app/theme/terminal_theme.dart';
-import 'package:boot_app/pages/home_page.dart';
-import 'package:boot_app/pages/Login/login_page.dart';
+import 'package:boot_app/pages/Home_Page.dart';
+import 'package:boot_app/pages/Login/Login_Page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:boot_app/services/supabase/auth/auth.dart';
+import 'package:boot_app/services/supabase/auth/Auth.dart';
 import 'package:boot_app/services/supabase/auth/auth_listener.dart';
 import 'package:boot_app/services/misc/logger.dart';
 

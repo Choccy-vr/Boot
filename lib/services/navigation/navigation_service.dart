@@ -1,23 +1,23 @@
-import 'package:boot_app/pages/Profile/profile_page.dart';
-import 'package:boot_app/services/Projects/project.dart';
-import 'package:boot_app/services/users/boot_user.dart';
-import 'package:boot_app/services/users/user.dart';
+import 'package:boot_app/pages/Profile/Profile_Page.dart';
+import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/users/Boot_User.dart';
+import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
-import '/animations/shared_axis.dart';
+import '/animations/Shared_Axis.dart';
 import '/services/dialog/dialog_service.dart';
 
-import '/pages/test_page.dart';
-import '/pages/Login/login_page.dart';
+import '/pages/Test_Page.dart';
+import '/pages/Login/Login_Page.dart';
 import '/pages/Login/SignUp/sign_up_page.dart';
-import '/pages/home_page.dart';
-import '/pages/Login/SignUp/signup_pass_page.dart';
+import '/pages/Home_Page.dart';
+import '/pages/Login/SignUp/Signup_Pass_page.dart';
 import '/pages/Login/SignUp/sign_up_profile_page.dart';
 import '/pages/Login/SignUp/sign_up_hackatime_page.dart';
-import '/pages/Projects/my_projects_page.dart';
-import '/pages/Projects/creation_page.dart';
-import '/pages/Projects/project_page.dart';
-import '/pages/Explore/explore_page.dart';
+import '/pages/Projects/My_Projects_Page.dart';
+import '/pages/Projects/Creation_Page.dart';
+import '/pages/Projects/Project_Page.dart';
+import '/pages/Explore/Explore_Page.dart';
 
 enum AppDestination {
   home,
