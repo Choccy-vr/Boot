@@ -1,23 +1,8 @@
-import 'package:boot_app/pages/Profile/Profile_Page.dart';
 import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/users/Boot_User.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
-import 'package:animations/animations.dart';
-import '/animations/Shared_Axis.dart';
 import '/services/dialog/dialog_service.dart';
-
-import '/pages/Test_Page.dart';
-import '/pages/Login/Login_Page.dart';
-import '/pages/Login/SignUp/sign_up_page.dart';
-import '/pages/Home_Page.dart';
-import '/pages/Login/SignUp/Signup_Pass_page.dart';
-import '/pages/Login/SignUp/sign_up_profile_page.dart';
-import '/pages/Login/SignUp/sign_up_hackatime_page.dart';
-import '/pages/Projects/My_Projects_Page.dart';
-import '/pages/Projects/Creation_Page.dart';
-import '/pages/Projects/Project_Page.dart';
-import '/pages/Explore/Explore_Page.dart';
 
 enum AppDestination {
   home,
@@ -40,56 +25,39 @@ class NavigationService {
     required AppDestination destination,
     required ColorScheme colorScheme,
     required TextTheme textTheme,
-    bool sharedAxis = false,
-    SharedAxisTransitionType transitionType =
-        SharedAxisTransitionType.horizontal,
   }) {
+    final navigator = Navigator.of(context);
     switch (destination) {
       case AppDestination.home:
-        _pushPage(context, const HomePage(), sharedAxis, transitionType);
+        navigator.pushNamedAndRemoveUntil('/dashboard', (route) => false);
         break;
       case AppDestination.project:
-        _pushPage(context, const ProjectsPage(), sharedAxis, transitionType);
+        navigator.pushNamed('/projects');
         break;
       case AppDestination.test:
         DialogService.showComingSoon(context, 'Test', textTheme, colorScheme);
         break;
       case AppDestination.login:
-        _pushPage(context, const LoginPage(), sharedAxis, transitionType);
+        navigator.pushNamedAndRemoveUntil('/login', (route) => false);
         break;
       case AppDestination.signup:
-        _pushPage(context, const SignUpPage(), sharedAxis, transitionType);
+        navigator.pushNamed('/signup');
         break;
       case AppDestination.signupPass:
-        _pushPage(context, const SignUpPassPage(), sharedAxis, transitionType);
+        navigator.pushNamed('/signup/password');
         break;
       case AppDestination.signupProfile:
-        _pushPage(
-          context,
-          const SignUpProfilePage(),
-          sharedAxis,
-          transitionType,
-        );
+        navigator.pushNamed('/signup/profile');
         break;
       case AppDestination.signupHackatime:
-        _pushPage(
-          context,
-          const SignupHackatimePage(),
-          sharedAxis,
-          transitionType,
-        );
+        navigator.pushNamed('/signup/hackatime');
         break;
 
       case AppDestination.createProject:
-        _pushPage(
-          context,
-          const CreateProjectPage(),
-          sharedAxis,
-          transitionType,
-        );
+        navigator.pushNamed('/projects/create');
         break;
       case AppDestination.explore:
-        _pushPage(context, const ExplorePage(), sharedAxis, transitionType);
+        navigator.pushNamed('/explore');
         break;
       case AppDestination.leaderboard:
         DialogService.showComingSoon(
@@ -100,38 +68,27 @@ class NavigationService {
         );
         break;
       case AppDestination.profile:
-        openProfile(UserService.currentUser!, context);
+        final user = UserService.currentUser;
+        if (user == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User profile not loaded yet.')),
+          );
+          return;
+        }
+        navigator.pushNamed('/user/${user.id}', arguments: user);
         break;
     }
   }
 
-  static void _pushPage(
-    BuildContext context,
-    Widget page,
-    bool sharedAxis,
-    SharedAxisTransitionType transitionType,
-  ) {
-    Navigator.push(
+  static Future<T?> openProject<T>(Project project, BuildContext context) {
+    return Navigator.of(
       context,
-      sharedAxis
-          ? SharedAxisPageRoute(child: page, transitionType: transitionType)
-          : MaterialPageRoute(builder: (context) => page),
-    );
+    ).pushNamed<T>('/projects/${project.id}', arguments: project);
   }
 
-  static void openProject(Project project, BuildContext context) {
-    Navigator.push(
+  static Future<T?> openProfile<T>(BootUser user, BuildContext context) {
+    return Navigator.of(
       context,
-      MaterialPageRoute(
-        builder: (context) => ProjectDetailPage(project: project),
-      ),
-    );
-  }
-
-  static void openProfile(BootUser user, BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ProfilePage(user: user)),
-    );
+    ).pushNamed<T>('/user/${user.id}', arguments: user);
   }
 }

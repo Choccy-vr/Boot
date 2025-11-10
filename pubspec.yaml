@@ -11,6 +11,8 @@ dependencies:
   file_picker: ^10.3.2
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   flutter_rfb: ^0.6.2
   flutter_secure_storage: ^9.2.4
   flutter_svg: ^2.2.1

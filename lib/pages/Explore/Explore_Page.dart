@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
+import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
-import '/pages/Projects/Project_Page.dart';
 import '/theme/responsive.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -146,20 +146,14 @@ class _ExplorePageState extends State<ExplorePage>
     await _loadLikedProjects();
   }
 
-  void _navigateToProject(Project project) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProjectDetailPage(project: project),
-      ),
-    ).then((_) {
-      // Refresh data when returning from project page
-      if (_tabController.index == 0) {
-        _refreshAllProjects();
-      } else {
-        _refreshLikedProjects();
-      }
-    });
+  Future<void> _navigateToProject(Project project) async {
+    await NavigationService.openProject(project, context);
+    if (!mounted) return;
+    if (_tabController.index == 0) {
+      await _refreshAllProjects();
+    } else {
+      await _refreshLikedProjects();
+    }
   }
 
   @override

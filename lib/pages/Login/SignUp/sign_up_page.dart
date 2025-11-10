@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:animations/animations.dart';
 import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 
@@ -194,8 +193,6 @@ class _SignUpPageState extends State<SignUpPage> {
         destination: AppDestination.signupPass,
         colorScheme: Theme.of(context).colorScheme,
         textTheme: Theme.of(context).textTheme,
-        sharedAxis: true,
-        transitionType: SharedAxisTransitionType.horizontal,
       );
     } catch (e) {
       ScaffoldMessenger.of(
