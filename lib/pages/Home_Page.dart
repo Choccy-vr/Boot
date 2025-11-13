@@ -1,9 +1,11 @@
+import 'package:boot_app/services/supabase/auth/Auth.dart';
 import 'package:flutter/material.dart';
 import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
+import '/services/users/Boot_User.dart';
 import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
@@ -109,6 +111,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: colorScheme.surfaceContainerLowest,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Symbols.menu, color: colorScheme.primary),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            tooltip: 'Menu',
+          ),
+        ),
+        title: Row(
+          children: [
+            Icon(Symbols.terminal, color: colorScheme.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Boot',
+              style: textTheme.titleLarge?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Symbols.notifications, color: colorScheme.primary),
+            onPressed: () {
+              // TODO: Show notifications
+            },
+            tooltip: 'Notifications',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      drawer: _buildDrawer(colorScheme, textTheme),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -138,6 +175,241 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawer(ColorScheme colorScheme, TextTheme textTheme) {
+    final user = UserService.currentUser;
+
+    return Drawer(
+      backgroundColor: colorScheme.surface,
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLowest,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outline.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.terminal,
+                            color: colorScheme.primary,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Boot',
+                            style: textTheme.headlineSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: Icon(Symbols.close, color: colorScheme.onSurface),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Close menu',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (user != null)
+                    Text(
+                      '${user.username}@ysws',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildDrawerItem(
+                  icon: Symbols.home,
+                  title: 'Dashboard',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.home,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Symbols.construction,
+                  title: 'My Projects',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.project,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Symbols.explore,
+                  title: 'Explore',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.explore,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Symbols.leaderboard,
+                  title: 'Leaderboard',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.leaderboard,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Symbols.leaderboard,
+                  title: 'Challenges',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.leaderboard,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          _buildProfileSection(colorScheme, textTheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileSection(ColorScheme colorScheme, TextTheme textTheme) {
+    final user = UserService.currentUser;
+
+    if (user == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          _ProfileCardWithHover(
+            user: user,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+            onTap: () {
+              Navigator.pop(context);
+              NavigationService.navigateTo(
+                context: context,
+                destination: AppDestination.profile,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Authentication.signOut();
+                NavigationService.navigateTo(
+                  context: context,
+                  destination: AppDestination.login,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                );
+              },
+              icon: Icon(Symbols.logout, size: 18, color: TerminalColors.red),
+              label: Text(
+                'Logout',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: TerminalColors.red,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: TerminalColors.red.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? TerminalColors.red : colorScheme.onSurface;
+
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(title, style: textTheme.bodyLarge?.copyWith(color: color)),
+      onTap: onTap,
+      hoverColor: colorScheme.surfaceContainerHighest,
     );
   }
 
@@ -781,6 +1053,148 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileCardWithHover extends StatefulWidget {
+  final BootUser user;
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+  final VoidCallback onTap;
+
+  const _ProfileCardWithHover({
+    required this.user,
+    required this.colorScheme,
+    required this.textTheme,
+    required this.onTap,
+  });
+
+  @override
+  State<_ProfileCardWithHover> createState() => _ProfileCardWithHoverState();
+}
+
+class _ProfileCardWithHoverState extends State<_ProfileCardWithHover>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: 0,
+      end: 4,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => _controller.forward(),
+      onExit: (_) => _controller.reverse(),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: widget.colorScheme.primary.withValues(
+                  alpha: 0.2,
+                ),
+                backgroundImage: widget.user.profilePicture.isNotEmpty
+                    ? NetworkImage(widget.user.profilePicture)
+                    : null,
+                child: widget.user.profilePicture.isEmpty
+                    ? Text(
+                        widget.user.username.isNotEmpty
+                            ? widget.user.username[0].toUpperCase()
+                            : '?',
+                        style: widget.textTheme.titleLarge?.copyWith(
+                          color: widget.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.user.username,
+                      style: widget.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: widget.colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: TerminalColors.yellow.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: TerminalColors.yellow.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Symbols.toll,
+                            size: 14,
+                            color: TerminalColors.yellow,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.user.bootCoins}',
+                            style: widget.textTheme.bodySmall?.copyWith(
+                              color: TerminalColors.yellow,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _animation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(_animation.value, 0),
+                    child: Icon(
+                      Symbols.chevron_right,
+                      color: widget.colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
