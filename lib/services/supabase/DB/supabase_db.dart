@@ -70,6 +70,17 @@ class SupabaseDB {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getAllRowData({
+    required String table,
+  }) async {
+    try {
+      return await supabase.from(table).select();
+    } catch (e, stack) {
+      AppLogger.error('Error getting all row data from $table', e, stack);
+      throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
   //Insert
   static Future<void> insertData({
     required String table,

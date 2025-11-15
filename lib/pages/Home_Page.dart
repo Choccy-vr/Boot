@@ -321,8 +321,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     Navigator.pop(context);
                     NavigationService.navigateTo(
                       context: context,
-                      //TODO: MAKE CHALLENGES DESTINATION
-                      destination: AppDestination.leaderboard,
+                      destination: AppDestination.challenges,
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     );

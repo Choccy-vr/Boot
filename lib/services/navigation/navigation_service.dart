@@ -11,6 +11,7 @@ enum AppDestination {
   test,
   explore,
   leaderboard,
+  challenges,
   profile,
   login,
   signup,
@@ -67,6 +68,9 @@ class NavigationService {
           textTheme,
           colorScheme,
         );
+        break;
+      case AppDestination.challenges:
+        navigator.pushNamed('/challenges');
         break;
       case AppDestination.profile:
         final user = UserService.currentUser;

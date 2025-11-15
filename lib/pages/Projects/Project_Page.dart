@@ -18,7 +18,13 @@ import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/theme/responsive.dart';
+import '/theme/terminal_theme.dart';
 import '/services/notifications/notifications.dart';
+import '/services/challenges/Challenge.dart';
+import '/services/challenges/Challenge_Service.dart';
+import '/services/prizes/Prize.dart';
+import '/services/prizes/Prize_Service.dart';
+import '/pages/Challenges/Challenge_page.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -49,13 +55,26 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _devlogDescriptionDirty = false;
   bool _devlogMediaDirty = false;
   bool _devlogValidationAttempted = false;
+  bool _isEditMode = false;
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _githubRepoController = TextEditingController();
+  List<Challenge> _projectChallenges = [];
+  List<Challenge> _filteredProjectChallenges = [];
+  Map<String, Prize> _prizeCacheForChallenges = {};
+  ChallengeType? _selectedChallengeType;
+  ChallengeDifficulty? _selectedChallengeDifficulty;
 
   @override
   void initState() {
     super.initState();
     _project = widget.project;
+    _titleController.text = _project.title;
+    _descriptionController.text = _project.description;
+    _githubRepoController.text = _project.githubRepo;
     _loadOwner();
     _loadDevlogs();
+    _loadProjectChallenges();
     _refreshController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
@@ -114,11 +133,77 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     } catch (_) {}
   }
 
+  Future<void> _loadProjectChallenges() async {
+    try {
+      final allChallenges = await ChallengeService.fetchChallenges();
+
+      // Filter challenges based on project type
+      List<Challenge> relevantChallenges = allChallenges.where((challenge) {
+        // If project is from scratch, exclude base challenges
+        if (_project.level.toLowerCase().contains('scratch')) {
+          return challenge.type != ChallengeType.base;
+        }
+        // If project is base, exclude scratch challenges
+        else if (_project.level.toLowerCase().contains('base')) {
+          return challenge.type != ChallengeType.scratch;
+        }
+        // Otherwise show all challenges
+        return true;
+      }).toList();
+
+      // Load prizes for challenges
+      final prizeIds = relevantChallenges
+          .map((c) => c.prize)
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (prizeIds.isNotEmpty) {
+        final prizes = await PrizeService.getPrizesByIds(prizeIds);
+        _prizeCacheForChallenges = {for (var prize in prizes) prize.id: prize};
+      }
+
+      if (mounted) {
+        setState(() {
+          _projectChallenges = relevantChallenges;
+          _applyProjectChallengeFilters();
+        });
+      }
+    } catch (e) {
+      // Error loading challenges
+    }
+  }
+
+  void _applyProjectChallengeFilters() {
+    List<Challenge> filtered = List.from(_projectChallenges);
+
+    // Apply type filter
+    if (_selectedChallengeType != null) {
+      filtered = filtered
+          .where((c) => c.type == _selectedChallengeType)
+          .toList();
+    }
+
+    // Apply difficulty filter
+    if (_selectedChallengeDifficulty != null) {
+      filtered = filtered
+          .where((c) => c.difficulty == _selectedChallengeDifficulty)
+          .toList();
+    }
+
+    setState(() {
+      _filteredProjectChallenges = filtered;
+    });
+  }
+
   @override
   void dispose() {
     _refreshController?.dispose();
     _devlogTitleController.dispose();
     _devlogDescriptionController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _githubRepoController.dispose();
     super.dispose();
   }
 
@@ -1396,25 +1481,166 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           Row(
             children: [
               Expanded(
-                child: Text(
-                  _project.title,
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isEditMode
+                    ? TextField(
+                        controller: _titleController,
+                        style: textTheme.headlineMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Project Title',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        _project.title,
+                        style: textTheme.headlineMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
+              if (_isOwner() && !_isEditMode)
+                PopupMenuButton<String>(
+                  icon: Icon(Symbols.more_vert, color: colorScheme.onSurface),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Symbols.edit, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Edit Project'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Symbols.delete,
+                            size: 20,
+                            color: colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete Project',
+                            style: TextStyle(color: colorScheme.error),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      setState(() => _isEditMode = true);
+                    } else if (value == 'delete') {
+                      _showDeleteConfirmation();
+                    }
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            _project.description,
-            style: textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface,
-              height: 1.5,
-            ),
-          ),
+          _isEditMode
+              ? TextField(
+                  controller: _descriptionController,
+                  maxLines: 4,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Project Description',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                )
+              : Text(
+                  _project.description,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                    height: 1.5,
+                  ),
+                ),
           const SizedBox(height: 32),
+          if (_isEditMode) ...[
+            Row(
+              children: [
+                Icon(
+                  Symbols.link,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _githubRepoController,
+                    style: textTheme.bodyMedium,
+                    decoration: InputDecoration(
+                      hintText: 'GitHub Repository URL',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isEditMode = false;
+                      _titleController.text = _project.title;
+                      _descriptionController.text = _project.description;
+                      _githubRepoController.text = _project.githubRepo;
+                    });
+                  },
+                  child: Text('Cancel'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _handleSaveProject,
+                  icon: Icon(Symbols.save, size: 20),
+                  label: Text('Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           Divider(
             color: colorScheme.outline.withValues(alpha: 0.3),
             thickness: 1,
@@ -1568,21 +1794,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Widget _buildOwnerActions(ColorScheme colorScheme, TextTheme textTheme) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Divider(
-            color: colorScheme.outline.withValues(alpha: 0.3),
-            thickness: 1,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Divider(
+          color: colorScheme.outline.withValues(alpha: 0.3),
+          thickness: 1,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left side - ship button
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ElevatedButton(
                     onPressed: _project.status.toLowerCase().contains('shipped')
@@ -1597,10 +1823,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           _project.status.toLowerCase().contains('shipped')
                           ? colorScheme.onSurfaceVariant
                           : null,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Symbols.directions_boat, size: 18),
+                        Icon(Symbols.directions_boat, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           _project.status.toLowerCase().contains('shipped')
@@ -1611,33 +1842,442 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                   if (_project.status.toLowerCase().contains('shipped')) ...[
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message:
-                          'You cannot ship again until your first ship is completed',
-                      child: Icon(
-                        Symbols.info,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Symbols.info,
+                          size: 16,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'You cannot ship again until your first ship is completed',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
               ),
-              ElevatedButton(
-                onPressed: () {},
+            ),
+            const SizedBox(width: 24),
+            // Right side - challenges
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStyledFilter(
+                          icon: Symbols.category,
+                          label: _selectedChallengeType == null
+                              ? 'Type'
+                              : _selectedChallengeType
+                                    .toString()
+                                    .split('.')
+                                    .last,
+                          isActive: _selectedChallengeType != null,
+                          items: [
+                            _FilterItem(
+                              label: 'All Types',
+                              value: null,
+                              onTap: () {
+                                setState(() {
+                                  _selectedChallengeType = null;
+                                  _applyProjectChallengeFilters();
+                                });
+                              },
+                            ),
+                            ...ChallengeType.values.map(
+                              (type) => _FilterItem(
+                                label: type
+                                    .toString()
+                                    .split('.')
+                                    .last
+                                    .toUpperCase(),
+                                value: type,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedChallengeType = type;
+                                    _applyProjectChallengeFilters();
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStyledFilter(
+                          icon: Symbols.signal_cellular_alt,
+                          label: _selectedChallengeDifficulty == null
+                              ? 'Difficulty'
+                              : _selectedChallengeDifficulty
+                                    .toString()
+                                    .split('.')
+                                    .last,
+                          isActive: _selectedChallengeDifficulty != null,
+                          items: [
+                            _FilterItem(
+                              label: 'All Levels',
+                              value: null,
+                              onTap: () {
+                                setState(() {
+                                  _selectedChallengeDifficulty = null;
+                                  _applyProjectChallengeFilters();
+                                });
+                              },
+                            ),
+                            ...ChallengeDifficulty.values.map(
+                              (difficulty) => _FilterItem(
+                                label: difficulty
+                                    .toString()
+                                    .split('.')
+                                    .last
+                                    .toUpperCase(),
+                                value: difficulty,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedChallengeDifficulty = difficulty;
+                                    _applyProjectChallengeFilters();
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(
+                        Symbols.mountain_flag,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Available Challenges',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_filteredProjectChallenges.isEmpty)
+                    Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.outline.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Symbols.search_off,
+                              size: 48,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No challenges found',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: colorScheme.outline.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: ListView.separated(
+                        itemCount: _filteredProjectChallenges.length,
+                        separatorBuilder: (context, index) => Divider(
+                          height: 1,
+                          color: colorScheme.outline.withValues(alpha: 0.2),
+                        ),
+                        itemBuilder: (context, index) {
+                          final challenge = _filteredProjectChallenges[index];
+                          return _buildCompactChallengeCard(
+                            challenge,
+                            colorScheme,
+                            textTheme,
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.error,
-                  foregroundColor: colorScheme.onError,
+  Widget _buildStyledFilter({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required List<_FilterItem> items,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    return PopupMenuButton<dynamic>(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: TerminalColors.green, width: 2),
+      ),
+      color: colorScheme.surface,
+      elevation: 8,
+      offset: const Offset(0, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: isActive
+              ? LinearGradient(
+                  colors: [
+                    TerminalColors.green.withValues(alpha: 0.2),
+                    TerminalColors.green.withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isActive ? null : colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive
+                ? TerminalColors.green
+                : colorScheme.outline.withValues(alpha: 0.4),
+            width: isActive ? 2 : 1,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: TerminalColors.green.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isActive
+                  ? TerminalColors.green
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: textTheme.labelLarge?.copyWith(
+                  color: isActive
+                      ? TerminalColors.green
+                      : colorScheme.onSurface,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
-                child: Text('Delete Project'),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Icon(
+              Symbols.arrow_drop_down,
+              size: 18,
+              color: isActive
+                  ? TerminalColors.green
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => items.map((item) {
+        final bool isSelected =
+            item.value ==
+            (icon == Symbols.category
+                ? _selectedChallengeType
+                : _selectedChallengeDifficulty);
+        return PopupMenuItem(
+          padding: EdgeInsets.zero,
+          child: InkWell(
+            onTap: item.onTap,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? TerminalColors.green.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                border: Border(
+                  left: BorderSide(
+                    color: isSelected
+                        ? TerminalColors.green
+                        : Colors.transparent,
+                    width: 3,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  if (isSelected) ...[
+                    Icon(Symbols.check, size: 18, color: TerminalColors.green),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: isSelected
+                            ? TerminalColors.green
+                            : colorScheme.onSurface,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Future<void> _handleSaveProject() async {
+    try {
+      setState(() {
+        _project.title = _titleController.text;
+        _project.description = _descriptionController.text;
+        _project.githubRepo = _githubRepoController.text;
+        _isEditMode = false;
+      });
+
+      await ProjectService.updateProject(_project);
+
+      if (!mounted) return;
+      GlobalNotificationService.instance.showSuccess(
+        'Project updated successfully!',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'Failed to update project: $e',
+      );
+    }
+  }
+
+  Future<void> _showDeleteConfirmation() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Symbols.warning, color: colorScheme.error),
+              const SizedBox(width: 8),
+              Text('Delete Project?'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete "${_project.title}"?',
+                style: textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This action cannot be undone. All project data, devlogs, and associated information will be permanently deleted.',
+                style: textTheme.bodyMedium,
               ),
             ],
           ),
-        ],
-      ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleDeleteProject();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+              ),
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _handleDeleteProject() async {
+    try {
+      // TODO: Implement project deletion in ProjectService
+      // await ProjectService.deleteProject(_project.id);
+
+      if (!mounted) return;
+      GlobalNotificationService.instance.showSuccess(
+        'Project deleted successfully',
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'Failed to delete project: $e',
+      );
+    }
   }
 
   Widget _buildDevlogSection(ColorScheme colorScheme, TextTheme textTheme) {
@@ -1898,6 +2538,298 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       ),
     );
   }
+
+  Widget _buildCompactChallengeCard(
+    Challenge challenge,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final difficultyColor = _getChallengeDifficultyColor(challenge.difficulty);
+    final typeIcon = _getChallengeTypeIcon(challenge.type);
+    final daysRemaining = challenge.endDate.difference(DateTime.now()).inDays;
+    final isExpired = daysRemaining < 0;
+    final prize = _prizeCacheForChallenges[challenge.prize];
+
+    return InkWell(
+      onTap: () =>
+          _showChallengeDetailDialog(challenge, colorScheme, textTheme),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Row(
+          children: [
+            // Type icon
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(typeIcon, color: colorScheme.primary, size: 18),
+            ),
+            const SizedBox(width: 12),
+            // Challenge info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          challenge.title,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (challenge.isActive && !isExpired)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TerminalColors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: TerminalColors.green,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'ACTIVE',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: TerminalColors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        )
+                      else if (isExpired)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TerminalColors.red.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: TerminalColors.red,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'EXPIRED',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: TerminalColors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      // Type label
+                      _buildChallengeTypeLabel(
+                        challenge.type,
+                        colorScheme,
+                        textTheme,
+                      ),
+                      if (_buildChallengeTypeLabel(
+                            challenge.type,
+                            colorScheme,
+                            textTheme,
+                          )
+                          is! SizedBox)
+                        const SizedBox(width: 8),
+                      // Difficulty
+                      Icon(
+                        Symbols.signal_cellular_alt,
+                        size: 12,
+                        color: difficultyColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        challenge.difficulty
+                            .toString()
+                            .split('.')
+                            .last
+                            .toUpperCase(),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: difficultyColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Days remaining
+                      Icon(
+                        Symbols.schedule,
+                        size: 12,
+                        color: isExpired
+                            ? TerminalColors.red
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isExpired
+                            ? 'Ended'
+                            : '$daysRemaining day${daysRemaining != 1 ? 's' : ''}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: isExpired
+                              ? TerminalColors.red
+                              : colorScheme.onSurfaceVariant,
+                          fontSize: 10,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Prize info
+                      if (prize != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Symbols.toll,
+                              size: 14,
+                              color: TerminalColors.yellow,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${prize.cost}',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: TerminalColors.yellow,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Symbols.chevron_right,
+              size: 16,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChallengeTypeLabel(
+    ChallengeType type,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    String? label;
+    switch (type) {
+      case ChallengeType.special:
+        label = 'SPECIAL';
+        break;
+      case ChallengeType.weekly:
+        label = 'WEEKLY';
+        break;
+      case ChallengeType.monthly:
+        label = 'MONTHLY';
+        break;
+      case ChallengeType.scratch:
+        label = 'SCRATCH';
+        break;
+      case ChallengeType.base:
+        label = 'BASE';
+        break;
+      case ChallengeType.normal:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: colorScheme.secondary.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: textTheme.labelSmall?.copyWith(
+          color: colorScheme.secondary,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+
+  Color _getChallengeDifficultyColor(ChallengeDifficulty difficulty) {
+    switch (difficulty) {
+      case ChallengeDifficulty.easy:
+        return TerminalColors.green;
+      case ChallengeDifficulty.medium:
+        return TerminalColors.yellow;
+      case ChallengeDifficulty.hard:
+        return TerminalColors.red;
+    }
+  }
+
+  IconData _getChallengeTypeIcon(ChallengeType type) {
+    switch (type) {
+      case ChallengeType.special:
+        return Symbols.star_rate;
+      case ChallengeType.weekly:
+        return Symbols.date_range;
+      case ChallengeType.monthly:
+        return Symbols.calendar_month;
+      case ChallengeType.scratch:
+        return Symbols.code;
+      case ChallengeType.base:
+        return Symbols.foundation;
+      case ChallengeType.normal:
+        return Symbols.flag;
+    }
+  }
+
+  void _showChallengeDetailDialog(
+    Challenge challenge,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) async {
+    // Get prize from cache or load it
+    Prize? prize = _prizeCacheForChallenges[challenge.prize];
+    if (prize == null && challenge.prize.isNotEmpty) {
+      prize = await PrizeService.getPrizeById(challenge.prize);
+      if (prize != null) {
+        _prizeCacheForChallenges[challenge.prize] = prize;
+      }
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => ChallengeDetailDialog(
+        challenge: challenge,
+        prize: prize,
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+    );
+  }
 }
 
 // Separate stateful widget for media viewer
@@ -2075,4 +3007,12 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
       ],
     );
   }
+}
+
+class _FilterItem {
+  final String label;
+  final dynamic value;
+  final VoidCallback onTap;
+
+  _FilterItem({required this.label, required this.value, required this.onTap});
 }

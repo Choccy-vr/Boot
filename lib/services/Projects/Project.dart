@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:boot_app/services/challenges/Challenge.dart';
+import 'package:boot_app/services/challenges/Challenge_Service.dart';
+
 class Project {
   String title;
   String description;
@@ -18,6 +21,7 @@ class Project {
   double timeDevlogs;
   String isoUrl;
   String qemuCMD;
+  List<Challenge> challenges;
   //not in db
   String readableTime;
   double time;
@@ -42,6 +46,7 @@ class Project {
     required this.time,
     this.isoUrl = '',
     this.qemuCMD = '',
+    this.challenges = const [],
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -67,8 +72,10 @@ class Project {
       time: 0.0,
       isoUrl: row['ISO_url'] ?? '',
       qemuCMD: row['qemu_cmd'] ?? '',
+      challenges: ChallengeService.getChallengesByIds(row['challenges'] ?? []),
     );
   }
+
   static Map<String, dynamic> toRow({
     String? title,
     String? description,
@@ -85,6 +92,7 @@ class Project {
     double? timeDevlogs,
     String? isoUrl,
     String? qemuCMD,
+    List<Challenge>? challenges,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -106,6 +114,9 @@ class Project {
     if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
     if (isoUrl != null) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
+    if (challenges != null && challenges.isNotEmpty) {
+      map['challenges'] = challenges.map((c) => c.id).toList();
+    }
     return map;
   }
 
