@@ -3,15 +3,17 @@ import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/users/User.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
 //Theme Data
 
 //Services
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
-import '/services/supabase/Storage/supabase_storage.dart';
+import '../../services/Storage/storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
@@ -40,7 +42,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   final TextEditingController _devlogTitleController = TextEditingController();
   final TextEditingController _devlogDescriptionController =
       TextEditingController();
-  final List<String> _cachedMediaPaths = [];
+  final List<PlatformFile> _cachedMediaFiles = [];
   bool _isUploadingMedia = false;
 
   @override
@@ -202,7 +204,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _showDevlogEditor = false;
       _devlogTitleController.clear();
       _devlogDescriptionController.clear();
-      _cachedMediaPaths.clear();
+      _cachedMediaFiles.clear();
     });
   }
 
@@ -212,37 +214,35 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     });
 
     try {
-      final cachedFilePath = await DevlogService.cacheMediaFilePicker();
-      if (cachedFilePath != 'User cancelled') {
+      final cachedFile = await DevlogService.cacheMediaFilePicker();
+      if (cachedFile != null) {
         setState(() {
-          _cachedMediaPaths.add(cachedFilePath);
-          _isUploadingMedia = false;
+          _cachedMediaFiles.add(cachedFile);
         });
-      } else {
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackbar(context, 'Failed to cache media: $e');
+    } finally {
+      if (mounted) {
         setState(() {
           _isUploadingMedia = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _isUploadingMedia = false;
-      });
-      if (!mounted) return;
-      // Optionally show error message
-      _showErrorSnackbar(context, 'Failed to upload media: $e');
     }
   }
 
   Future<void> _handleSaveDevlog() async {
-    final newDevlog = await DevlogService.addDevlog(
+    await DevlogService.addDevlog(
       projectID: _project.id,
       title: _devlogTitleController.text,
       description: _devlogDescriptionController.text,
-      cachedMediaUrls: _cachedMediaPaths,
+      cachedMediaFiles: _cachedMediaFiles,
     );
-    setState(() {
-      _devlogs.add(newDevlog);
-    });
+    // The devlog returned from the service now has the final URLs
+    // We need to fetch the devlogs again to get the updated list with URLs
+    await _loadDevlogs();
+
     _closeDevlogEditor();
   }
 
@@ -462,12 +462,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     });
   }
 
-  String _getMediaTypeFromPath(String filePath) {
-    final extension = filePath.toLowerCase().split('.').last;
+  String _getMediaType(PlatformFile file) {
+    final extension = file.extension?.toLowerCase() ?? '';
     switch (extension) {
       case 'jpg':
       case 'jpeg':
       case 'png':
+      case 'webp':
         return 'image';
       case 'mp4':
         return 'video';
@@ -807,9 +808,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
             ),
             Spacer(),
-            if (_cachedMediaPaths.isNotEmpty)
+            if (_cachedMediaFiles.isNotEmpty)
               Text(
-                '${_cachedMediaPaths.length} file${_cachedMediaPaths.length == 1 ? '' : 's'}',
+                '${_cachedMediaFiles.length} file${_cachedMediaFiles.length == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -828,11 +829,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               style: BorderStyle.solid,
             ),
           ),
-          child: _cachedMediaPaths.isEmpty
+          child: _cachedMediaFiles.isEmpty
               ? _buildMediaUploadArea()
               : _buildMediaCarousel(),
         ),
-        if (_cachedMediaPaths.isNotEmpty) ...[
+        if (_cachedMediaFiles.isNotEmpty) ...[
           SizedBox(height: 8),
           Row(
             children: [
@@ -853,7 +854,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               OutlinedButton.icon(
                 onPressed: () {
                   setState(() {
-                    _cachedMediaPaths.clear();
+                    _cachedMediaFiles.clear();
                   });
                 },
                 icon: Icon(Symbols.delete, size: 16),
@@ -926,12 +927,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       padding: EdgeInsets.all(12),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _cachedMediaPaths.length,
+        itemCount: _cachedMediaFiles.length,
         itemBuilder: (context, index) {
+          final file = _cachedMediaFiles[index];
           return Container(
             width: 160,
             margin: EdgeInsets.only(
-              right: index < _cachedMediaPaths.length - 1 ? 12 : 0,
+              right: index < _cachedMediaFiles.length - 1 ? 12 : 0,
             ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
@@ -949,45 +951,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     width: double.infinity,
                     height: double.infinity,
                     child:
-                        _getMediaTypeFromPath(_cachedMediaPaths[index]) ==
-                            'image'
-                        ? Image.file(
-                            File(_cachedMediaPaths[index]),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.errorContainer,
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Symbols.broken_image,
-                                          size: 24,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.error,
-                                        ),
-                                        SizedBox(height: 4),
-                                        Text(
-                                          'Error',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.error,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                          )
+                        _getMediaType(file) == 'image' ||
+                            _getMediaType(file) == 'gif'
+                        ? (kIsWeb
+                              ? Image.memory(
+                                  file.bytes!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _buildPreviewError(),
+                                )
+                              : Image.file(
+                                  File(file.path!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _buildPreviewError(),
+                                ))
                         : Container(
                             color: Theme.of(context)
                                 .colorScheme
@@ -998,12 +976,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    _getMediaTypeFromPath(
-                                              _cachedMediaPaths[index],
-                                            ) ==
-                                            'video'
+                                    _getMediaType(file) == 'video'
                                         ? Symbols.play_circle
-                                        : Symbols.gif,
+                                        : Symbols.error, // Fallback icon
                                     size: 32,
                                     color: Theme.of(
                                       context,
@@ -1011,12 +986,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    _getMediaTypeFromPath(
-                                              _cachedMediaPaths[index],
-                                            ) ==
-                                            'video'
+                                    _getMediaType(file) == 'video'
                                         ? 'Video'
-                                        : 'GIF',
+                                        : 'Unsupported',
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color: Theme.of(
@@ -1027,9 +999,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                   ),
                                   SizedBox(height: 2),
                                   Text(
-                                    _getFileNameFromPath(
-                                      _cachedMediaPaths[index],
-                                    ),
+                                    file.name,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color: Theme.of(
@@ -1061,7 +1031,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     child: InkWell(
                       onTap: () {
                         setState(() {
-                          _cachedMediaPaths.removeAt(index);
+                          _cachedMediaFiles.removeAt(index);
                         });
                       },
                       borderRadius: BorderRadius.circular(12),
@@ -1080,9 +1050,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      _getMediaTypeFromPath(
-                        _cachedMediaPaths[index],
-                      ).toUpperCase(),
+                      _getMediaType(file).toUpperCase(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.white,
                         fontSize: 10,
@@ -1099,8 +1067,29 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
-  String _getFileNameFromPath(String filePath) {
-    return filePath.split('/').last.split('\\').last;
+  Widget _buildPreviewError() {
+    return Container(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Symbols.broken_image,
+              size: 24,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Error',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildDevlogMediaViewer(
@@ -1243,11 +1232,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _isLoading = true;
       });
       final supabasePath = '${_project.id}/picture';
-      String supabasePrivateUrl =
-          await SupabaseStorageService.uploadFileWithPicker(
-            bucket: 'Projects',
-            supabasePath: supabasePath,
-          );
+      String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
+        path: supabasePath,
+      );
       if (!mounted) return;
       if (supabasePrivateUrl == 'User cancelled') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1258,9 +1245,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return;
       }
 
-      String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
-        bucket: 'Projects',
-        supabasePath: supabasePrivateUrl,
+      String? supabasePublicUrl = await StorageService.getPublicUrl(
+        path: supabasePrivateUrl,
       );
       if (!mounted) return;
 

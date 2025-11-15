@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/supabase/Storage/supabase_storage.dart';
+import '../../../services/Storage/storage.dart';
 import 'package:boot_app/services/users/User.dart';
 
 class SignUpProfilePage extends StatefulWidget {
@@ -226,20 +226,17 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
         _imageLoadError = false;
       });
 
-      String supabasePrivateUrl =
-          await SupabaseStorageService.uploadFileWithPicker(
-            bucket: 'Profiles',
-            supabasePath: '${UserService.currentUser?.id}/profile_pic',
-          );
+      String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
+        path: 'profiles/${UserService.currentUser?.id}/profile_pic',
+      );
 
       if (supabasePrivateUrl == 'User cancelled') {
         // Silently ignore cancels
         return;
       }
 
-      String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
-        bucket: 'Profiles',
-        supabasePath: supabasePrivateUrl,
+      String? supabasePublicUrl = await StorageService.getPublicUrl(
+        path: supabasePrivateUrl,
       );
 
       if (supabasePublicUrl == null) {

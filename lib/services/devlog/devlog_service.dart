@@ -1,11 +1,11 @@
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
-import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
+import 'package:boot_app/services/Storage/storage.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'Devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DevlogService {
   static Future<List<Devlog>> getDevlogsByProjectId(String projectId) async {
@@ -26,7 +26,7 @@ class DevlogService {
     required int projectID,
     required String title,
     required String description,
-    List<String> cachedMediaUrls = const [],
+    List<PlatformFile> cachedMediaFiles = const [],
   }) async {
     try {
       final response = await SupabaseDB.insertAndReturnData(
@@ -38,11 +38,20 @@ class DevlogService {
         },
       );
       final tempDevlog = Devlog.fromJson(response.first);
-      final mediaUrls = await SupabaseStorageService.uploadMultipleFilesWithURL(
-        filePaths: cachedMediaUrls,
-        bucket: 'Devlogs',
-        supabaseDirPath: '$projectID/devlog_${tempDevlog.id}',
+      final objectPaths = await StorageService.uploadMultipleFiles(
+        files: cachedMediaFiles,
+        dirPath: 'projects/$projectID/devlog_${tempDevlog.id}',
       );
+
+      // Convert object paths to public URLs before saving
+      final mediaUrls = <String>[];
+      for (final path in objectPaths) {
+        final publicUrl = await StorageService.getPublicUrl(path: path);
+        if (publicUrl != null) {
+          mediaUrls.add(publicUrl);
+        }
+      }
+
       final updatedDevlog = await SupabaseDB.updateAndReturnData(
         table: 'devlogs',
         data: {'media_urls': mediaUrls},
@@ -62,22 +71,22 @@ class DevlogService {
     }
   }
 
-  static Future<String> cacheMediaFilePicker() async {
+  static Future<PlatformFile?> cacheMediaFilePicker() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
+      allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp', 'gif'],
       allowMultiple: false,
-      withData: false,
+      withData: kIsWeb, // Fetch bytes on web
     );
     if (result == null || result.files.isEmpty) {
-      return 'User cancelled';
+      return null;
     }
-    final ext = (result.files.single.extension ?? '').toLowerCase();
-    const allowed = ['png', 'jpg', 'jpeg', 'webp'];
+    final file = result.files.single;
+    final ext = (file.extension ?? '').toLowerCase();
+    const allowed = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
     if (!allowed.contains(ext)) {
       throw Exception('Unsupported file type: .$ext');
     }
-    final file = File(result.files.single.path!);
-    return file.path;
+    return file;
   }
 }

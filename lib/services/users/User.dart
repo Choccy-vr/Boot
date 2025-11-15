@@ -1,5 +1,5 @@
 import 'package:boot_app/services/misc/logger.dart';
-import 'package:boot_app/services/supabase/Storage/supabase_storage.dart';
+import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
@@ -70,19 +70,16 @@ class UserService {
   }
 
   static Future<String> uploadProfilePic(BuildContext context) async {
-    String supabasePrivateUrl =
-        await SupabaseStorageService.uploadFileWithPicker(
-          bucket: 'Profiles',
-          supabasePath: '${UserService.currentUser?.id}/profile_pic',
-        );
+    String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
+      path: 'profiles/${UserService.currentUser?.id}/profile_pic',
+    );
 
     if (supabasePrivateUrl == 'User cancelled') {
       return '';
     }
 
-    String? supabasePublicUrl = await SupabaseStorageService.getPublicUrl(
-      bucket: 'Profiles',
-      supabasePath: supabasePrivateUrl,
+    String? supabasePublicUrl = await StorageService.getPublicUrl(
+      path: supabasePrivateUrl,
     );
 
     if (supabasePublicUrl == null) {

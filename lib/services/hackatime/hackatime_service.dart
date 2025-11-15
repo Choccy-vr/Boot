@@ -123,40 +123,6 @@ class HackatimeService {
     }
   }
 
-  static Future<HackatimeProject> fetchProjectDetails({
-    required List<HackatimeProject> projects,
-    required String projectName,
-  }) async {
-    try {
-      final project = projects.firstWhere(
-        (p) => p.name.toLowerCase() == projectName.toLowerCase(),
-        orElse: () => HackatimeProject(
-          name: 'Not Found',
-          totalSeconds: 0,
-          text: '0m',
-          hours: 0,
-          minutes: 0,
-          digital: '0:00',
-        ),
-      );
-      return project;
-    } catch (e, stack) {
-      AppLogger.error(
-        'Error fetching Hackatime project details for $projectName',
-        e,
-        stack,
-      );
-      return HackatimeProject(
-        name: 'Error',
-        totalSeconds: 0,
-        text: '0m',
-        hours: 0,
-        minutes: 0,
-        digital: '0:00',
-      );
-    }
-  }
-
   static Future<bool> isHackatimeBanned({
     required int userId,
     required String apiKey,
@@ -220,23 +186,38 @@ class HackatimeService {
           (_) => _showErrorSnackbar(context, 'No Hackatime projects found'),
         );
       }
-      final hackatimeProject = await fetchProjectDetails(
-        projects: projects,
-        projectName: project.hackatimeProjects,
-      );
-      if (hackatimeProject.name == 'Not Found') {
+      if (project.hackatimeProjects.isEmpty) {
+        project.time = 0;
+        project.readableTime = '0m';
+        return project;
+      }
+
+      int totalSeconds = 0;
+      final missingProjects = <String>[];
+      for (final projectName in project.hackatimeProjects) {
+        final details = _findProjectByName(projects, projectName);
+        if (details == null) {
+          missingProjects.add(projectName);
+          continue;
+        }
+        totalSeconds += details.totalSeconds;
+      }
+
+      if (missingProjects.isNotEmpty) {
+        final missingList = missingProjects.join(', ');
         AppLogger.warning(
-          'Hackatime project ${project.hackatimeProjects} not found for user $userId',
+          'Hackatime project(s) $missingList not found for user $userId',
         );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _showErrorSnackbar(
             context,
-            'Project "${project.hackatimeProjects}" not found on Hackatime',
+            'Project(s) $missingList not found on Hackatime',
           ),
         );
       }
-      project.time = hackatimeProject.totalSeconds / 3600.0;
-      project.readableTime = hackatimeProject.text;
+
+      project.time = totalSeconds / 3600.0;
+      project.readableTime = _formatReadableDuration(totalSeconds);
       return project;
     } catch (e, stack) {
       AppLogger.error(
@@ -246,6 +227,33 @@ class HackatimeService {
       );
       throw Exception('Error fetching project time: $e');
     }
+  }
+
+  static HackatimeProject? _findProjectByName(
+    List<HackatimeProject> projects,
+    String projectName,
+  ) {
+    try {
+      return projects.firstWhere(
+        (p) => p.name.toLowerCase() == projectName.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _formatReadableDuration(int totalSeconds) {
+    if (totalSeconds <= 0) return '0m';
+    final duration = Duration(seconds: totalSeconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    if (hours > 0) {
+      return '${hours}h';
+    }
+    return '${minutes}m';
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:boot_app/services/misc/logger.dart';
 import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/project_service.dart';
@@ -17,6 +18,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   late AnimationController _typewriterController;
   late Animation<int> _typewriterAnimation;
   final String _headerText = "make build-os";
+  static final RegExp _githubRepoRegex = RegExp(
+    r'^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$',
+  );
 
   final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -24,7 +28,8 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   String _selectedOSType = 'scratch';
   String _selectedArchitecture = 'x86_64';
-  String _selectedHackatimeProject = 'No Project';
+  final List<String> _selectedHackatimeProjects = [];
+  Set<String> _claimedHackatimeProjects = {};
 
   final Map<String, String> _osTypes = {
     'scratch': 'From Scratch (LFS, Buildroot, etc.)',
@@ -35,16 +40,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     'x86_64': 'x86-64 (64-bit)',
     'x86': 'x86 (32-bit)',
   };
-  List<HackatimeProject> _hackatimeProjects = [
-    HackatimeProject(
-      name: 'No Projects Available',
-      totalSeconds: 0,
-      text: '',
-      hours: 0,
-      minutes: 0,
-      digital: '',
-    ),
-  ];
+  List<HackatimeProject> _hackatimeProjects = [];
 
   @override
   void initState() {
@@ -58,6 +54,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
     _typewriterController.forward();
     _fetchHackatimeProjects();
+    _loadExistingHackatimeAssignments();
   }
 
   Future<void> _fetchHackatimeProjects() async {
@@ -68,17 +65,40 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
     setState(() {
       _hackatimeProjects = projects;
-      if (_hackatimeProjects.isNotEmpty) {
-        final names = _hackatimeProjects.map((p) => p.name).toSet();
-        if (!names.contains(_selectedHackatimeProject) ||
-            _hackatimeProjects
-                    .where((p) => p.name == _selectedHackatimeProject)
-                    .length !=
-                1) {
-          _selectedHackatimeProject = _hackatimeProjects.first.name;
-        }
-      }
+      _selectedHackatimeProjects.removeWhere(
+        (selected) => !_hackatimeProjects.any(
+          (project) => project.name.toLowerCase() == selected.toLowerCase(),
+        ),
+      );
     });
+  }
+
+  Future<void> _loadExistingHackatimeAssignments() async {
+    final userId = UserService.currentUser?.id;
+    if (userId == null || userId.isEmpty) return;
+    try {
+      final projects = await ProjectService.getProjects(userId);
+      final claimed = <String>{};
+      for (final project in projects) {
+        claimed.addAll(
+          project.hackatimeProjects
+              .map((name) => name.toLowerCase())
+              .where((name) => name.isNotEmpty),
+        );
+      }
+      setState(() {
+        _claimedHackatimeProjects = claimed;
+        _selectedHackatimeProjects.removeWhere(
+          (name) => claimed.contains(name.toLowerCase()),
+        );
+      });
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to load existing Hackatime assignments',
+        e,
+        stack,
+      );
+    }
   }
 
   @override
@@ -178,10 +198,13 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             const SizedBox(height: 24),
             TextField(
               controller: _projectNameController,
+              maxLength: 25,
+              onChanged: (_) => setState(() {}),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Project Name',
                 hintText: 'MyAwesomeOS',
+                helperText: '2–25 characters',
                 prefixIcon: Icon(
                   Symbols.folder,
                   color: colorScheme.onSurfaceVariant,
@@ -194,11 +217,15 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             const SizedBox(height: 20),
             TextField(
               controller: _descriptionController,
-              maxLines: 3,
+              minLines: 3,
+              maxLines: 6,
+              maxLength: 500,
+              onChanged: (_) => setState(() {}),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Description',
                 hintText: 'A powerful operating system built from scratch...',
+                helperText: '50–500 characters',
                 alignLabelWithHint: true,
                 prefixIcon: Icon(
                   Symbols.description,
@@ -212,10 +239,12 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             const SizedBox(height: 20),
             TextField(
               controller: _repositoryController,
+              onChanged: (_) => setState(() {}),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Repository URL',
                 hintText: 'https://github.com/username/my-awesome-os',
+                helperText: 'Must be a valid GitHub URL',
                 prefixIcon: Icon(
                   Symbols.folder_data,
                   color: colorScheme.onSurfaceVariant,
@@ -306,6 +335,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
+    final hasAvailableProjects =
+        _hackatimeProjects.isNotEmpty &&
+        !(_hackatimeProjects.length == 1 &&
+            _hackatimeProjects.first.name == 'No Projects Available');
     return Card(
       color: colorScheme.surfaceContainer,
       child: Padding(
@@ -321,60 +354,229 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               ),
             ),
             const SizedBox(height: 24),
-            DropdownButtonFormField<String>(
-              initialValue:
-                  (_hackatimeProjects.isEmpty ||
-                      (_hackatimeProjects.length == 1 &&
-                          _hackatimeProjects.first.name ==
-                              'No Projects Available'))
-                  ? 'No Projects Available'
-                  : _selectedHackatimeProject,
-              style: TextStyle(color: colorScheme.onSurface),
-              dropdownColor: colorScheme.surfaceContainerHigh,
-              decoration: InputDecoration(
-                labelText: 'Hackatime Project',
-                prefixIcon: Icon(
-                  Symbols.hourglass,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              items:
-                  (_hackatimeProjects.isEmpty ||
-                      (_hackatimeProjects.length == 1 &&
-                          _hackatimeProjects.first.name ==
-                              'No Projects Available'))
-                  ? [
-                      DropdownMenuItem(
-                        value: 'No Projects Available',
-                        child: Text('No Projects Available'),
-                      ),
-                    ]
-                  : _hackatimeProjects.map((project) {
-                      return DropdownMenuItem(
-                        value: project.name,
-                        child: Text(
-                          project.text.isNotEmpty
-                              ? "${project.name} (${project.text})"
-                              : project.name,
-                        ),
-                      );
-                    }).toList(),
-              onChanged:
-                  (_hackatimeProjects.isEmpty ||
-                      (_hackatimeProjects.length == 1 &&
-                          _hackatimeProjects.first.name ==
-                              'No Projects Available'))
-                  ? null
-                  : (value) =>
-                        setState(() => _selectedHackatimeProject = value!),
-            ),
+            if (!hasAvailableProjects)
+              _buildNoHackatimeProjectsMessage(colorScheme, textTheme)
+            else ...[
+              _buildHackatimeInfoBanner(colorScheme, textTheme),
+              const SizedBox(height: 16),
+              _buildHackatimeProjectChips(colorScheme, textTheme),
+              if (_selectedHackatimeProjects.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildSelectedHackatimeSummary(colorScheme, textTheme),
+              ],
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildNoHackatimeProjectsMessage(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Symbols.info, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No Hackatime projects detected yet. Start tracking time in Hackatime and refresh to link it here.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHackatimeInfoBanner(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Symbols.timer, color: colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHackatimeProjectChips(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final selectedSet = _selectedHackatimeProjects
+        .map(_normalizeHackatimeName)
+        .toSet();
+    final projects = _hackatimeProjects
+        .where((project) => project.name != 'No Projects Available')
+        .toList();
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: projects.map((project) {
+        final normalizedName = _normalizeHackatimeName(project.name);
+        final isSelected = selectedSet.contains(normalizedName);
+        final isClaimedElsewhere = _claimedHackatimeProjects.contains(
+          normalizedName,
+        );
+        final isDisabled = isClaimedElsewhere && !isSelected;
+        final labelSecondary = project.text.isNotEmpty
+            ? project.text
+            : project.digital.isNotEmpty
+            ? project.digital
+            : '';
+
+        return Tooltip(
+          message: isDisabled
+              ? 'Already linked to another Boot project'
+              : isSelected
+              ? 'Tap to unlink this Hackatime project'
+              : 'Tap to link this Hackatime project',
+          child: FilterChip(
+            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+            selectedColor: colorScheme.primaryContainer,
+            checkmarkColor: colorScheme.onPrimaryContainer,
+            disabledColor: colorScheme.surfaceContainerHigh,
+            backgroundColor: colorScheme.surfaceContainerLow,
+            avatar: Icon(
+              isDisabled
+                  ? Symbols.block
+                  : isSelected
+                  ? Symbols.check
+                  : Symbols.add,
+              size: 18,
+              color: isDisabled
+                  ? colorScheme.onSurfaceVariant
+                  : isSelected
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.primary,
+            ),
+            label: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 140, maxWidth: 220),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    project.name,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: isDisabled
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onSurface,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  if (labelSecondary.isNotEmpty)
+                    Text(
+                      labelSecondary,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            selected: isSelected,
+            onSelected: isDisabled
+                ? null
+                : (selected) => _toggleHackatimeProject(project.name, selected),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSelectedHackatimeSummary(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Linked Hackatime projects',
+          style: textTheme.titleSmall?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _selectedHackatimeProjects.map((projectName) {
+            return InputChip(
+              label: Text(projectName),
+              onDeleted: () => _toggleHackatimeProject(projectName, false),
+              avatar: Icon(Symbols.bolt, size: 18),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _toggleHackatimeProject(String projectName, bool shouldSelect) {
+    final normalizedName = _normalizeHackatimeName(projectName);
+    setState(() {
+      if (shouldSelect) {
+        final alreadySelected = _selectedHackatimeProjects.any(
+          (name) => _normalizeHackatimeName(name) == normalizedName,
+        );
+        if (!alreadySelected) {
+          _selectedHackatimeProjects.add(projectName);
+        }
+      } else {
+        _selectedHackatimeProjects.removeWhere(
+          (name) => _normalizeHackatimeName(name) == normalizedName,
+        );
+      }
+    });
+  }
+
+  String _normalizeHackatimeName(String name) => name.trim().toLowerCase();
+
+  bool _isValidGithubRepoUrl(String url) {
+    if (url.isEmpty) return false;
+    return _githubRepoRegex.hasMatch(url.trim());
+  }
+
+  void _showFormMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildProjectPreview(ColorScheme colorScheme, TextTheme textTheme) {
@@ -437,6 +639,14 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                     _repositoryController.text.isEmpty
                         ? 'not specified'
                         : _repositoryController.text,
+                    colorScheme,
+                    textTheme,
+                  ),
+                  _buildConfigLine(
+                    'HACK',
+                    _selectedHackatimeProjects.isEmpty
+                        ? 'not linked'
+                        : _selectedHackatimeProjects.join(', '),
                     colorScheme,
                     textTheme,
                   ),
@@ -505,55 +715,75 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   }
 
   Future<void> _createProject() async {
-    if (_projectNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter a project name')));
+    final title = _projectNameController.text.trim();
+    final description = _descriptionController.text.trim();
+    final repoUrl = _repositoryController.text.trim();
+    final ownerId = UserService.currentUser?.id;
+
+    if (ownerId == null || ownerId.isEmpty) {
+      _showFormMessage('You need to be signed in to create a project.');
       return;
     }
 
-    if (_descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a project description')),
+    if (title.length < 2 || title.length > 25) {
+      _showFormMessage('Project name must be between 2 and 25 characters.');
+      return;
+    }
+
+    if (description.length < 50 || description.length > 500) {
+      _showFormMessage('Description must be between 50 and 500 characters.');
+      return;
+    }
+
+    if (!_isValidGithubRepoUrl(repoUrl)) {
+      _showFormMessage('Enter a valid GitHub repository URL.');
+      return;
+    }
+
+    if (_selectedHackatimeProjects.isEmpty) {
+      _showFormMessage('Select at least one Hackatime project.');
+      return;
+    }
+
+    final normalizedSelections = _selectedHackatimeProjects
+        .map(_normalizeHackatimeName)
+        .toSet();
+    final conflictingSelections = normalizedSelections
+        .where(_claimedHackatimeProjects.contains)
+        .toList();
+    if (conflictingSelections.isNotEmpty) {
+      _showFormMessage(
+        'One or more selected Hackatime projects are already linked to another build.',
       );
       return;
     }
 
-    if (_repositoryController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter a repository URL')));
-      return;
-    }
-
-    if (_selectedHackatimeProject == 'No Project') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a Hackatime project')),
+    try {
+      await ProjectService.createProject(
+        title: title,
+        description: description,
+        imageURL: '',
+        githubRepo: repoUrl,
+        likes: 0,
+        lastModified: DateTime.now(),
+        awaitingReview: false,
+        level: _selectedOSType,
+        status: 'Building',
+        reviewed: false,
+        hackatimeProjects: _selectedHackatimeProjects,
+        owner: ownerId,
       );
-      return;
+      if (!mounted) return;
+      NavigationService.navigateTo(
+        context: context,
+        destination: AppDestination.project,
+        colorScheme: Theme.of(context).colorScheme,
+        textTheme: Theme.of(context).textTheme,
+      );
+    } catch (e, stack) {
+      AppLogger.error('Failed to create project', e, stack);
+      _showFormMessage('Something went wrong while creating your project.');
     }
-
-    await ProjectService.createProject(
-      title: _projectNameController.text.trim(),
-      description: _descriptionController.text.trim(),
-      imageURL: '',
-      githubRepo: _repositoryController.text.trim(),
-      likes: 0,
-      lastModified: DateTime.now(),
-      awaitingReview: false,
-      level: _selectedOSType,
-      status: 'Building',
-      reviewed: false,
-      hackatimeProjects: _selectedHackatimeProject,
-      owner: UserService.currentUser?.id,
-    );
-    if (!mounted) return;
-    NavigationService.navigateTo(
-      context: context,
-      destination: AppDestination.project,
-      colorScheme: Theme.of(context).colorScheme,
-      textTheme: Theme.of(context).textTheme,
-    );
   }
 
   @override

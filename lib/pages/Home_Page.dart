@@ -306,7 +306,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   },
                 ),
                 _buildDrawerItem(
-                  icon: Symbols.leaderboard,
+                  icon: Symbols.mountain_flag,
                   title: 'Challenges',
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -314,6 +314,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     Navigator.pop(context);
                     NavigationService.navigateTo(
                       context: context,
+                      //TODO: MAKE CHALLENGES DESTINATION
                       destination: AppDestination.leaderboard,
                       colorScheme: colorScheme,
                       textTheme: textTheme,

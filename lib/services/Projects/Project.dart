@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Project {
   String title;
   String description;
@@ -12,7 +14,7 @@ class Project {
   String level;
   final int id;
   String status;
-  String hackatimeProjects;
+  List<String> hackatimeProjects;
   double timeDevlogs;
   String isoUrl;
   String qemuCMD;
@@ -59,7 +61,7 @@ class Project {
       level: row['level'] ?? 'unknown',
       status: row['status'] ?? 'unknown',
       reviewed: row['reviewed'] ?? false,
-      hackatimeProjects: row['hackatime_projects'] ?? '',
+      hackatimeProjects: _parseHackatimeProjects(row['hackatime_projects']),
       timeDevlogs: row['total_time_devlogs'] ?? 0.0,
       readableTime: '0s',
       time: 0.0,
@@ -78,7 +80,7 @@ class Project {
     String? level,
     String? status,
     bool? reviewed,
-    String? hackatimeProjects,
+    List<String>? hackatimeProjects,
     String? owner,
     double? timeDevlogs,
     String? isoUrl,
@@ -105,5 +107,32 @@ class Project {
     if (isoUrl != null) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
     return map;
+  }
+
+  static List<String> _parseHackatimeProjects(dynamic raw) {
+    if (raw == null) return [];
+    if (raw is List) {
+      return raw
+          .map((value) => value == null ? '' : value.toString())
+          .where((value) => value.isNotEmpty)
+          .toList();
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return [];
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          final decoded = jsonDecode(trimmed);
+          if (decoded is List) {
+            return decoded
+                .map((value) => value == null ? '' : value.toString())
+                .where((value) => value.isNotEmpty)
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [trimmed];
+    }
+    return [];
   }
 }

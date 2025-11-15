@@ -96,7 +96,7 @@ class ProjectService {
     required String? level,
     required String? status,
     required bool? reviewed,
-    required String? hackatimeProjects,
+    required List<String>? hackatimeProjects,
     required String? owner,
   }) async {
     await SupabaseDB.insertData(

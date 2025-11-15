@@ -1,3 +1,4 @@
+import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -39,6 +40,7 @@ void main() async {
   AuthListener.startListening();
   await SupabaseAuth.redirectCheck();
   final sessionRestored = await Authentication.restoreStoredSession();
+  await StorageService.initialize();
   final initialRoute = sessionRestored ? '/dashboard' : '/login';
   runApp(MainApp(initialRoute: initialRoute));
 }
