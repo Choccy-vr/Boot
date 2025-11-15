@@ -9,6 +9,7 @@ import '/services/users/Boot_User.dart';
 import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
+import '/services/notifications/notifications.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -135,12 +136,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Symbols.notifications, color: colorScheme.primary),
-            onPressed: () {
-              // TODO: Show notifications
+          Builder(
+            builder: (context) {
+              final manager = NotificationScope.of(context);
+              if (manager == null) {
+                return IconButton(
+                  icon: Icon(Symbols.notifications, color: colorScheme.primary),
+                  onPressed: () {},
+                  tooltip: 'Notifications',
+                );
+              }
+              return NotificationBellButton(manager: manager);
             },
-            tooltip: 'Notifications',
           ),
           const SizedBox(width: 8),
         ],
@@ -166,6 +173,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 SizedBox(height: Responsive.spacing(context) * 1.5),
                 if (!_isHackatimeBanned) ...[
+                  _buildNotificationTestButtons(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context) * 1.5),
                   _buildNavigationGrid(colorScheme, textTheme),
                   SizedBox(height: Responsive.spacing(context) * 1.5),
                   _buildBottomSection(colorScheme, textTheme),
@@ -321,6 +330,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     );
                   },
                 ),
+                // Debug menu item - only for specific user
+                if (user?.id == '7f18c57b-ca6f-4812-aac7-a2fb6cc10362')
+                  _buildDrawerItem(
+                    icon: Symbols.bug_report,
+                    title: 'Debug Console',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/debug');
+                    },
+                  ),
               ],
             ),
           ),
@@ -555,6 +576,131 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationTestButtons(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Card(
+      color: colorScheme.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Symbols.bug_report, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Notification Tests',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showError(
+                      'This is a test error notification',
+                      persistent: false,
+                    );
+                  },
+                  icon: Icon(Symbols.error, size: 18),
+                  label: Text('Error'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.errorContainer,
+                    foregroundColor: colorScheme.onErrorContainer,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showWarning(
+                      'This is a test warning notification',
+                    );
+                  },
+                  icon: Icon(Symbols.warning, size: 18),
+                  label: Text('Warning'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.tertiaryContainer,
+                    foregroundColor: colorScheme.onTertiaryContainer,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showInfo(
+                      'This is a test info notification',
+                    );
+                  },
+                  icon: Icon(Symbols.info, size: 18),
+                  label: Text('Info'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primaryContainer,
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showSuccess(
+                      'This is a test success notification',
+                    );
+                  },
+                  icon: Icon(Symbols.check_circle, size: 18),
+                  label: Text('Success'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.secondaryContainer,
+                    foregroundColor: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showPromo(
+                      'This is a promotional notification with an action!',
+                      actionLabel: 'Learn More',
+                      onActionTap: () {
+                        GlobalNotificationService.instance.showSuccess(
+                          'Action button clicked!',
+                        );
+                      },
+                    );
+                  },
+                  icon: Icon(Symbols.campaign, size: 18),
+                  label: Text('Promo'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primaryContainer.withValues(
+                      alpha: 0.6,
+                    ),
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    GlobalNotificationService.instance.showError(
+                      'This error will stay in history until you clear it',
+                      persistent: true,
+                    );
+                  },
+                  icon: Icon(Symbols.push_pin, size: 18),
+                  label: Text('Persistent'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.errorContainer,
+                    foregroundColor: colorScheme.onErrorContainer,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

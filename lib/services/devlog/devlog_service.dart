@@ -28,13 +28,27 @@ class DevlogService {
     required String description,
     List<PlatformFile> cachedMediaFiles = const [],
   }) async {
+    final trimmedTitle = title.trim();
+    final trimmedDescription = description.trim();
+    if (trimmedTitle.length <= 2) {
+      throw ArgumentError('Devlog title must be at least 3 characters long');
+    }
+    if (trimmedDescription.length <= 150) {
+      throw ArgumentError(
+        'Devlog description must be more than 150 characters',
+      );
+    }
+    if (cachedMediaFiles.isEmpty) {
+      throw ArgumentError('Attach at least one media file to the devlog');
+    }
+
     try {
       final response = await SupabaseDB.insertAndReturnData(
         table: 'devlogs',
         data: {
           'project': projectID,
-          'title': title,
-          'description': description,
+          'title': trimmedTitle,
+          'description': trimmedDescription,
         },
       );
       final tempDevlog = Devlog.fromJson(response.first);

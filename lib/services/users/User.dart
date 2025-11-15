@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
 import 'Boot_User.dart';
+import '/services/notifications/notifications.dart';
 
 class UserService {
   static BootUser? currentUser;
@@ -88,10 +89,8 @@ class UserService {
         'for user ${UserService.currentUser?.id}',
       );
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to get public url for profile picture'),
-          ),
+        (_) => GlobalNotificationService.instance.showError(
+          'Failed to get public url for profile picture',
         ),
       );
       return '';

@@ -3,6 +3,7 @@ import 'package:boot_app/services/users/Boot_User.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/material.dart';
 import '/services/dialog/dialog_service.dart';
+import '/services/notifications/notifications.dart';
 
 enum AppDestination {
   home,
@@ -70,8 +71,8 @@ class NavigationService {
       case AppDestination.profile:
         final user = UserService.currentUser;
         if (user == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User profile not loaded yet.')),
+          GlobalNotificationService.instance.showWarning(
+            'User profile not loaded yet.',
           );
           return;
         }

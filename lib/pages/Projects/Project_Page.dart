@@ -18,6 +18,7 @@ import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/theme/responsive.dart';
+import '/services/notifications/notifications.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -44,6 +45,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       TextEditingController();
   final List<PlatformFile> _cachedMediaFiles = [];
   bool _isUploadingMedia = false;
+  bool _devlogTitleDirty = false;
+  bool _devlogDescriptionDirty = false;
+  bool _devlogMediaDirty = false;
+  bool _devlogValidationAttempted = false;
 
   @override
   void initState() {
@@ -93,7 +98,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       });
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar(context, 'Failed to get project time');
+      GlobalNotificationService.instance.showError(
+        'Failed to get project time',
+      );
     }
   }
 
@@ -105,15 +112,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             false;
       });
     } catch (_) {}
-  }
-
-  void _showErrorSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
   }
 
   @override
@@ -160,8 +158,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           _isLiked = false;
         });
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('You unliked ${_project.title}.')),
+        GlobalNotificationService.instance.showInfo(
+          'You unliked ${_project.title}.',
         );
       } else {
         await SupabaseDBFunctions.callDbFunction(
@@ -174,13 +172,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           _isLiked = true;
         });
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('You liked ${_project.title}!')));
+        GlobalNotificationService.instance.showSuccess(
+          'You liked ${_project.title}!',
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar(context, 'Failed to like/unlike project: $e');
+      GlobalNotificationService.instance.showError(
+        'Failed to like/unlike project: $e',
+      );
     } finally {
       if (mounted) setState(() => _isLiking = false);
     }
@@ -196,6 +196,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleCreateDevlog() async {
     setState(() {
       _showDevlogEditor = true;
+      _devlogValidationAttempted = false;
+      _devlogTitleDirty = false;
+      _devlogDescriptionDirty = false;
+      _devlogMediaDirty = false;
     });
   }
 
@@ -205,12 +209,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogTitleController.clear();
       _devlogDescriptionController.clear();
       _cachedMediaFiles.clear();
+      _devlogValidationAttempted = false;
+      _devlogTitleDirty = false;
+      _devlogDescriptionDirty = false;
+      _devlogMediaDirty = false;
     });
   }
 
   Future<void> _handleUploadDevlogMedia() async {
     setState(() {
       _isUploadingMedia = true;
+      _devlogMediaDirty = true;
     });
 
     try {
@@ -218,11 +227,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       if (cachedFile != null) {
         setState(() {
           _cachedMediaFiles.add(cachedFile);
+          _devlogMediaDirty = true;
         });
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackbar(context, 'Failed to cache media: $e');
+      GlobalNotificationService.instance.showError('Failed to cache media: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -233,21 +243,89 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Future<void> _handleSaveDevlog() async {
-    await DevlogService.addDevlog(
-      projectID: _project.id,
-      title: _devlogTitleController.text,
-      description: _devlogDescriptionController.text,
-      cachedMediaFiles: _cachedMediaFiles,
-    );
-    // The devlog returned from the service now has the final URLs
-    // We need to fetch the devlogs again to get the updated list with URLs
-    await _loadDevlogs();
+    setState(() {
+      _devlogValidationAttempted = true;
+      _devlogTitleDirty = true;
+      _devlogDescriptionDirty = true;
+      _devlogMediaDirty = true;
+    });
 
-    _closeDevlogEditor();
+    if (!_validateDevlogForm()) {
+      return;
+    }
+
+    try {
+      await DevlogService.addDevlog(
+        projectID: _project.id,
+        title: _devlogTitleController.text,
+        description: _devlogDescriptionController.text,
+        cachedMediaFiles: _cachedMediaFiles,
+      );
+      // Refresh devlogs to include new entry with media URLs
+      await _loadDevlogs();
+      _closeDevlogEditor();
+    } catch (e) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'Failed to publish devlog: $e',
+      );
+    }
   }
 
   bool _isOwner() {
     return UserService.currentUser?.id == _project.owner;
+  }
+
+  String? get _devlogTitleError {
+    final text = _devlogTitleController.text.trim();
+    if (text.isEmpty) return 'Title is required';
+    if (text.length <= 2) return 'Title must be at least 3 characters';
+    return null;
+  }
+
+  String? get _devlogDescriptionError {
+    final text = _devlogDescriptionController.text.trim();
+    if (text.isEmpty) return 'Description is required';
+    if (text.length <= 150) {
+      return 'Description must be more than 150 characters';
+    }
+    return null;
+  }
+
+  String? get _devlogMediaError {
+    if (_cachedMediaFiles.isEmpty) {
+      return 'Add at least one media file to your devlog';
+    }
+    return null;
+  }
+
+  bool get _showDevlogTitleError =>
+      _devlogTitleDirty || _devlogValidationAttempted;
+
+  bool get _showDevlogDescriptionError =>
+      _devlogDescriptionDirty || _devlogValidationAttempted;
+
+  bool get _showDevlogMediaError =>
+      _devlogMediaDirty || _devlogValidationAttempted;
+
+  bool _validateDevlogForm() {
+    final titleError = _devlogTitleError;
+    final descriptionError = _devlogDescriptionError;
+    final mediaError = _devlogMediaError;
+
+    if (titleError != null) {
+      GlobalNotificationService.instance.showError(titleError);
+      return false;
+    }
+    if (descriptionError != null) {
+      GlobalNotificationService.instance.showError(descriptionError);
+      return false;
+    }
+    if (mediaError != null) {
+      GlobalNotificationService.instance.showError(mediaError);
+      return false;
+    }
+    return true;
   }
 
   Future<void> _showShipConfirmationDialog() async {
@@ -375,11 +453,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _showShipSuccessDialog();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to ship project: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      GlobalNotificationService.instance.showError(
+        'Failed to ship project: $e',
       );
     }
   }
@@ -476,198 +551,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return 'gif';
       default:
         return 'unknown';
-    }
-  }
-
-  Future<void> _showStatusEditDialog() async {
-    final predefinedStatuses = ['building', 'reviewing', 'voting', 'error'];
-    String? selectedStatus;
-    final TextEditingController customStatusController =
-        TextEditingController();
-    bool useCustomStatus = false;
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Icon(
-                    Symbols.edit,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Edit Project Status',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Select a predefined status:',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: predefinedStatuses.map((status) {
-                        final isSelected =
-                            selectedStatus == status && !useCustomStatus;
-                        return InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              selectedStatus = status;
-                              useCustomStatus = false;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? ProjectService.getStatusColor(
-                                      status,
-                                    ).withValues(alpha: 0.2)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected
-                                    ? ProjectService.getStatusColor(status)
-                                    : Theme.of(context).colorScheme.outline
-                                          .withValues(alpha: 0.3),
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Text(
-                              status,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: isSelected
-                                        ? ProjectService.getStatusColor(status)
-                                        : Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Or create a custom status:',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: customStatusController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter custom status...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          useCustomStatus = value.isNotEmpty;
-                          if (useCustomStatus) {
-                            selectedStatus = value;
-                          }
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      (selectedStatus != null && selectedStatus!.isNotEmpty)
-                      ? () {
-                          Navigator.of(context).pop(selectedStatus);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  child: Text('Update Status'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (result != null && result.isNotEmpty) {
-      try {
-        // Update the project status locally
-        setState(() {
-          _project.status = result;
-        });
-
-        // Update the project in the database
-        await ProjectService.updateProject(_project);
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Project status updated to "$result"'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        _showErrorSnackbar(context, 'Failed to update status: $e');
-      }
     }
   }
 
@@ -773,8 +656,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         TextField(
           controller: _devlogTitleController,
           maxLength: 80,
+          onChanged: (_) => setState(() => _devlogTitleDirty = true),
           decoration: InputDecoration(
             hintText: 'Enter devlog title...',
+            helperText: _showDevlogTitleError && _devlogTitleError != null
+                ? null
+                : 'Minimum 3 characters',
+            errorText: _showDevlogTitleError ? _devlogTitleError : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
@@ -833,6 +721,30 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ? _buildMediaUploadArea()
               : _buildMediaCarousel(),
         ),
+        if (_showDevlogMediaError && _cachedMediaFiles.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Symbols.error,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _devlogMediaError!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_cachedMediaFiles.isNotEmpty) ...[
           SizedBox(height: 8),
           Row(
@@ -1118,10 +1030,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               maxLines: null,
               maxLength: 500,
               expands: true,
+              onChanged: (_) => setState(() => _devlogDescriptionDirty = true),
               textAlignVertical: TextAlignVertical.top,
               decoration: InputDecoration(
                 hintText:
                     'Share your development progress, challenges, insights, and learnings...',
+                helperText:
+                    _showDevlogDescriptionError &&
+                        _devlogDescriptionError != null
+                    ? null
+                    : 'Must be more than 150 characters',
+                errorText: _showDevlogDescriptionError
+                    ? _devlogDescriptionError
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(
@@ -1237,11 +1158,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       );
       if (!mounted) return;
       if (supabasePrivateUrl == 'User cancelled') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload picture: $supabasePrivateUrl'),
-          ),
-        );
+        GlobalNotificationService.instance.showWarning('Upload cancelled');
         return;
       }
 
@@ -1251,10 +1168,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       if (!mounted) return;
 
       if (supabasePublicUrl == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to get public url for profile picture'),
-          ),
+        GlobalNotificationService.instance.showError(
+          'Failed to get public url for profile picture',
         );
         return;
       }
@@ -1265,17 +1180,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       ProjectService.updateProject(_project);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Picture uploaded successfully!'),
-          backgroundColor: Colors.green,
-        ),
+      GlobalNotificationService.instance.showSuccess(
+        'Picture uploaded successfully!',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to upload picture: $e')));
+      GlobalNotificationService.instance.showError(
+        'Failed to upload picture: $e',
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -1491,53 +1403,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: ProjectService.getStatusColor(
-                        _project.status,
-                      ).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: ProjectService.getStatusColor(_project.status),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _project.status,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: ProjectService.getStatusColor(_project.status),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  if (UserService.currentUser?.id ==
-                      '7f18c57b-ca6f-4812-aac7-a2fb6cc10362') ...[
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: _showStatusEditDialog,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer.withValues(
-                            alpha: 0.5,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Symbols.edit,
-                          size: 16,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
               ),
             ],
           ),

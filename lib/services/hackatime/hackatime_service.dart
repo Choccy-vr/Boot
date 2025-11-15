@@ -4,24 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '/services/notifications/notifications.dart';
 import '/services/users/User.dart';
 
 class HackatimeService {
-  static void _showErrorSnackbar(BuildContext? context, String message) {
-    if (context != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Hackatime Error: $message',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 10),
-        ),
-      );
-    }
-  }
-
   static String _getErrorMessage(int statusCode, String defaultMessage) {
     if (statusCode == 403 || statusCode == 404) {
       return 'Hackatime is most likely down or unavailable (Error: $defaultMessage Status: $statusCode)';
@@ -58,9 +44,8 @@ class HackatimeService {
           'Hackatime init failed for $username with status ${response.statusCode}: ${response.body}',
         );
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _showErrorSnackbar(
-            context,
-            _getErrorMessage(response.statusCode, 'Failed to initialize user'),
+          (_) => GlobalNotificationService.instance.showError(
+            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to initialize user')}',
           ),
         );
       }
@@ -71,8 +56,9 @@ class HackatimeService {
         stack,
       );
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) =>
-            _showErrorSnackbar(context, 'Network error during initialization'),
+        (_) => GlobalNotificationService.instance.showError(
+          'Hackatime Error: Network error during initialization',
+        ),
       );
     }
   }
@@ -103,9 +89,8 @@ class HackatimeService {
           'Hackatime project fetch failed for user $userId with status ${response.statusCode}: ${response.body}',
         );
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _showErrorSnackbar(
-            context,
-            _getErrorMessage(response.statusCode, 'Failed to load projects'),
+          (_) => GlobalNotificationService.instance.showError(
+            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to load projects')}',
           ),
         );
         return [];
@@ -117,7 +102,9 @@ class HackatimeService {
         stack,
       );
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _showErrorSnackbar(context, 'Network error loading projects'),
+        (_) => GlobalNotificationService.instance.showError(
+          'Hackatime Error: Network error loading projects',
+        ),
       );
       return [];
     }
@@ -148,9 +135,8 @@ class HackatimeService {
           'Hackatime ban check failed for user $userId with status ${response.statusCode}: ${response.body}',
         );
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _showErrorSnackbar(
-            context,
-            _getErrorMessage(response.statusCode, 'Failed to check ban status'),
+          (_) => GlobalNotificationService.instance.showError(
+            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to check ban status')}',
           ),
         );
         return false;
@@ -162,7 +148,9 @@ class HackatimeService {
         stack,
       );
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _showErrorSnackbar(context, 'Network error checking ban status'),
+        (_) => GlobalNotificationService.instance.showError(
+          'Hackatime Error: Network error checking ban status',
+        ),
       );
       return false;
     }
@@ -183,7 +171,9 @@ class HackatimeService {
       if (projects.isEmpty) {
         AppLogger.warning('Hackatime projects list empty for user $userId');
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _showErrorSnackbar(context, 'No Hackatime projects found'),
+          (_) => GlobalNotificationService.instance.showError(
+            'Hackatime Error: No Hackatime projects found for ${project.id}',
+          ),
         );
       }
       if (project.hackatimeProjects.isEmpty) {
@@ -209,9 +199,8 @@ class HackatimeService {
           'Hackatime project(s) $missingList not found for user $userId',
         );
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _showErrorSnackbar(
-            context,
-            'Project(s) $missingList not found on Hackatime',
+          (_) => GlobalNotificationService.instance.showError(
+            'Hackatime Error: Project(s) $missingList not found on Hackatime',
           ),
         );
       }

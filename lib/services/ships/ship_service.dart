@@ -4,6 +4,7 @@ import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/ships/Boot_Ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:flutter/material.dart';
+import '/services/notifications/notifications.dart';
 
 class ShipService {
   static Future<Ship> getShipById(String id) async {
@@ -145,11 +146,8 @@ class ShipService {
         stack,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error recording vote: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        GlobalNotificationService.instance.showError(
+          'Error recording vote: ${e.toString()}',
         );
       }
     }

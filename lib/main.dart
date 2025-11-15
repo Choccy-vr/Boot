@@ -16,12 +16,14 @@ import 'pages/Projects/Project_Page.dart';
 import 'pages/Profile/Profile_Page.dart';
 import 'pages/Explore/Explore_Page.dart';
 import 'pages/not_found_page.dart';
+import 'pages/Debug_Page.dart';
 import 'services/Projects/Project.dart';
 import 'services/Projects/project_service.dart';
 import 'services/supabase/auth/Auth.dart';
 import 'services/supabase/auth/supabase_auth.dart';
 import 'services/supabase/auth/auth_listener.dart';
 import 'services/misc/logger.dart';
+import 'services/notifications/notifications.dart';
 import 'services/users/Boot_User.dart';
 import 'services/users/User.dart';
 import 'theme/terminal_theme.dart';
@@ -56,6 +58,9 @@ class MainApp extends StatelessWidget {
       title: 'Boot App',
       theme: buildTerminalTheme(),
       initialRoute: initialRoute,
+      builder: (context, child) {
+        return NotificationScope(child: child ?? const SizedBox.shrink());
+      },
       onGenerateRoute: _onGenerateRoute,
       onUnknownRoute: _onUnknownRoute,
       debugShowCheckedModeBanner: false,
@@ -136,6 +141,10 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'explore':
       page = const ExplorePage();
       routeName = '/explore';
+      break;
+    case 'debug':
+      page = const DebugPage();
+      routeName = '/debug';
       break;
     case 'user':
       if (segments.length >= 2) {

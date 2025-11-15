@@ -5,6 +5,7 @@ import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
+import '/services/notifications/notifications.dart';
 
 class CreateProjectPage extends StatefulWidget {
   const CreateProjectPage({super.key});
@@ -30,6 +31,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   String _selectedArchitecture = 'x86_64';
   final List<String> _selectedHackatimeProjects = [];
   Set<String> _claimedHackatimeProjects = {};
+  bool _showNameValidation = false;
+  bool _showDescriptionValidation = false;
+  bool _showRepoValidation = false;
+  bool _showHackatimeValidation = false;
 
   final Map<String, String> _osTypes = {
     'scratch': 'From Scratch (LFS, Buildroot, etc.)',
@@ -41,6 +46,30 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     'x86': 'x86 (32-bit)',
   };
   List<HackatimeProject> _hackatimeProjects = [];
+
+  String? get _projectNameError {
+    final text = _projectNameController.text.trim();
+    if (text.isEmpty) return 'Project name is required';
+    if (text.length < 2) return 'Minimum 2 characters';
+    if (text.length > 25) return 'Maximum 25 characters';
+    return null;
+  }
+
+  String? get _descriptionError {
+    final text = _descriptionController.text.trim();
+    if (text.isEmpty) return 'Description is required';
+    if (text.length < 50) return 'Minimum 50 characters';
+    if (text.length > 500) return 'Maximum 500 characters';
+    return null;
+  }
+
+  String? get _repositoryError {
+    final text = _repositoryController.text.trim();
+    if (text.isEmpty) return 'Repository URL is required';
+    if (!_isValidGithubRepoUrl(text))
+      return 'Enter a valid GitHub repository URL';
+    return null;
+  }
 
   @override
   void initState() {
@@ -199,12 +228,15 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             TextField(
               controller: _projectNameController,
               maxLength: 25,
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) => setState(() => _showNameValidation = true),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Project Name',
                 hintText: 'MyAwesomeOS',
-                helperText: '2–25 characters',
+                helperText: _showNameValidation && _projectNameError != null
+                    ? null
+                    : '2–25 characters',
+                errorText: _showNameValidation ? _projectNameError : null,
                 prefixIcon: Icon(
                   Symbols.folder,
                   color: colorScheme.onSurfaceVariant,
@@ -220,12 +252,19 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               minLines: 3,
               maxLines: 6,
               maxLength: 500,
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) =>
+                  setState(() => _showDescriptionValidation = true),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Description',
                 hintText: 'A powerful operating system built from scratch...',
-                helperText: '50–500 characters',
+                helperText:
+                    _showDescriptionValidation && _descriptionError != null
+                    ? null
+                    : '50–500 characters',
+                errorText: _showDescriptionValidation
+                    ? _descriptionError
+                    : null,
                 alignLabelWithHint: true,
                 prefixIcon: Icon(
                   Symbols.description,
@@ -239,12 +278,15 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             const SizedBox(height: 20),
             TextField(
               controller: _repositoryController,
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) => setState(() => _showRepoValidation = true),
               style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Repository URL',
                 hintText: 'https://github.com/username/my-awesome-os',
-                helperText: 'Must be a valid GitHub URL',
+                helperText: _showRepoValidation && _repositoryError != null
+                    ? null
+                    : 'Must be a valid GitHub URL',
+                errorText: _showRepoValidation ? _repositoryError : null,
                 prefixIcon: Icon(
                   Symbols.folder_data,
                   color: colorScheme.onSurfaceVariant,
@@ -364,6 +406,27 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 const SizedBox(height: 16),
                 _buildSelectedHackatimeSummary(colorScheme, textTheme),
               ],
+              if (_showHackatimeValidation &&
+                  _selectedHackatimeProjects.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Symbols.error, size: 18, color: colorScheme.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Select at least one Hackatime project to continue.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ],
         ),
@@ -550,6 +613,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   void _toggleHackatimeProject(String projectName, bool shouldSelect) {
     final normalizedName = _normalizeHackatimeName(projectName);
     setState(() {
+      _showHackatimeValidation = true;
       if (shouldSelect) {
         final alreadySelected = _selectedHackatimeProjects.any(
           (name) => _normalizeHackatimeName(name) == normalizedName,
@@ -570,13 +634,6 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   bool _isValidGithubRepoUrl(String url) {
     if (url.isEmpty) return false;
     return _githubRepoRegex.hasMatch(url.trim());
-  }
-
-  void _showFormMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildProjectPreview(ColorScheme colorScheme, TextTheme textTheme) {
@@ -720,28 +777,42 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     final repoUrl = _repositoryController.text.trim();
     final ownerId = UserService.currentUser?.id;
 
+    setState(() {
+      _showNameValidation = true;
+      _showDescriptionValidation = true;
+      _showRepoValidation = true;
+      _showHackatimeValidation = true;
+    });
+
     if (ownerId == null || ownerId.isEmpty) {
-      _showFormMessage('You need to be signed in to create a project.');
+      GlobalNotificationService.instance.showError(
+        'You need to be signed in to create a project.',
+      );
       return;
     }
 
-    if (title.length < 2 || title.length > 25) {
-      _showFormMessage('Project name must be between 2 and 25 characters.');
+    final nameError = _projectNameError;
+    if (nameError != null) {
+      GlobalNotificationService.instance.showError(nameError);
       return;
     }
 
-    if (description.length < 50 || description.length > 500) {
-      _showFormMessage('Description must be between 50 and 500 characters.');
+    final descriptionError = _descriptionError;
+    if (descriptionError != null) {
+      GlobalNotificationService.instance.showError(descriptionError);
       return;
     }
 
-    if (!_isValidGithubRepoUrl(repoUrl)) {
-      _showFormMessage('Enter a valid GitHub repository URL.');
+    final repoError = _repositoryError;
+    if (repoError != null) {
+      GlobalNotificationService.instance.showError(repoError);
       return;
     }
 
     if (_selectedHackatimeProjects.isEmpty) {
-      _showFormMessage('Select at least one Hackatime project.');
+      GlobalNotificationService.instance.showError(
+        'Select at least one Hackatime project.',
+      );
       return;
     }
 
@@ -752,7 +823,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         .where(_claimedHackatimeProjects.contains)
         .toList();
     if (conflictingSelections.isNotEmpty) {
-      _showFormMessage(
+      GlobalNotificationService.instance.showError(
         'One or more selected Hackatime projects are already linked to another build.',
       );
       return;
@@ -774,6 +845,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         owner: ownerId,
       );
       if (!mounted) return;
+      GlobalNotificationService.instance.showSuccess(
+        'Project created! Redirecting to your build...',
+      );
       NavigationService.navigateTo(
         context: context,
         destination: AppDestination.project,
@@ -782,7 +856,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       );
     } catch (e, stack) {
       AppLogger.error('Failed to create project', e, stack);
-      _showFormMessage('Something went wrong while creating your project.');
+      GlobalNotificationService.instance.showError(
+        'Something went wrong while creating your project.',
+      );
     }
   }
 
@@ -812,20 +888,24 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         backgroundColor: colorScheme.surfaceContainerLow,
         elevation: 1,
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTerminalHeader(colorScheme, textTheme),
-            const SizedBox(height: 24),
-            Expanded(
-              child: SingleChildScrollView(
-                child: _buildProjectForm(colorScheme, textTheme),
-              ),
+      body: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTerminalHeader(colorScheme, textTheme),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: _buildProjectForm(colorScheme, textTheme),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
