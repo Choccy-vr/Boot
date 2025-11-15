@@ -2702,13 +2702,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Symbols.toll,
+                              Symbols.featured_seasonal_and_gifts,
                               size: 14,
                               color: TerminalColors.yellow,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${prize.cost}',
+                              '${prize.title}',
                               style: textTheme.bodySmall?.copyWith(
                                 color: TerminalColors.yellow,
                                 fontWeight: FontWeight.bold,
