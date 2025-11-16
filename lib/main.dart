@@ -16,6 +16,7 @@ import 'pages/Projects/Project_Page.dart';
 import 'pages/Profile/Profile_Page.dart';
 import 'pages/Explore/Explore_Page.dart';
 import 'pages/Challenges/Challenge_page.dart';
+import 'pages/Leaderboard/Leaderboard_Page.dart';
 import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
 import 'services/Projects/Project.dart';
@@ -146,6 +147,10 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'challenges':
       page = const ChallengePage();
       routeName = '/challenges';
+      break;
+    case 'leaderboard':
+      page = const LeaderboardPage();
+      routeName = '/leaderboard';
       break;
     case 'debug':
       page = const DebugPage();

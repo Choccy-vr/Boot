@@ -434,8 +434,6 @@ class _ExplorePageState extends State<ExplorePage>
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
-                  const SizedBox(width: 8),
-                  _buildStatusChip(project.status, colorScheme, textTheme),
                   const Spacer(),
                   Text(
                     _timeAgoSinceDate(project.createdAt),
@@ -478,31 +476,6 @@ class _ExplorePageState extends State<ExplorePage>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(
-    String status,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    Color statusColor;
-    statusColor = ProjectService.getStatusColor(status);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        status,
-        style: textTheme.bodySmall?.copyWith(
-          color: statusColor,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }

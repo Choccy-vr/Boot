@@ -61,10 +61,6 @@ class ShipService {
         data: {'project': project, 'time': time, 'approved': approved},
       );
       final newShip = Ship.fromJson(response.first);
-      await ProjectService.updateStatus(
-        projectId: project,
-        newStatus: 'Shipped / Awaiting Review',
-      );
       return newShip;
     } catch (e, stack) {
       AppLogger.error('Error adding ship for project $project', e, stack);

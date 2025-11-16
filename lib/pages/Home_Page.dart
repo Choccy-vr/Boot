@@ -855,29 +855,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ProjectService.getStatusColor(
-                          project.status,
-                        ).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: ProjectService.getStatusColor(project.status),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        project.status.toUpperCase(),
-                        style: textTheme.labelSmall?.copyWith(
-                          color: ProjectService.getStatusColor(project.status),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],

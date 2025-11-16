@@ -110,7 +110,6 @@ class ProjectService {
         lastModified: lastModified,
         awaitingReview: awaitingReview,
         level: level,
-        status: status,
         reviewed: reviewed,
         hackatimeProjects: hackatimeProjects,
         owner: owner,
@@ -138,41 +137,9 @@ class ProjectService {
         lastModified: project.lastModified,
         awaitingReview: project.awaitingReview,
         level: project.level,
-        status: project.status,
         reviewed: project.reviewed,
         hackatimeProjects: project.hackatimeProjects,
       ),
     );
-  }
-
-  static Future<void> updateStatus({
-    required int projectId,
-    required String newStatus,
-  }) async {
-    await getProjectById(projectId).then((project) async {
-      if (project != null) {
-        project.status = newStatus;
-        await updateProject(project);
-      } else {
-        throw Exception('Project with ID $projectId not found');
-      }
-    });
-  }
-
-  static Color getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'building':
-        return TerminalColors.yellow;
-      case 'voting':
-        return TerminalColors.green;
-      case 'error':
-        return TerminalColors.red;
-      case 'shipped / awaiting review':
-        return TerminalColors.cyan;
-      case 'shipped':
-        return TerminalColors.magenta;
-      default:
-        return TerminalColors.gray;
-    }
   }
 }

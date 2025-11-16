@@ -250,26 +250,6 @@ class _ProjectsPageState extends State<ProjectsPage>
               const Spacer(),
               Row(
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: ProjectService.getStatusColor(
-                        project.status,
-                      ).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: ProjectService.getStatusColor(project.status),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      project.status,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: ProjectService.getStatusColor(project.status),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
                   const Spacer(),
                   Text(
                     timeAgoSinceDate(project.lastModified),
@@ -328,32 +308,6 @@ class _ProjectsPageState extends State<ProjectsPage>
                             style: textTheme.titleMedium?.copyWith(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: ProjectService.getStatusColor(
-                              project.status,
-                            ).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: ProjectService.getStatusColor(
-                                project.status,
-                              ),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            project.status,
-                            style: textTheme.bodySmall?.copyWith(
-                              color: ProjectService.getStatusColor(
-                                project.status,
-                              ),
                             ),
                           ),
                         ),

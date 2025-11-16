@@ -22,6 +22,7 @@ class Project {
   String isoUrl;
   String qemuCMD;
   List<Challenge> challenges;
+  int coinsEarned;
   //not in db
   String readableTime;
   double time;
@@ -47,6 +48,7 @@ class Project {
     this.isoUrl = '',
     this.qemuCMD = '',
     this.challenges = const [],
+    this.coinsEarned = 0,
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -73,6 +75,7 @@ class Project {
       isoUrl: row['ISO_url'] ?? '',
       qemuCMD: row['qemu_cmd'] ?? '',
       challenges: ChallengeService.getChallengesByIds(row['challenges'] ?? []),
+      coinsEarned: row['coins_earned'] ?? 0,
     );
   }
 
@@ -85,7 +88,6 @@ class Project {
     DateTime? lastModified,
     bool? awaitingReview,
     String? level,
-    String? status,
     bool? reviewed,
     List<String>? hackatimeProjects,
     String? owner,
@@ -93,6 +95,7 @@ class Project {
     String? isoUrl,
     String? qemuCMD,
     List<Challenge>? challenges,
+    int? coinsEarned,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -105,7 +108,6 @@ class Project {
     }
     if (awaitingReview != null) map['awaiting_review'] = awaitingReview;
     if (level != null) map['level'] = level;
-    if (status != null) map['status'] = status;
     if (reviewed != null) map['reviewed'] = reviewed;
     if (hackatimeProjects != null) {
       map['hackatime_projects'] = hackatimeProjects;
@@ -117,6 +119,7 @@ class Project {
     if (challenges != null && challenges.isNotEmpty) {
       map['challenges'] = challenges.map((c) => c.id).toList();
     }
+    if (coinsEarned != null) map['coins_earned'] = coinsEarned;
     return map;
   }
 

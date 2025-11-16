@@ -2708,7 +2708,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${prize.title}',
+                              prize.title,
                               style: textTheme.bodySmall?.copyWith(
                                 color: TerminalColors.yellow,
                                 fontWeight: FontWeight.bold,
