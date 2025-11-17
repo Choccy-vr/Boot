@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isHackatimeBanned = false;
   List<Project> _userProjects = [];
   bool _isLoadingProjects = true;
+  bool _isRailExpanded = false;
 
   @override
   void initState() {
@@ -115,26 +116,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       appBar: AppBar(
         backgroundColor: colorScheme.surfaceContainerLowest,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Symbols.menu, color: colorScheme.primary),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            tooltip: 'Menu',
-          ),
-        ),
-        title: Row(
-          children: [
-            Icon(Symbols.terminal, color: colorScheme.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Boot',
-              style: textTheme.titleLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
         actions: [
           Builder(
             builder: (context) {
@@ -152,226 +133,325 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           const SizedBox(width: 8),
         ],
       ),
-      drawer: _buildDrawer(colorScheme, textTheme),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: Responsive.pagePadding(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTerminalHeader(colorScheme, textTheme),
-                SizedBox(height: Responsive.spacing(context)),
-                if (_isHackatimeBanned) ...[
-                  _buildHackatimeBanWarning(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context)),
-                ],
-                Row(
-                  children: [
-                    Expanded(child: _buildSystemStatus(colorScheme, textTheme)),
-                  ],
-                ),
-                SizedBox(height: Responsive.spacing(context) * 1.5),
-                if (!_isHackatimeBanned) ...[
-                  _buildNavigationGrid(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context) * 1.5),
-                  _buildBottomSection(colorScheme, textTheme),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(ColorScheme colorScheme, TextTheme textTheme) {
-    final user = UserService.currentUser;
-
-    return Drawer(
-      backgroundColor: colorScheme.surface,
-      child: Column(
+      body: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLowest,
-              border: Border(
-                bottom: BorderSide(
-                  color: colorScheme.outline.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          _buildNavigationRail(colorScheme, textTheme),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: Responsive.pagePadding(context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildTerminalHeader(colorScheme, textTheme),
+                      SizedBox(height: Responsive.spacing(context)),
+                      if (_isHackatimeBanned) ...[
+                        _buildHackatimeBanWarning(colorScheme, textTheme),
+                        SizedBox(height: Responsive.spacing(context)),
+                      ],
                       Row(
                         children: [
-                          Icon(
-                            Symbols.terminal,
-                            color: colorScheme.primary,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Boot',
-                            style: textTheme.headlineSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Expanded(
+                            child: _buildSystemStatus(colorScheme, textTheme),
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: Icon(Symbols.close, color: colorScheme.onSurface),
-                        onPressed: () => Navigator.pop(context),
-                        tooltip: 'Close menu',
-                      ),
+                      SizedBox(height: Responsive.spacing(context) * 1.5),
+                      if (!_isHackatimeBanned) ...[
+                        _buildNavigationGrid(colorScheme, textTheme),
+                        SizedBox(height: Responsive.spacing(context) * 1.5),
+                        _buildBottomSection(colorScheme, textTheme),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (user != null)
-                    Text(
-                      '${user.username}@ysws',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildDrawerItem(
-                  icon: Symbols.home,
-                  title: 'Dashboard',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    Navigator.pop(context);
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.home,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Symbols.construction,
-                  title: 'My Projects',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    Navigator.pop(context);
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.project,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Symbols.explore,
-                  title: 'Explore',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    Navigator.pop(context);
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.explore,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Symbols.leaderboard,
-                  title: 'Leaderboard',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    Navigator.pop(context);
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.leaderboard,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Symbols.mountain_flag,
-                  title: 'Challenges',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    Navigator.pop(context);
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.challenges,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
-                // Debug menu item - only for specific user
-                if (user?.id == '7f18c57b-ca6f-4812-aac7-a2fb6cc10362')
-                  _buildDrawerItem(
-                    icon: Symbols.bug_report,
-                    title: 'Debug Console',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/debug');
-                    },
-                  ),
-              ],
-            ),
-          ),
-          _buildProfileSection(colorScheme, textTheme),
         ],
       ),
     );
   }
 
-  Widget _buildProfileSection(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildNavigationRail(ColorScheme colorScheme, TextTheme textTheme) {
     final user = UserService.currentUser;
+    final railWidth = _isRailExpanded ? 240.0 : 72.0;
 
-    if (user == null) return const SizedBox.shrink();
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isRailExpanded = true),
+      onExit: (_) => setState(() => _isRailExpanded = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: railWidth,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLowest,
+          border: Border(
+            right: BorderSide(
+              color: colorScheme.outline.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: _isRailExpanded
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Symbols.terminal,
+                                color: colorScheme.primary,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Boot',
+                                style: textTheme.titleLarge?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (user != null)
+                            Text(
+                              '${user.username}@ysws',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  : Center(
+                      child: Icon(
+                        Symbols.terminal,
+                        color: colorScheme.primary,
+                        size: 28,
+                      ),
+                    ),
+            ),
+            // Navigation items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _buildRailItem(
+                    icon: Symbols.home,
+                    title: 'Dashboard',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    onTap: () {
+                      NavigationService.navigateTo(
+                        context: context,
+                        destination: AppDestination.home,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    },
+                  ),
+                  _buildRailItem(
+                    icon: Symbols.construction,
+                    title: 'My Projects',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    onTap: () {
+                      NavigationService.navigateTo(
+                        context: context,
+                        destination: AppDestination.project,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    },
+                  ),
+                  _buildRailItem(
+                    icon: Symbols.explore,
+                    title: 'Explore',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    onTap: () {
+                      NavigationService.navigateTo(
+                        context: context,
+                        destination: AppDestination.explore,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    },
+                  ),
+                  _buildRailItem(
+                    icon: Symbols.leaderboard,
+                    title: 'Leaderboard',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    onTap: () {
+                      NavigationService.navigateTo(
+                        context: context,
+                        destination: AppDestination.leaderboard,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    },
+                  ),
+                  _buildRailItem(
+                    icon: Symbols.mountain_flag,
+                    title: 'Challenges',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    onTap: () {
+                      NavigationService.navigateTo(
+                        context: context,
+                        destination: AppDestination.challenges,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      );
+                    },
+                  ),
+                  if (user?.id == '7f18c57b-ca6f-4812-aac7-a2fb6cc10362')
+                    _buildRailItem(
+                      icon: Symbols.bug_report,
+                      title: 'Debug Console',
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      isExpanded: _isRailExpanded,
+                      onTap: () {
+                        Navigator.pushNamed(context, '/debug');
+                      },
+                    ),
+                ],
+              ),
+            ),
+            // Profile section
+            if (user != null) _buildRailProfile(user, colorScheme, textTheme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRailItem({
+    required IconData icon,
+    required String title,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+          child: isExpanded
+              ? Row(
+                  children: [
+                    Icon(icon, color: colorScheme.primary, size: 24),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                )
+              : Center(child: Icon(icon, color: colorScheme.primary, size: 24)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRailProfile(
+    BootUser user,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final hasProfileImage = user.profilePicture.isNotEmpty;
+
+    if (!_isRailExpanded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: hasProfileImage
+              ? Colors.transparent
+              : colorScheme.primary.withValues(alpha: 0.2),
+          backgroundImage: hasProfileImage
+              ? NetworkImage(user.profilePicture)
+              : null,
+          child: hasProfileImage
+              ? null
+              : Text(
+                  user.username.isNotEmpty
+                      ? user.username[0].toUpperCase()
+                      : '?',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+      );
+    }
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLowest,
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.surfaceContainer,
+            colorScheme.surfaceContainerLowest,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.3),
-          width: 1,
+          color: colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          _ProfileCardWithHover(
-            user: user,
-            colorScheme: colorScheme,
-            textTheme: textTheme,
+          InkWell(
             onTap: () {
-              Navigator.pop(context);
               NavigationService.navigateTo(
                 context: context,
                 destination: AppDestination.profile,
@@ -379,56 +459,175 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 textTheme: textTheme,
               );
             },
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Authentication.signOut();
-                NavigationService.navigateTo(
-                  context: context,
-                  destination: AppDestination.login,
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                );
-              },
-              icon: Icon(Symbols.logout, size: 18, color: TerminalColors.red),
-              label: Text(
-                'Logout',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: TerminalColors.red,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: TerminalColors.red.withValues(alpha: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: _isRailExpanded
+                  ? Row(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colorScheme.primary.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: hasProfileImage
+                                ? Colors.transparent
+                                : colorScheme.primary.withValues(alpha: 0.2),
+                            backgroundImage: hasProfileImage
+                                ? NetworkImage(user.profilePicture)
+                                : null,
+                            child: hasProfileImage
+                                ? null
+                                : Text(
+                                    user.username.isNotEmpty
+                                        ? user.username[0].toUpperCase()
+                                        : '?',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                user.username,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              const SizedBox(height: 4),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: TerminalColors.yellow.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: TerminalColors.yellow.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Symbols.toll,
+                                        size: 11,
+                                        color: TerminalColors.yellow,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '${user.bootCoins}',
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: TerminalColors.yellow,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : CircleAvatar(
+                      radius: 20,
+                      backgroundColor: hasProfileImage
+                          ? Colors.transparent
+                          : colorScheme.primary.withValues(alpha: 0.2),
+                      backgroundImage: hasProfileImage
+                          ? NetworkImage(user.profilePicture)
+                          : null,
+                      child: hasProfileImage
+                          ? null
+                          : Text(
+                              user.username.isNotEmpty
+                                  ? user.username[0].toUpperCase()
+                                  : '?',
+                              style: textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
             ),
           ),
+          if (_isRailExpanded) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.only(top: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Authentication.signOut();
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.login,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                  icon: Icon(
+                    Symbols.logout,
+                    size: 16,
+                    color: TerminalColors.red,
+                  ),
+                  label: Text(
+                    'Logout',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: TerminalColors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: TerminalColors.red.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? TerminalColors.red : colorScheme.onSurface;
-
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title, style: textTheme.bodyLarge?.copyWith(color: color)),
-      onTap: onTap,
-      hoverColor: colorScheme.surfaceContainerHighest,
     );
   }
 
