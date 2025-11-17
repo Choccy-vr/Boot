@@ -47,7 +47,7 @@ class Challenge {
       title: json['title'] ?? 'Untitled Challenge',
       description: json['description'] ?? 'No description provided',
       requirements: json['requirements'] ?? 'No requirements specified',
-      isActive: json['is_active'] ?? false,
+      isActive: json['active'] ?? false,
     );
   }
 }

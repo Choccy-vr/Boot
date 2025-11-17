@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import '/services/Projects/Project.dart';
+import '/services/Projects/project_service.dart';
 import '/services/challenges/Challenge.dart';
 import '/services/challenges/Challenge_Service.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
+import '/services/users/User.dart';
 import '/theme/terminal_theme.dart';
 import '/theme/responsive.dart';
 import '/services/notifications/notifications.dart';
@@ -1176,21 +1179,6 @@ class ChallengeDetailDialog extends StatelessWidget {
                                         Row(
                                           children: [
                                             Icon(
-                                              Symbols.toll,
-                                              size: 16,
-                                              color: TerminalColors.yellow,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${prize!.cost} Boot Coins',
-                                              style: textTheme.bodyMedium
-                                                  ?.copyWith(
-                                                    color: colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Icon(
                                               Symbols.inventory_2,
                                               size: 16,
                                               color:
@@ -1328,10 +1316,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: isExpired || !challenge.isActive
                             ? null
-                            : () {
-                                // TODO: Implement mark as completed
-                                Navigator.pop(context);
-                              },
+                            : () => _handleMarkAsCompleted(context),
                         icon: Icon(Symbols.check, size: 20),
                         label: Text('Mark as Completed'),
                       ),
@@ -1463,5 +1448,118 @@ class ChallengeDetailDialog extends StatelessWidget {
       case ChallengeType.normal:
         return Symbols.flag;
     }
+  }
+
+  Future<void> _handleMarkAsCompleted(BuildContext context) async {
+    final currentUser = UserService.currentUser;
+    if (currentUser == null) {
+      GlobalNotificationService.instance.showError(
+        'You need to be logged in to complete challenges.',
+      );
+      return;
+    }
+
+    final projectId = _extractProjectId(context);
+    if (projectId != null) {
+      final project = await ProjectService.getProjectById(projectId);
+      if (project != null && project.owner == currentUser.id) {
+        await _completeChallengeForProject(context, project);
+        return;
+      }
+    }
+
+    await _showProjectSelectionDialog(context, currentUser.id);
+  }
+
+  Future<void> _completeChallengeForProject(
+    BuildContext context,
+    Project project,
+  ) async {
+    try {
+      await ChallengeService.markChallengeAsCompleted(
+        project: project,
+        challenge: challenge,
+      );
+      Navigator.of(context).pop();
+      GlobalNotificationService.instance.showSuccess(
+        '${challenge.title} marked as completed for ${project.title}.',
+      );
+    } catch (e) {
+      GlobalNotificationService.instance.showError(
+        'Failed to mark challenge as complete: $e',
+      );
+    }
+  }
+
+  Future<void> _showProjectSelectionDialog(
+    BuildContext context,
+    String userId,
+  ) async {
+    final projects = await ProjectService.getProjects(userId);
+    if (projects.isEmpty) {
+      GlobalNotificationService.instance.showError(
+        'You do not have any projects yet.',
+      );
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final colorScheme = theme.colorScheme;
+        return AlertDialog(
+          title: Text('Select Project'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 360,
+            child: ListView.separated(
+              itemCount: projects.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final project = projects[index];
+                return ListTile(
+                  tileColor: colorScheme.surfaceContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
+                    child: Text(
+                      project.title.isNotEmpty
+                          ? project.title[0].toUpperCase()
+                          : '?',
+                    ),
+                  ),
+                  title: Text(project.title),
+                  subtitle: Text(
+                    'Time: ${(project.time / 3600).toStringAsFixed(1)}h',
+                  ),
+                  onTap: () async {
+                    Navigator.of(dialogContext).pop();
+                    await _completeChallengeForProject(context, project);
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  int? _extractProjectId(BuildContext context) {
+    final routeName = ModalRoute.of(context)?.settings.name;
+    if (routeName == null) return null;
+
+    final match = RegExp(r'/projects/(\d+)').firstMatch(routeName);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+
+    return null;
   }
 }

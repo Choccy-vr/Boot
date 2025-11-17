@@ -1,6 +1,9 @@
+import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/challenges/Challenge.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/misc/logger.dart';
+import 'package:boot_app/services/users/Boot_User.dart';
 
 class ChallengeService {
   static List<Challenge> challenges = [];
@@ -94,6 +97,24 @@ class ChallengeService {
     } catch (e, stack) {
       AppLogger.error('Error getting challenges by type', e, stack);
       return [];
+    }
+  }
+
+  static Future<void> markChallengeAsCompleted({
+    required Project project,
+    required Challenge challenge,
+  }) async {
+    try {
+      List<Challenge> challenges = project.challenges;
+      challenges.add(challenge);
+      project.challenges = challenges;
+      await ProjectService.updateProject(project);
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error marking challenge ${challenge.id} as completed for project ${project.title}',
+        e,
+        stack,
+      );
     }
   }
 }
