@@ -139,6 +139,11 @@ class ProjectService {
         level: project.level,
         reviewed: project.reviewed,
         hackatimeProjects: project.hackatimeProjects,
+        timeDevlogs: project.timeDevlogs,
+        isoUrl: project.isoUrl,
+        qemuCMD: project.qemuCMD,
+        challenges: project.challenges,
+        coinsEarned: project.coinsEarned,
       ),
     );
   }

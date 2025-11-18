@@ -52,6 +52,7 @@ class Project {
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
+    final challengeIds = _parseChallengeIds(row['challenges']);
     return Project(
       id: row['id'] ?? 0,
       title: row['name'] ?? 'Untitled Project',
@@ -74,7 +75,7 @@ class Project {
       time: 0.0,
       isoUrl: row['ISO_url'] ?? '',
       qemuCMD: row['qemu_cmd'] ?? '',
-      challenges: ChallengeService.getChallengesByIds(row['challenges'] ?? []),
+      challenges: ChallengeService.getChallengesByIds(challengeIds),
       coinsEarned: row['coins_earned'] ?? 0,
     );
   }
@@ -148,5 +149,46 @@ class Project {
       return [trimmed];
     }
     return [];
+  }
+
+  static List<int> _parseChallengeIds(dynamic raw) {
+    if (raw == null) return [];
+    if (raw is List) {
+      return raw
+          .map(_coerceInt)
+          .where((value) => value != null)
+          .cast<int>()
+          .toList();
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return [];
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          final decoded = jsonDecode(trimmed);
+          if (decoded is List) {
+            return decoded
+                .map(_coerceInt)
+                .where((value) => value != null)
+                .cast<int>()
+                .toList();
+          }
+        } catch (_) {}
+      }
+      final singleId = int.tryParse(trimmed);
+      return singleId == null ? [] : [singleId];
+    }
+    if (raw is num) {
+      return [raw.toInt()];
+    }
+    return [];
+  }
+
+  static int? _coerceInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 }

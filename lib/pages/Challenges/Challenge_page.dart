@@ -1508,42 +1508,228 @@ class ChallengeDetailDialog extends StatelessWidget {
       builder: (dialogContext) {
         final theme = Theme.of(dialogContext);
         final colorScheme = theme.colorScheme;
-        return AlertDialog(
-          title: Text('Select Project'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 360,
-            child: ListView.separated(
-              itemCount: projects.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                final project = projects[index];
-                return ListTile(
-                  tileColor: colorScheme.surfaceContainer,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.2),
+        final textTheme = theme.textTheme;
+
+        return Dialog(
+          backgroundColor: colorScheme.surfaceContainer,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 550, maxHeight: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLowest,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: colorScheme.outline.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
                     ),
                   ),
-                  leading: CircleAvatar(
-                    backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
-                    child: Text(
-                      project.title.isNotEmpty
-                          ? project.title[0].toUpperCase()
-                          : '?',
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Symbols.folder_open,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Select Project',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Symbols.close,
+                          color: colorScheme.onSurface,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  title: Text(project.title),
-                  subtitle: Text(
-                    'Time: ${(project.time / 3600).toStringAsFixed(1)}h',
+                ),
+                // Projects list
+                Flexible(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: projects.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, index) {
+                      final project = projects[index];
+                      final hours = (project.time / 3600).toStringAsFixed(1);
+                      final hasImage = project.imageURL.isNotEmpty;
+
+                      return InkWell(
+                        onTap: () async {
+                          Navigator.of(dialogContext).pop();
+                          await _completeChallengeForProject(context, project);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: colorScheme.outline.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // Project image/thumbnail
+                              ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(8),
+                                  bottomLeft: Radius.circular(8),
+                                ),
+                                child: Container(
+                                  width: 72,
+                                  height: 72,
+                                  color: colorScheme.surfaceContainer,
+                                  child: hasImage
+                                      ? Image.network(
+                                          project.imageURL,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Container(
+                                                  color: colorScheme.primary
+                                                      .withValues(alpha: 0.1),
+                                                  child: Icon(
+                                                    Symbols.image,
+                                                    color: colorScheme.primary
+                                                        .withValues(alpha: 0.3),
+                                                    size: 28,
+                                                  ),
+                                                );
+                                              },
+                                        )
+                                      : Container(
+                                          color: colorScheme.primary.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          child: Icon(
+                                            Symbols.image,
+                                            color: colorScheme.primary
+                                                .withValues(alpha: 0.3),
+                                            size: 28,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              // Project info
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        project.title,
+                                        style: textTheme.titleSmall?.copyWith(
+                                          color: colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Symbols.schedule,
+                                            size: 13,
+                                            color: TerminalColors.cyan,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${hours}h',
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: TerminalColors.cyan,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(
+                                            Symbols.flag,
+                                            size: 13,
+                                            color: TerminalColors.yellow,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            project.level,
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: TerminalColors.yellow,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                          if (project.likes > 0) ...[
+                                            const SizedBox(width: 12),
+                                            Icon(
+                                              Symbols.favorite,
+                                              size: 13,
+                                              color: TerminalColors.red,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${project.likes}',
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    color: TerminalColors.red,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 11,
+                                                  ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Arrow indicator
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  Symbols.chevron_right,
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  onTap: () async {
-                    Navigator.of(dialogContext).pop();
-                    await _completeChallengeForProject(context, project);
-                  },
-                );
-              },
+                ),
+              ],
             ),
           ),
         );
