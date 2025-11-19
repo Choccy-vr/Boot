@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:boot_app/services/challenges/Challenge.dart';
-import 'package:boot_app/services/challenges/Challenge_Service.dart';
 
 class Project {
   String title;
@@ -22,6 +21,7 @@ class Project {
   String isoUrl;
   String qemuCMD;
   List<Challenge> challenges;
+  List<int> challengeIds;
   int coinsEarned;
   //not in db
   String readableTime;
@@ -48,6 +48,7 @@ class Project {
     this.isoUrl = '',
     this.qemuCMD = '',
     this.challenges = const [],
+    this.challengeIds = const [],
     this.coinsEarned = 0,
   });
 
@@ -75,7 +76,8 @@ class Project {
       time: 0.0,
       isoUrl: row['ISO_url'] ?? '',
       qemuCMD: row['qemu_cmd'] ?? '',
-      challenges: ChallengeService.getChallengesByIds(challengeIds),
+      challenges: const [],
+      challengeIds: List<int>.from(challengeIds),
       coinsEarned: row['coins_earned'] ?? 0,
     );
   }
@@ -96,6 +98,7 @@ class Project {
     String? isoUrl,
     String? qemuCMD,
     List<Challenge>? challenges,
+    List<int>? challengeIds,
     int? coinsEarned,
   }) {
     final map = <String, dynamic>{};
@@ -117,8 +120,12 @@ class Project {
     if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
     if (isoUrl != null) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
-    if (challenges != null && challenges.isNotEmpty) {
-      map['challenges'] = challenges.map((c) => c.id).toList();
+    final serializedChallengeIds =
+        (challenges != null && challenges.isNotEmpty)
+            ? challenges.map((c) => c.id).toList()
+            : (challengeIds ?? []);
+    if (serializedChallengeIds.isNotEmpty) {
+      map['challenges'] = serializedChallengeIds;
     }
     if (coinsEarned != null) map['coins_earned'] = coinsEarned;
     return map;

@@ -1,7 +1,5 @@
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
-import 'package:boot_app/theme/terminal_theme.dart';
-import 'package:flutter/material.dart';
 
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/Projects/Project.dart';
@@ -143,6 +141,7 @@ class ProjectService {
         isoUrl: project.isoUrl,
         qemuCMD: project.qemuCMD,
         challenges: project.challenges,
+        challengeIds: project.challengeIds,
         coinsEarned: project.coinsEarned,
       ),
     );

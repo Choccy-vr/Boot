@@ -1459,16 +1459,37 @@ class ChallengeDetailDialog extends StatelessWidget {
       return;
     }
 
-    final projectId = _extractProjectId(context);
-    if (projectId != null) {
-      final project = await ProjectService.getProjectById(projectId);
-      if (project != null && project.owner == currentUser.id) {
-        await _completeChallengeForProject(context, project);
-        return;
+    final projects = await ProjectService.getProjects(currentUser.id);
+    if (projects.isEmpty) {
+      GlobalNotificationService.instance.showError(
+        'You do not have any projects yet.',
+      );
+      return;
+    }
+
+    final routeProjectId = _extractProjectId(context);
+    Project? routeProject;
+    if (routeProjectId != null) {
+      for (final project in projects) {
+        if (project.id == routeProjectId) {
+          routeProject = project;
+          break;
+        }
       }
     }
 
-    await _showProjectSelectionDialog(context, currentUser.id);
+    if (routeProject != null) {
+      if (!_projectHasChallenge(routeProject)) {
+        await _completeChallengeForProject(context, routeProject);
+        return;
+      } else {
+        GlobalNotificationService.instance.showInfo(
+          '${routeProject.title} already completed this challenge. Please pick another project.',
+        );
+      }
+    }
+
+    await _showProjectSelectionDialog(context, projects);
   }
 
   Future<void> _completeChallengeForProject(
@@ -1493,16 +1514,8 @@ class ChallengeDetailDialog extends StatelessWidget {
 
   Future<void> _showProjectSelectionDialog(
     BuildContext context,
-    String userId,
+    List<Project> projects,
   ) async {
-    final projects = await ProjectService.getProjects(userId);
-    if (projects.isEmpty) {
-      GlobalNotificationService.instance.showError(
-        'You do not have any projects yet.',
-      );
-      return;
-    }
-
     await showDialog(
       context: context,
       builder: (dialogContext) {
@@ -1517,7 +1530,6 @@ class ChallengeDetailDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -1562,7 +1574,6 @@ class ChallengeDetailDialog extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Projects list
                 Flexible(
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
@@ -1572,157 +1583,166 @@ class ChallengeDetailDialog extends StatelessWidget {
                       final project = projects[index];
                       final hours = (project.time / 3600).toStringAsFixed(1);
                       final hasImage = project.imageURL.isNotEmpty;
+                      final alreadyCompleted = _projectHasChallenge(project);
 
-                      return InkWell(
-                        onTap: () async {
-                          Navigator.of(dialogContext).pop();
-                          await _completeChallengeForProject(context, project);
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: colorScheme.outline.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // Project image/thumbnail
-                              ClipRRect(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(8),
-                                  bottomLeft: Radius.circular(8),
-                                ),
-                                child: Container(
-                                  width: 72,
-                                  height: 72,
-                                  color: colorScheme.surfaceContainer,
-                                  child: hasImage
-                                      ? Image.network(
-                                          project.imageURL,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                return Container(
-                                                  color: colorScheme.primary
-                                                      .withValues(alpha: 0.1),
-                                                  child: Icon(
-                                                    Symbols.image,
-                                                    color: colorScheme.primary
-                                                        .withValues(alpha: 0.3),
-                                                    size: 28,
-                                                  ),
-                                                );
-                                              },
-                                        )
-                                      : Container(
-                                          color: colorScheme.primary.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          child: Icon(
-                                            Symbols.image,
-                                            color: colorScheme.primary
-                                                .withValues(alpha: 0.3),
-                                            size: 28,
-                                          ),
-                                        ),
-                                ),
+                      return Opacity(
+                        opacity: alreadyCompleted ? 0.6 : 1,
+                        child: InkWell(
+                          onTap: alreadyCompleted
+                              ? null
+                              : () async {
+                                  Navigator.of(dialogContext).pop();
+                                  await _completeChallengeForProject(
+                                    context,
+                                    project,
+                                  );
+                                },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colorScheme.outline
+                                    .withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                              // Project info
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        project.title,
-                                        style: textTheme.titleSmall?.copyWith(
-                                          color: colorScheme.onSurface,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                            ),
+                            child: Stack(
+                              children: [
+                                Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(8),
+                                        bottomLeft: Radius.circular(8),
                                       ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Symbols.schedule,
-                                            size: 13,
-                                            color: TerminalColors.cyan,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${hours}h',
-                                            style: textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: TerminalColors.cyan,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 11,
+                                      child: Container(
+                                        width: 80,
+                                        height: 80,
+                                        color: colorScheme.surfaceContainer,
+                                        child: hasImage
+                                            ? Image.network(
+                                                project.imageURL,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) {
+                                                  return Container(
+                                                    color: colorScheme.primary
+                                                        .withValues(
+                                                      alpha: 0.1,
+                                                    ),
+                                                    child: Icon(
+                                                      Symbols.image,
+                                                      color: colorScheme
+                                                          .primary
+                                                          .withValues(
+                                                        alpha: 0.3,
+                                                      ),
+                                                      size: 28,
+                                                    ),
+                                                  );
+                                                },
+                                              )
+                                            : Container(
+                                                color: colorScheme.primary
+                                                    .withValues(alpha: 0.1),
+                                                child: Icon(
+                                                  Symbols.image,
+                                                  color: colorScheme.primary
+                                                      .withValues(alpha: 0.3),
+                                                  size: 28,
                                                 ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Icon(
-                                            Symbols.flag,
-                                            size: 13,
-                                            color: TerminalColors.yellow,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            project.level,
-                                            style: textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: TerminalColors.yellow,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 11,
-                                                ),
-                                          ),
-                                          if (project.likes > 0) ...[
-                                            const SizedBox(width: 12),
-                                            Icon(
-                                              Symbols.favorite,
-                                              size: 13,
-                                              color: TerminalColors.red,
-                                            ),
-                                            const SizedBox(width: 4),
+                                              ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
                                             Text(
-                                              '${project.likes}',
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
+                                              project.title,
+                                              style:
+                                                  textTheme.titleSmall?.copyWith(
+                                                color:
+                                                    colorScheme.onSurface,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Wrap(
+                                              spacing: 10,
+                                              crossAxisAlignment:
+                                                  WrapCrossAlignment.center,
+                                              children: [
+                                                _buildProjectStatChip(
+                                                  icon: Symbols.schedule,
+                                                  label: '${hours}h',
+                                                  color: TerminalColors.cyan,
+                                                  textTheme: textTheme,
+                                                ),
+                                                _buildProjectStatChip(
+                                                  icon: Symbols.flag,
+                                                  label: project.level,
+                                                  color: TerminalColors.yellow,
+                                                  textTheme: textTheme,
+                                                ),
+                                                if (project.likes > 0)
+                                                  _buildProjectStatChip(
+                                                    icon: Symbols.favorite,
+                                                    label:
+                                                        '${project.likes}',
                                                     color: TerminalColors.red,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 11,
+                                                    textTheme: textTheme,
                                                   ),
+                                              ],
                                             ),
                                           ],
-                                        ],
+                                        ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              // Arrow indicator
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  Symbols.chevron_right,
-                                  color: colorScheme.primary.withValues(
-                                    alpha: 0.5,
+                                if (alreadyCompleted)
+                                  Positioned(
+                                    right: 12,
+                                    bottom: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surfaceTint
+                                            .withValues(alpha: 0.15),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        'Already completed',
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.surfaceTint,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  size: 20,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -1735,6 +1755,36 @@ class ChallengeDetailDialog extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _buildProjectStatChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required TextTheme textTheme,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _projectHasChallenge(Project project) {
+    if (project.challenges.any((c) => c.id == challenge.id)) {
+      return true;
+    }
+    return project.challengeIds.any((id) => id == challenge.id);
   }
 
   int? _extractProjectId(BuildContext context) {

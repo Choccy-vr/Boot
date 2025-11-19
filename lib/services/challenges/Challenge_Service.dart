@@ -1,9 +1,8 @@
 import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/challenges/Challenge.dart';
-import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/misc/logger.dart';
-import 'package:boot_app/services/users/Boot_User.dart';
+import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 
 class ChallengeService {
   static List<Challenge> challenges = [];
@@ -105,9 +104,15 @@ class ChallengeService {
     required Challenge challenge,
   }) async {
     try {
-      List<Challenge> challenges = project.challenges;
-      challenges.add(challenge);
-      project.challenges = challenges;
+      if (!project.challenges.any((c) => c.id == challenge.id)) {
+        project.challenges = List<Challenge>.from(project.challenges)
+          ..add(challenge);
+      }
+      if (!project.challengeIds.contains(challenge.id)) {
+        project.challengeIds = List<int>.from(project.challengeIds)
+          ..add(challenge.id);
+      }
+
       await ProjectService.updateProject(project);
     } catch (e, stack) {
       AppLogger.error(
