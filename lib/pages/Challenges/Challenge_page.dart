@@ -1604,8 +1604,9 @@ class ChallengeDetailDialog extends StatelessWidget {
                               color: colorScheme.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: colorScheme.outline
-                                    .withValues(alpha: 0.3),
+                                color: colorScheme.outline.withValues(
+                                  alpha: 0.3,
+                                ),
                                 width: 1,
                               ),
                             ),
@@ -1626,27 +1627,29 @@ class ChallengeDetailDialog extends StatelessWidget {
                                             ? Image.network(
                                                 project.imageURL,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (
-                                                  context,
-                                                  error,
-                                                  stackTrace,
-                                                ) {
-                                                  return Container(
-                                                    color: colorScheme.primary
-                                                        .withValues(
-                                                      alpha: 0.1,
-                                                    ),
-                                                    child: Icon(
-                                                      Symbols.image,
-                                                      color: colorScheme
-                                                          .primary
-                                                          .withValues(
-                                                        alpha: 0.3,
-                                                      ),
-                                                      size: 28,
-                                                    ),
-                                                  );
-                                                },
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Container(
+                                                        color: colorScheme
+                                                            .primary
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                        child: Icon(
+                                                          Symbols.image,
+                                                          color: colorScheme
+                                                              .primary
+                                                              .withValues(
+                                                                alpha: 0.3,
+                                                              ),
+                                                          size: 28,
+                                                        ),
+                                                      );
+                                                    },
                                               )
                                             : Container(
                                                 color: colorScheme.primary
@@ -1674,12 +1677,12 @@ class ChallengeDetailDialog extends StatelessWidget {
                                           children: [
                                             Text(
                                               project.title,
-                                              style:
-                                                  textTheme.titleSmall?.copyWith(
-                                                color:
-                                                    colorScheme.onSurface,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                              style: textTheme.titleSmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        colorScheme.onSurface,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -1704,8 +1707,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                                                 if (project.likes > 0)
                                                   _buildProjectStatChip(
                                                     icon: Symbols.favorite,
-                                                    label:
-                                                        '${project.likes}',
+                                                    label: '${project.likes}',
                                                     color: TerminalColors.red,
                                                     textTheme: textTheme,
                                                   ),
@@ -1729,8 +1731,9 @@ class ChallengeDetailDialog extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: colorScheme.surfaceTint
                                             .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                       child: Text(
                                         'Already completed',

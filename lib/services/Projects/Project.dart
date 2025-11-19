@@ -120,10 +120,9 @@ class Project {
     if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
     if (isoUrl != null) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
-    final serializedChallengeIds =
-        (challenges != null && challenges.isNotEmpty)
-            ? challenges.map((c) => c.id).toList()
-            : (challengeIds ?? []);
+    final serializedChallengeIds = (challenges != null && challenges.isNotEmpty)
+        ? challenges.map((c) => c.id).toList()
+        : (challengeIds ?? []);
     if (serializedChallengeIds.isNotEmpty) {
       map['challenges'] = serializedChallengeIds;
     }
