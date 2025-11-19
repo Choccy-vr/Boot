@@ -21,6 +21,8 @@ class BootUser {
   int hackatimeID;
   //Projects
   List<int> likedProjects;
+  //Role
+  UserRole role;
   //constructor
   BootUser({
     required this.id,
@@ -37,6 +39,7 @@ class BootUser {
     required this.hackatimeApiKey,
     required this.hackatimeID,
     this.likedProjects = const [],
+    this.role = UserRole.normal,
   });
 
   factory BootUser.fromJson(Map<String, dynamic> json) {
@@ -78,6 +81,10 @@ class BootUser {
       hackatimeApiKey: json['hackatime_api_key'] ?? '',
       hackatimeID: json['hackatime_user'] ?? 0,
       likedProjects: likedProjectsParsed,
+      role: UserRole.values.firstWhere(
+        (r) => r.name == (json['role'] ?? 'normal'),
+        orElse: () => UserRole.normal,
+      ),
     );
   }
 
@@ -97,6 +104,9 @@ class BootUser {
       'hackatime_api_key': hackatimeApiKey,
       'hackatime_user': hackatimeID,
       'projects_liked': likedProjects,
+      'role': role.name,
     };
   }
 }
+
+enum UserRole { normal, reviewer, admin, owner }

@@ -337,7 +337,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     isDisabled: true,
                     onTap: () {},
                   ),
-                  if (user?.id == '7f18c57b-ca6f-4812-aac7-a2fb6cc10362')
+                  if (user?.role == UserRole.reviewer ||
+                      user?.role == UserRole.admin ||
+                      user?.role == UserRole.owner)
+                    _buildRailItem(
+                      icon: Symbols.grading,
+                      title: 'Reviewer Center',
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      isExpanded: _isRailExpanded,
+                      onTap: () {},
+                    ),
+                  if (user?.role == UserRole.admin ||
+                      user?.role == UserRole.owner)
+                    _buildRailItem(
+                      icon: Symbols.admin_panel_settings,
+                      title: 'Admin Panel',
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      isExpanded: _isRailExpanded,
+                      onTap: () {},
+                    ),
+                  if (user?.role == UserRole.owner)
                     _buildRailItem(
                       icon: Symbols.bug_report,
                       title: 'Debug Console',
@@ -368,13 +389,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required VoidCallback onTap,
     bool isDisabled = false,
   }) {
-    final iconColor = isDisabled 
+    final iconColor = isDisabled
         ? colorScheme.onSurfaceVariant.withValues(alpha: 0.38)
         : colorScheme.primary;
     final textColor = isDisabled
         ? colorScheme.onSurface.withValues(alpha: 0.38)
         : colorScheme.onSurface;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
