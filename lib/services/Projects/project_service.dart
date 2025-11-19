@@ -95,7 +95,7 @@ class ProjectService {
     required String? status,
     required bool? reviewed,
     required List<String>? hackatimeProjects,
-    required String? owner,
+    required String owner,
   }) async {
     await SupabaseDB.insertData(
       table: 'projects',
@@ -116,8 +116,24 @@ class ProjectService {
     await SupabaseDBFunctions.callIncrementFunction(
       table: 'users',
       column: 'total_projects',
-      rowID: owner!,
+      rowID: owner,
       incrementBy: 1,
+    );
+  }
+  static Future<void> deleteProject({
+    required int projectId,
+    required String ownerId,
+  }) async {
+    await SupabaseDB.deleteData(
+      table: 'projects',
+      column: 'id',
+      value: projectId,
+    );
+    await SupabaseDBFunctions.callIncrementFunction(
+      table: 'users',
+      column: 'total_projects',
+      rowID: ownerId,
+      incrementBy: -1,
     );
   }
 

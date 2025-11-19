@@ -235,7 +235,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               '${user.username}@ysws',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'monospace',
                               ),
                             ),
                         ],
@@ -329,6 +328,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       );
                     },
                   ),
+                  _buildRailItem(
+                    icon: Symbols.question_mark,
+                    title: '???',
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    isExpanded: _isRailExpanded,
+                    isDisabled: true,
+                    onTap: () {},
+                  ),
                   if (user?.id == '7f18c57b-ca6f-4812-aac7-a2fb6cc10362')
                     _buildRailItem(
                       icon: Symbols.bug_report,
@@ -358,33 +366,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required TextTheme textTheme,
     required bool isExpanded,
     required VoidCallback onTap,
+    bool isDisabled = false,
   }) {
+    final iconColor = isDisabled 
+        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.38)
+        : colorScheme.primary;
+    final textColor = isDisabled
+        ? colorScheme.onSurface.withValues(alpha: 0.38)
+        : colorScheme.onSurface;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
-        onTap: onTap,
+        onTap: isDisabled ? null : onTap,
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: isExpanded
-              ? Row(
-                  children: [
-                    Icon(icon, color: colorScheme.primary, size: 24),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w500,
+        child: Opacity(
+          opacity: isDisabled ? 0.5 : 1.0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+            child: isExpanded
+                ? Row(
+                    children: [
+                      Icon(icon, color: iconColor, size: 24),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                )
-              : Center(child: Icon(icon, color: colorScheme.primary, size: 24)),
+                    ],
+                  )
+                : Center(child: Icon(icon, color: iconColor, size: 24)),
+          ),
         ),
       ),
     );

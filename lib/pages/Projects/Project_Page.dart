@@ -230,6 +230,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Future<void> _handleLikeProject() async {
     if (_isLiking) return;
+    if (_project.owner == UserService.currentUser?.id) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showWarning(
+        "You can't like your own OS.\nSilly Goose",
+      );
+      return;
+    }
     try {
       setState(() => _isLiking = true);
       if (_isLiked) {
@@ -2248,7 +2255,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _handleDeleteProject();
+                _showFinalDeleteConfirmation();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.error,
@@ -2262,10 +2269,70 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
+  Future<void> _showFinalDeleteConfirmation() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Symbols.warning, color: colorScheme.error),
+              const SizedBox(width: 8),
+              Text('Final Confirmation'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you ABSOLUTELY sure?',
+                style: textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.error,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "I am not joking everything will be deleted. Like it never happened. (This won't delete your GitHub repo)",
+                style: textTheme.bodyMedium,
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleDeleteProject();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+              ),
+              child: Text('Delete Anyway'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _handleDeleteProject() async {
     try {
-      // TODO: Implement project deletion in ProjectService
-      // await ProjectService.deleteProject(_project.id);
+      await ProjectService.deleteProject(
+        projectId: _project.id,
+        ownerId: _project.owner,
+      );
 
       if (!mounted) return;
       GlobalNotificationService.instance.showSuccess(
