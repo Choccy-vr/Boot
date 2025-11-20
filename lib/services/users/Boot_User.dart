@@ -104,7 +104,6 @@ class BootUser {
       'hackatime_api_key': hackatimeApiKey,
       'hackatime_user': hackatimeID,
       'projects_liked': likedProjects,
-      'role': role.name,
     };
   }
 }

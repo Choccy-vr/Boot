@@ -1,3 +1,4 @@
+import 'package:boot_app/pages/Leaderboard/Leaderboard_Page.dart';
 import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -146,6 +147,10 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'challenges':
       page = const ChallengePage();
       routeName = '/challenges';
+      break;
+    case 'leaderboard':
+      page = const LeaderboardPage();
+      routeName = '/leaderboard';
       break;
     case 'debug':
       page = const DebugPage();

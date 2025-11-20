@@ -120,6 +120,7 @@ class ProjectService {
       incrementBy: 1,
     );
   }
+
   static Future<void> deleteProject({
     required int projectId,
     required String ownerId,
@@ -161,5 +162,72 @@ class ProjectService {
         coinsEarned: project.coinsEarned,
       ),
     );
+  }
+
+  static Future<List<Project>> getTopProjectsByLikes({int limit = 50}) async {
+    try {
+      final response = await SupabaseDB.selectData(table: 'projects');
+
+      if (response.isEmpty) return [];
+
+      final projects = response
+          .map<Project>((row) => Project.fromRow(row))
+          .toList();
+
+      // Sort by likes descending
+      projects.sort((a, b) => b.likes.compareTo(a.likes));
+
+      // Return top projects
+      return projects.take(limit).toList();
+    } catch (e, stack) {
+      AppLogger.error('Error fetching top projects by likes', e, stack);
+      return [];
+    }
+  }
+
+  static Future<List<Project>> getTopProjectsByTime({int limit = 50}) async {
+    try {
+      final response = await SupabaseDB.selectData(table: 'projects');
+
+      if (response.isEmpty) return [];
+
+      final projects = response
+          .map<Project>((row) => Project.fromRow(row))
+          .toList();
+
+      // Sort by time descending
+      projects.sort((a, b) => b.time.compareTo(a.time));
+
+      // Return top projects
+      return projects.take(limit).toList();
+    } catch (e, stack) {
+      AppLogger.error('Error fetching top projects by time', e, stack);
+      return [];
+    }
+  }
+
+  static Future<List<Project>> getTopProjectsByChallenges({
+    int limit = 50,
+  }) async {
+    try {
+      final response = await SupabaseDB.selectData(table: 'projects');
+
+      if (response.isEmpty) return [];
+
+      final projects = response
+          .map<Project>((row) => Project.fromRow(row))
+          .toList();
+
+      // Sort by number of challenges completed descending
+      projects.sort(
+        (a, b) => b.challengeIds.length.compareTo(a.challengeIds.length),
+      );
+
+      // Return top projects
+      return projects.take(limit).toList();
+    } catch (e, stack) {
+      AppLogger.error('Error fetching top projects by challenges', e, stack);
+      return [];
+    }
   }
 }

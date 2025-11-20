@@ -62,12 +62,7 @@ class NavigationService {
         navigator.pushNamed('/explore');
         break;
       case AppDestination.leaderboard:
-        DialogService.showComingSoon(
-          context,
-          'Leaderboard',
-          textTheme,
-          colorScheme,
-        );
+        navigator.pushNamed('/leaderboard');
         break;
       case AppDestination.challenges:
         navigator.pushNamed('/challenges');
