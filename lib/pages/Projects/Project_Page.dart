@@ -25,6 +25,7 @@ import '/services/challenges/Challenge_Service.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/pages/Challenges/Challenge_page.dart';
+import '/services/test/Testing_Manager.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -282,6 +283,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     final url = Uri.parse(_project.githubRepo);
     if (!await launchUrl(url)) {
       throw Exception('Could not launch $url');
+    }
+  }
+
+  Future<void> _handleTestOS() async {
+    try {
+      await TestingManager.openBootHelper(_project);
+    } catch (e) {
+      // Error is already handled in TestingManager
     }
   }
 
@@ -1693,6 +1702,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primaryContainer,
                   foregroundColor: colorScheme.onPrimaryContainer,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _handleTestOS,
+                icon: Icon(Symbols.play_arrow, size: 18),
+                label: Text('Test OS'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.secondaryContainer,
+                  foregroundColor: colorScheme.onSecondaryContainer,
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
