@@ -2,10 +2,12 @@
 import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
+import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 //Theme Data
@@ -25,7 +27,6 @@ import '/services/challenges/Challenge_Service.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/pages/Challenges/Challenge_page.dart';
-import '/services/test/Testing_Manager.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
@@ -65,6 +66,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Map<String, Prize> _prizeCacheForChallenges = {};
   ChallengeType? _selectedChallengeType;
   ChallengeDifficulty? _selectedChallengeDifficulty;
+  double _timeToAdd = 0.0;
+  String _timeToAddReadable = '0m';
+  bool _isFetchingTime = false;
 
   @override
   void initState() {
@@ -80,7 +84,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
-    _getTime();
     _userLiked();
   }
 
@@ -97,30 +100,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _project.id.toString(),
       );
       setState(() {
-        _devlogs = devlogs;
+        _devlogs = devlogs.reversed.toList();
       });
     } catch (e) {
       // Error loading devlogs: $e
-    }
-  }
-
-  Future<void> _getTime() async {
-    try {
-      final updatedProject = await HackatimeService.getProjectTime(
-        project: _project,
-        userId: UserService.currentUser?.hackatimeID ?? 0,
-        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
-        context: context,
-      );
-      if (!mounted) return;
-      setState(() {
-        _project = updatedProject;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'Failed to get project time',
-      );
     }
   }
 
@@ -177,6 +160,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   void _applyProjectChallengeFilters() {
     List<Challenge> filtered = List.from(_projectChallenges);
+
+    // Filter out expired and inactive challenges
+    filtered = filtered.where((challenge) {
+      final isExpired = challenge.endDate.isBefore(DateTime.now());
+      return challenge.isActive && !isExpired;
+    }).toList();
 
     // Apply type filter
     if (_selectedChallengeType != null) {
@@ -286,13 +275,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
-  Future<void> _handleTestOS() async {
+  /*Future<void> _handleTestOS() async {
     try {
-      await TestingManager.openBootHelper(_project);
+      await TestingManager.openBootHelper(_project, context);
     } catch (e) {
       // Error is already handled in TestingManager
     }
-  }
+  }*/
 
   Future<void> _handleCreateDevlog() async {
     setState(() {
@@ -301,7 +290,38 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogTitleDirty = false;
       _devlogDescriptionDirty = false;
       _devlogMediaDirty = false;
+      _isFetchingTime = true;
     });
+
+    // Fetch current time to calculate difference
+    try {
+      final updatedProject = await HackatimeService.getProjectTime(
+        project: _project,
+        userId: UserService.currentUser?.hackatimeID ?? 0,
+        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+        context: context,
+      );
+
+      _project = await ProjectService.getProjectById(_project.id) ?? _project;
+
+      final timeDiff = updatedProject.time - _project.time;
+      
+      if (mounted) {
+        setState(() {
+          _timeToAdd = timeDiff;
+          _timeToAddReadable = _formatReadableDuration((timeDiff * 3600).round());
+          _isFetchingTime = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFetchingTime = false;
+          _timeToAdd = 0;
+          _timeToAddReadable = 'Error';
+        });
+      }
+    }
   }
 
   void _closeDevlogEditor() {
@@ -314,6 +334,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogTitleDirty = false;
       _devlogDescriptionDirty = false;
       _devlogMediaDirty = false;
+      _timeToAdd = 0.0;
+      _timeToAddReadable = '0m';
     });
   }
 
@@ -355,15 +377,48 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       return;
     }
 
+    // Validate that work was done (minimum 5 minutes)
+    if (_timeToAdd <= 0) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'You cannot publish a devlog without working on the project. What do you need to talk about if you did nothing?',
+      );
+      return;
+    }
+    
+    // Validate minimum 5 minutes of work
+    final timeInMinutes = (_timeToAdd * 60).round();
+    if (timeInMinutes < 5) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'You must work at least 5 minutes before publishing a devlog. Current time: ${timeInMinutes}m',
+      );
+      return;
+    }
+
     try {
+      final updatedProject = await HackatimeService.getProjectTime(
+        project: _project,
+        userId: UserService.currentUser?.hackatimeID ?? 0,
+        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+        context: context,
+      );
+
       await DevlogService.addDevlog(
         projectID: _project.id,
         title: _devlogTitleController.text,
         description: _devlogDescriptionController.text,
         cachedMediaFiles: _cachedMediaFiles,
+        readableTime: updatedProject.readableTime,
+        time: updatedProject.time,
+
       );
       // Refresh devlogs to include new entry with media URLs
       await _loadDevlogs();
+      setState(() {
+        _project.time = updatedProject.time;
+        _project.readableTime = updatedProject.readableTime;
+      });
       _closeDevlogEditor();
     } catch (e) {
       if (!mounted) return;
@@ -375,6 +430,20 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   bool _isOwner() {
     return UserService.currentUser?.id == _project.owner;
+  }
+
+  String _formatReadableDuration(int totalSeconds) {
+    if (totalSeconds <= 0) return '0m';
+    final duration = Duration(seconds: totalSeconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    if (hours > 0) {
+      return '${hours}h';
+    }
+    return '${minutes}m';
   }
 
   String? get _devlogTitleError {
@@ -427,6 +496,180 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       return false;
     }
     return true;
+  }
+
+  Future<void> _showTestOSDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 500),
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Symbols.computer,
+                      color: colorScheme.primary,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Test Your OS',
+                        style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Symbols.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'To test your operating system, you\'ll need to set up a virtual machine on your own computer.',
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.lightbulb,
+                            size: 20,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Here\'s how:',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTestStep(
+                        '1.',
+                        'Download the ISO from your GitHub repository',
+                        colorScheme,
+                        textTheme,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTestStep(
+                        '2.',
+                        'Set up a virtual machine using software like VirtualBox or VMware',
+                        colorScheme,
+                        textTheme,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTestStep(
+                        '3.',
+                        'Boot the ISO in your VM to test your OS',
+                        colorScheme,
+                        textTheme,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Not sure how to get started? We have a comprehensive guide to help you through the process.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('Close'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Navigate to guide or open guide URL
+                        Navigator.of(context).pop();
+                        GlobalNotificationService.instance.showInfo(
+                          'Guide coming soon!',
+                        );
+                      },
+                      icon: Icon(Symbols.book, size: 20),
+                      label: Text('Go to Guide'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTestStep(
+    String number,
+    String text,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          number,
+          style: textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _showShipConfirmationDialog() async {
@@ -544,12 +787,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Future<void> _handleShipProject() async {
     try {
-      await ShipService.addShip(
-        project: _project.id,
-        time: _project.timeDevlogs,
-        // TODO: IMPORTANT: REMOVE AFTER TESTING
-        approved: true,
-      );
+      _project = await ProjectService.getProjectById(_project.id) ?? _project;
+      await ShipService.addShip(project: _project.id, time: _project.time, challengesRequested: _project.challengeIds);
 
       _showShipSuccessDialog();
     } catch (e) {
@@ -1129,7 +1368,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             child: TextField(
               controller: _devlogDescriptionController,
               maxLines: null,
-              maxLength: 500,
+              maxLength: 2000,
               expands: true,
               onChanged: (_) => setState(() => _devlogDescriptionDirty = true),
               textAlignVertical: TextAlignVertical.top,
@@ -1183,26 +1422,87 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          OutlinedButton(
-            onPressed: _closeDevlogEditor,
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              side: BorderSide(color: Theme.of(context).colorScheme.outline),
+          // Time tracking display
+          if (_isFetchingTime)
+            Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Calculating time...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            )
+          else
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _timeToAdd > 0
+                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                    : Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _timeToAdd > 0
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+                      : Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Symbols.schedule,
+                    size: 18,
+                    color: _timeToAdd > 0
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.error,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    _timeToAdd > 0
+                        ? 'Time to add: $_timeToAddReadable'
+                        : 'No work detected',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: _timeToAdd > 0
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Text('Cancel'),
-          ),
-          SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _handleSaveDevlog,
-            icon: Icon(Symbols.save, size: 20),
-            label: Text('Publish Devlog'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: _closeDevlogEditor,
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                ),
+                child: Text('Cancel'),
+              ),
+              SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _handleSaveDevlog,
+                icon: Icon(Symbols.save, size: 20),
+                label: Text('Publish Devlog'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1705,17 +2005,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: _handleTestOS,
-                icon: Icon(Symbols.play_arrow, size: 18),
-                label: Text('Test OS'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.secondaryContainer,
-                  foregroundColor: colorScheme.onSecondaryContainer,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1889,6 +2178,25 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ],
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => _showTestOSDialog(),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: colorScheme.primary),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Symbols.play_circle, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Test OS'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -2446,6 +2754,25 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        if (devlog.timeReadable.isNotEmpty)
+                          Row(
+                            children: [
+                              Icon(
+                                Symbols.schedule,
+                                size: 14,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Time tracked: ${devlog.timeReadable}',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 12),
                         Text(
                           devlog.description,

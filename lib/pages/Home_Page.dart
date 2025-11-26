@@ -1128,7 +1128,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             // Calculate responsive columns based on screen width
             int columns;
             if (constraints.maxWidth > 800) {
-              columns = 3; // Desktop
+              //columns = 3; // Desktop
+              columns = 2;
             } else if (constraints.maxWidth > 600) {
               columns = 2; // Tablet
             } else {
@@ -1156,7 +1157,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
                 ),
-                _buildNavigationCard(
+                /*_buildNavigationCard(
                   title: 'TEST',
                   subtitle: 'Test your OS in a VM',
                   icon: Symbols.experiment,
@@ -1172,7 +1173,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                   maxWidth:
                       (constraints.maxWidth - (12 * (columns - 1))) / columns,
-                ),
+                ),*/
                 _buildNavigationCard(
                   title: 'EXPLORE',
                   subtitle: 'Browse projects',

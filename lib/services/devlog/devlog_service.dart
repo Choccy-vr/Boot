@@ -1,3 +1,5 @@
+import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/Storage/storage.dart';
@@ -26,6 +28,8 @@ class DevlogService {
     required int projectID,
     required String title,
     required String description,
+    required String readableTime,
+    required double time,
     List<PlatformFile> cachedMediaFiles = const [],
   }) async {
     final trimmedTitle = title.trim();
@@ -41,6 +45,17 @@ class DevlogService {
     if (cachedMediaFiles.isEmpty) {
       throw ArgumentError('Attach at least one media file to the devlog');
     }
+    if (time <= 0) {
+      throw ArgumentError(
+        'Cannot create devlog with zero or negative time tracked',
+      );
+    }
+    final timeInMinutes = (time * 60).round();
+    if (timeInMinutes < 5) {
+      throw ArgumentError(
+        'Devlog must have at least 5 minutes of tracked time. Current: ${timeInMinutes}m',
+      );
+    }
 
     try {
       final response = await SupabaseDB.insertAndReturnData(
@@ -49,6 +64,8 @@ class DevlogService {
           'project': projectID,
           'title': trimmedTitle,
           'description': trimmedDescription,
+          'time_tracked': time,
+          'time_tracked_readable': readableTime,
         },
       );
       final tempDevlog = Devlog.fromJson(response.first);
@@ -77,6 +94,16 @@ class DevlogService {
         column: 'total_devlogs',
         rowID: UserService.currentUser?.id ?? '',
         incrementBy: 1,
+      );
+
+      await SupabaseDB.updateAndReturnData(
+        table: 'projects',
+        data: {
+          'time': time,
+          'time_readable': readableTime,
+        },
+        column: 'id',
+        value: projectID,
       );
       return Devlog.fromJson(updatedDevlog.first);
     } catch (e, stack) {

@@ -1,19 +1,22 @@
+/*
 import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/notifications/global_notification_service.dart';
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class TestingManager {
-  static Future<void> openBootHelper(Project project) async {
+  static Future<void> openBootHelper(
+    Project project,
+    BuildContext context,
+  ) async {
     final Uri url = Uri.parse('boothelper://project=${project.id}');
 
     try {
-      /*if (!await canLaunchUrl(url)) {
-        GlobalNotificationService.instance.showError(
-          'Boot Helper is not installed or cannot handle the request. \n Make sure you have Boot Helper installed.',
-        );
+      if (project.isoUrl.isEmpty || project.qemuCMD.isEmpty) {
+        Navigator.pushNamed(context, '/projects/${project.id}/setup');
         return;
-      }*/
+      }
 
       final bool launched = await launchUrl(
         url,
@@ -36,3 +39,4 @@ class TestingManager {
     }
   }
 }
+*/

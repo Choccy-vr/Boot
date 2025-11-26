@@ -1,3 +1,6 @@
+import 'package:boot_app/services/challenges/Challenge.dart';
+import 'package:boot_app/services/challenges/Challenge_Service.dart';
+
 class Ship {
   final String id;
   final DateTime createdAt;
@@ -7,8 +10,8 @@ class Ship {
   final String reviewer;
   final String comment;
   final double multiplier;
-  final int earned;
-  final List<String> voters;
+  final List<Challenge> challengesRequested;
+  final List<Challenge> challengesCompleted;
 
   Ship({
     required this.id,
@@ -19,11 +22,11 @@ class Ship {
     this.reviewer = '',
     this.comment = '',
     this.multiplier = 1.0,
-    this.earned = 0,
-    this.voters = const [],
+    this.challengesRequested = const [],
+    this.challengesCompleted = const [],
   });
 
-  factory Ship.fromJson(Map<String, dynamic> json) {
+  static Future<Ship> fromJson(Map<String, dynamic> json) async {
     return Ship(
       id: json['id']?.toString() ?? '',
       createdAt: json['created_at'] != null
@@ -35,12 +38,42 @@ class Ship {
       reviewer: json['reviewer'] ?? '',
       comment: json['comment'] ?? '',
       multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
-      earned: json['earned'] ?? 0,
-      voters:
-          (json['voters'] as List<dynamic>?)
-              ?.map((voter) => voter.toString())
-              .toList() ??
-          [],
+      challengesRequested:
+          await _resolveChallenges(json['challenges_requested']),
+      challengesCompleted:
+          await _resolveChallenges(json['challenges_completed']),
     );
+  }
+
+  static Future<List<Challenge>> _resolveChallenges(dynamic raw) async {
+    if (raw is! List) return [];
+
+    final futures = raw.map<Future<Challenge?>>((entry) {
+      if (entry is Map<String, dynamic>) {
+        return Future.value(Challenge.fromJson(entry));
+      }
+
+      final challengeId = _extractChallengeId(entry);
+      if (challengeId == null) return Future.value(null);
+      return ChallengeService.getChallengeById(challengeId);
+    }).toList();
+
+    if (futures.isEmpty) return [];
+
+    final resolved = await Future.wait(futures);
+    return resolved.whereType<Challenge>().toList();
+  }
+
+  static int? _extractChallengeId(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    if (value is Map<String, dynamic> && value['id'] != null) {
+      final nestedId = value['id'];
+      if (nestedId is int) return nestedId;
+      if (nestedId is num) return nestedId.toInt();
+      if (nestedId is String) return int.tryParse(nestedId);
+    }
+    return null;
   }
 }

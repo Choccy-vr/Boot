@@ -17,13 +17,11 @@ class Project {
   final int id;
   String status;
   List<String> hackatimeProjects;
-  double timeDevlogs;
   String isoUrl;
   String qemuCMD;
   List<Challenge> challenges;
   List<int> challengeIds;
   int coinsEarned;
-  //not in db
   String readableTime;
   double time;
 
@@ -42,8 +40,7 @@ class Project {
     required this.id,
     required this.status,
     required this.hackatimeProjects,
-    required this.timeDevlogs,
-    this.readableTime = '0s',
+    required this.readableTime,
     required this.time,
     this.isoUrl = '',
     this.qemuCMD = '',
@@ -71,9 +68,8 @@ class Project {
       status: row['status'] ?? 'unknown',
       reviewed: row['reviewed'] ?? false,
       hackatimeProjects: _parseHackatimeProjects(row['hackatime_projects']),
-      timeDevlogs: row['total_time_devlogs'] ?? 0.0,
-      readableTime: '0s',
-      time: 0.0,
+      readableTime: row['time_readable'] ?? '',
+      time: (row['time'] as num?)?.toDouble() ?? 0.0,
       isoUrl: row['ISO_url'] ?? '',
       qemuCMD: row['qemu_cmd'] ?? '',
       challenges: const [],
@@ -94,12 +90,13 @@ class Project {
     bool? reviewed,
     List<String>? hackatimeProjects,
     String? owner,
-    double? timeDevlogs,
     String? isoUrl,
     String? qemuCMD,
     List<Challenge>? challenges,
     List<int>? challengeIds,
     int? coinsEarned,
+    String? readableTime,
+    double? time,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -117,7 +114,6 @@ class Project {
       map['hackatime_projects'] = hackatimeProjects;
     }
     if (owner != null) map['owner'] = owner;
-    if (timeDevlogs != null) map['total_time_devlogs'] = timeDevlogs;
     if (isoUrl != null) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
     final serializedChallengeIds = (challenges != null && challenges.isNotEmpty)
@@ -127,6 +123,8 @@ class Project {
       map['challenges'] = serializedChallengeIds;
     }
     if (coinsEarned != null) map['coins_earned'] = coinsEarned;
+    if (readableTime != null) map['time_readable'] = readableTime;
+    if (time != null) map['time'] = time;
     return map;
   }
 
