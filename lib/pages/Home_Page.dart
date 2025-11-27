@@ -346,7 +346,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                       isExpanded: _isRailExpanded,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.pushNamed(context, '/reviewer');
+                      },
                     ),
                   if (user?.role == UserRole.admin ||
                       user?.role == UserRole.owner)

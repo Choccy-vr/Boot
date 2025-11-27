@@ -17,6 +17,7 @@ import 'pages/Projects/Project_Page.dart';
 import 'pages/Profile/Profile_Page.dart';
 import 'pages/Explore/Explore_Page.dart';
 import 'pages/Challenges/Challenge_page.dart';
+import 'pages/Reviewer/Reviewer_Page.dart';
 import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
 import 'services/Projects/Project.dart';
@@ -151,6 +152,10 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'leaderboard':
       page = const LeaderboardPage();
       routeName = '/leaderboard';
+      break;
+    case 'reviewer':
+      page = const ReviewerPage();
+      routeName = '/reviewer';
       break;
     case 'debug':
       page = const DebugPage();

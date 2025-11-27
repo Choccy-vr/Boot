@@ -19,6 +19,26 @@ class ShipService {
     }
   }
 
+  static Future<List<Ship>> getAllUnreviewedShips() async {
+    try {
+      final response = await SupabaseDB.getMultipleRowData(
+        table: 'ships',
+        column: 'reviewed',
+        columnValue: [false],
+      );
+      final rows = List<Map<String, dynamic>>.from(
+        (response as List).map((row) => Map<String, dynamic>.from(row)),
+      );
+      final ships = await Future.wait(
+        rows.map<Future<Ship>>((row) => Ship.fromJson(row)),
+      );
+      return ships;
+    } catch (e, stack) {
+      AppLogger.error('Error getting all unreviewed ships', e, stack);
+      return [];
+    }
+  }
+
   static Future<List<Ship>> getShipsByProject(String projectId) async {
     try {
       final response = await SupabaseDB.getMultipleRowData(
@@ -73,7 +93,7 @@ class ShipService {
     try {
       final response = await SupabaseDB.insertAndReturnData(
         table: 'ships',
-        data: {'project': project, 'time': time, 'challenges_requested': challengesRequested},
+        data: {'project': project, 'time': time, 'challenges_requested': challengesRequested, 'approved': false, 'reviewed': false},
       );
       final rows = List<Map<String, dynamic>>.from(
         (response as List).map((row) => Map<String, dynamic>.from(row)),
@@ -83,6 +103,54 @@ class ShipService {
     } catch (e, stack) {
       AppLogger.error('Error adding ship for project $project', e, stack);
       throw Exception('Error adding ship: $e');
+    }
+  }
+
+  static Future<void> approveShip({
+    required String shipId,
+    required String reviewerId,
+    required String comment,
+    required List<int> challengesCompleted,
+  }) async {
+    try {
+      await SupabaseDB.updateData(
+        table: 'ships',
+        column: 'id',
+        value: shipId,
+        data: {
+          'reviewed': true,
+          'approved': true,
+          'reviewer': reviewerId,
+          'comment': comment,
+          'challenges_completed': challengesCompleted,
+        },
+      );
+    } catch (e, stack) {
+      AppLogger.error('Error approving ship $shipId', e, stack);
+      throw Exception('Error approving ship: $e');
+    }
+  }
+
+  static Future<void> denyShip({
+    required String shipId,
+    required String reviewerId,
+    required String comment,
+  }) async {
+    try {
+      await SupabaseDB.updateData(
+        table: 'ships',
+        column: 'id',
+        value: shipId,
+        data: {
+          'reviewed': true,
+          'approved': false,
+          'reviewer': reviewerId,
+          'comment': comment,
+        },
+      );
+    } catch (e, stack) {
+      AppLogger.error('Error denying ship $shipId', e, stack);
+      throw Exception('Error denying ship: $e');
     }
   }
 }

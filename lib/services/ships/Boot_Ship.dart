@@ -9,9 +9,9 @@ class Ship {
   final bool approved;
   final String reviewer;
   final String comment;
-  final double multiplier;
   final List<Challenge> challengesRequested;
   final List<Challenge> challengesCompleted;
+  final bool reviewed;
 
   Ship({
     required this.id,
@@ -21,9 +21,9 @@ class Ship {
     this.approved = false,
     this.reviewer = '',
     this.comment = '',
-    this.multiplier = 1.0,
     this.challengesRequested = const [],
     this.challengesCompleted = const [],
+    this.reviewed = false,
   });
 
   static Future<Ship> fromJson(Map<String, dynamic> json) async {
@@ -37,11 +37,11 @@ class Ship {
       approved: json['approved'] ?? false,
       reviewer: json['reviewer'] ?? '',
       comment: json['comment'] ?? '',
-      multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
       challengesRequested:
           await _resolveChallenges(json['challenges_requested']),
       challengesCompleted:
           await _resolveChallenges(json['challenges_completed']),
+      reviewed: json['reviewed'] ?? false,
     );
   }
 
