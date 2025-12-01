@@ -9,6 +9,7 @@ import '/services/devlog/devlog_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/theme/responsive.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class ProfilePage extends StatefulWidget {
   final BootUser user;
@@ -121,86 +122,86 @@ class _ProfilePageState extends State<ProfilePage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-          '${widget.user.username}\'s Profile',
-          style: textTheme.titleLarge?.copyWith(
-            color: colorScheme.primary,
-            fontWeight: FontWeight.bold,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Text(
+            '${widget.user.username}\'s Profile',
+            style: textTheme.titleLarge?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
+          backgroundColor: colorScheme.surfaceContainerLow,
+          foregroundColor: colorScheme.primary,
+          automaticallyImplyLeading: false,
         ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        foregroundColor: colorScheme.primary,
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back),
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= Responsive.medium;
+        body: SingleChildScrollView(
+          padding: Responsive.pagePadding(context),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= Responsive.medium;
 
-            if (isWide) {
-              // Wide layout: side-by-side
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column - Profile Info
-                  SizedBox(
-                    width: Responsive.value(
-                      context: context,
-                      smallValue: 280.0,
-                      mediumValue: 320.0,
-                      largeValue: 360.0,
+              if (isWide) {
+                // Wide layout: side-by-side
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left Column - Profile Info
+                    SizedBox(
+                      width: Responsive.value(
+                        context: context,
+                        smallValue: 280.0,
+                        mediumValue: 320.0,
+                        largeValue: 360.0,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildProfileCard(colorScheme, textTheme),
+                          SizedBox(height: Responsive.spacing(context)),
+                          _buildCompactStatsCard(colorScheme, textTheme),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        _buildProfileCard(colorScheme, textTheme),
-                        SizedBox(height: Responsive.spacing(context)),
-                        _buildCompactStatsCard(colorScheme, textTheme),
-                      ],
+                    SizedBox(width: Responsive.spacing(context) * 1.5),
+                    // Right Column - Content Feed
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTopProjectsSection(colorScheme, textTheme),
+                          SizedBox(height: Responsive.spacing(context)),
+                          _buildLikedProjectsSection(colorScheme, textTheme),
+                          SizedBox(height: Responsive.spacing(context)),
+                          _buildRecentDevlogsSection(colorScheme, textTheme),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(width: Responsive.spacing(context) * 1.5),
-                  // Right Column - Content Feed
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTopProjectsSection(colorScheme, textTheme),
-                        SizedBox(height: Responsive.spacing(context)),
-                        _buildLikedProjectsSection(colorScheme, textTheme),
-                        SizedBox(height: Responsive.spacing(context)),
-                        _buildRecentDevlogsSection(colorScheme, textTheme),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              // Narrow layout: stacked
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildProfileCard(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context)),
-                  _buildCompactStatsCard(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context)),
-                  _buildTopProjectsSection(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context)),
-                  _buildLikedProjectsSection(colorScheme, textTheme),
-                  SizedBox(height: Responsive.spacing(context)),
-                  _buildRecentDevlogsSection(colorScheme, textTheme),
-                ],
-              );
+                  ],
+                );
+              } else {
+                // Narrow layout: stacked
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildProfileCard(colorScheme, textTheme),
+                    SizedBox(height: Responsive.spacing(context)),
+                    _buildCompactStatsCard(colorScheme, textTheme),
+                    SizedBox(height: Responsive.spacing(context)),
+                    _buildTopProjectsSection(colorScheme, textTheme),
+                    SizedBox(height: Responsive.spacing(context)),
+                    _buildLikedProjectsSection(colorScheme, textTheme),
+                    SizedBox(height: Responsive.spacing(context)),
+                    _buildRecentDevlogsSection(colorScheme, textTheme),
+                  ],
+                );
             }
           },
         ),
+      ),
       ),
     );
   }

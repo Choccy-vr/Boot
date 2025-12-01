@@ -5,6 +5,7 @@ import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
@@ -151,43 +152,52 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Symbols.leaderboard, color: colorScheme.primary, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Leaderboard',
-              style: textTheme.headlineSmall?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.leaderboard, color: colorScheme.primary, size: 28),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  'Leaderboard',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          automaticallyImplyLeading: false,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabs: const [
+              Tab(icon: Icon(Symbols.favorite), text: 'Most Liked'),
+              Tab(icon: Icon(Symbols.schedule), text: 'Most Time'),
+              Tab(icon: Icon(Symbols.emoji_events), text: 'Most Challenges'),
+            ],
+            labelColor: colorScheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            indicatorColor: colorScheme.primary,
+          ),
         ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Symbols.favorite), text: 'Most Liked'),
-            Tab(icon: Icon(Symbols.schedule), text: 'Most Time'),
-            Tab(icon: Icon(Symbols.emoji_events), text: 'Most Challenges'),
+          children: [
+            _buildMostLikedTab(colorScheme, textTheme),
+            _buildMostTimeTab(colorScheme, textTheme),
+            _buildMostChallengesTab(colorScheme, textTheme),
           ],
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant,
-          indicatorColor: colorScheme.primary,
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMostLikedTab(colorScheme, textTheme),
-          _buildMostTimeTab(colorScheme, textTheme),
-          _buildMostChallengesTab(colorScheme, textTheme),
-        ],
       ),
     );
   }

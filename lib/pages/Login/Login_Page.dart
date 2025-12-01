@@ -20,16 +20,33 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Constrain width on desktop for better UX
+    final maxContentWidth = screenWidth > 600 ? 450.0 : double.infinity;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildHeader(colorScheme, textTheme),
-            _buildLoginFields(colorScheme, textTheme),
-            _buildLoginButtons(colorScheme, textTheme),
-          ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 32),
+                  _buildHeader(colorScheme, textTheme),
+                  const SizedBox(height: 32),
+                  _buildLoginFields(colorScheme, textTheme),
+                  const SizedBox(height: 32),
+                  _buildLoginButtons(colorScheme, textTheme),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

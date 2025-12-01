@@ -5,6 +5,7 @@ import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/Projects/Project.dart';
 import '/theme/responsive.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -368,91 +369,89 @@ class _ProjectsPageState extends State<ProjectsPage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Symbols.construction, color: colorScheme.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Projects',
-              style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
-            ),
-          ],
-        ),
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back, color: colorScheme.onSurface),
-          onPressed: () => NavigationService.navigateTo(
-            context: context,
-            destination: AppDestination.home,
-            colorScheme: colorScheme,
-            textTheme: textTheme,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.construction, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Projects',
+                  style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          tooltip: 'Back',
-        ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-        actions: [
-          AnimatedBuilder(
-            animation: _refreshController!,
-            builder: (context, child) {
-              return Transform.rotate(
-                angle: (_refreshController?.value ?? 0) * 6.28319, // 2 * pi
-                child: child,
-              );
-            },
-            child: IconButton(
-              icon: Icon(Symbols.refresh, color: colorScheme.onSurface),
-              onPressed: () async {
-                if (!(_refreshController?.isAnimating ?? false)) {
-                  _refreshController?.forward(from: 0);
-                  await _fetchProjects();
-                }
+          automaticallyImplyLeading: false,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+          actions: [
+            AnimatedBuilder(
+              animation: _refreshController!,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: (_refreshController?.value ?? 0) * 6.28319, // 2 * pi
+                  child: child,
+                );
               },
-              tooltip: 'Refresh',
+              child: IconButton(
+                icon: Icon(Symbols.refresh, color: colorScheme.onSurface),
+                onPressed: () async {
+                  if (!(_refreshController?.isAnimating ?? false)) {
+                    _refreshController?.forward(from: 0);
+                    await _fetchProjects();
+                  }
+                },
+                tooltip: 'Refresh',
+              ),
             ),
-          ),
-          IconButton(
-            icon: Icon(
-              _isGridView ? Symbols.view_list : Symbols.grid_view,
-              color: colorScheme.onSurface,
+            IconButton(
+              icon: Icon(
+                _isGridView ? Symbols.view_list : Symbols.grid_view,
+                color: colorScheme.onSurface,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isGridView = !_isGridView;
+                });
+              },
+              tooltip: _isGridView ? 'List View' : 'Grid View',
             ),
-            onPressed: () {
-              setState(() {
-                _isGridView = !_isGridView;
-              });
-            },
-            tooltip: _isGridView ? 'List View' : 'Grid View',
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () {
-              NavigationService.navigateTo(
-                context: context,
-                destination: AppDestination.createProject,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              );
-            },
-            icon: Icon(Symbols.add, size: 18),
-            label: Text('Create Project'),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () {
+                NavigationService.navigateTo(
+                  context: context,
+                  destination: AppDestination.createProject,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                );
+              },
+              icon: const Icon(Symbols.add, size: 18),
+              label: const Text('Create Project'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: Padding(
-        padding: Responsive.pagePadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTerminalHeader(colorScheme, textTheme),
-            SizedBox(height: Responsive.spacing(context)),
-            Expanded(child: _buildProjectsContent(colorScheme, textTheme)),
+            const SizedBox(width: 16),
           ],
+        ),
+        body: Padding(
+          padding: Responsive.pagePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTerminalHeader(colorScheme, textTheme),
+              SizedBox(height: Responsive.spacing(context)),
+              Expanded(child: _buildProjectsContent(colorScheme, textTheme)),
+            ],
+          ),
         ),
       ),
     );

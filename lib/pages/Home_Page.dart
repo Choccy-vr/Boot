@@ -1,4 +1,5 @@
 import 'package:boot_app/services/supabase/auth/Auth.dart';
+import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
@@ -25,7 +26,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isHackatimeBanned = false;
   List<Project> _userProjects = [];
   bool _isLoadingProjects = true;
-  bool _isRailExpanded = false;
 
   @override
   void initState() {
@@ -111,564 +111,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surfaceContainerLowest,
-        elevation: 0,
-        actions: [
-          Builder(
-            builder: (context) {
-              final manager = NotificationScope.of(context);
-              if (manager == null) {
-                return IconButton(
-                  icon: Icon(Symbols.notifications, color: colorScheme.primary),
-                  onPressed: () {},
-                  tooltip: 'Notifications',
-                );
-              }
-              return NotificationBellButton(manager: manager);
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Row(
-        children: [
-          _buildNavigationRail(colorScheme, textTheme),
-          Expanded(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: Responsive.pagePadding(context),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTerminalHeader(colorScheme, textTheme),
-                      SizedBox(height: Responsive.spacing(context)),
-                      if (_isHackatimeBanned) ...[
-                        _buildHackatimeBanWarning(colorScheme, textTheme),
-                        SizedBox(height: Responsive.spacing(context)),
-                      ],
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSystemStatus(colorScheme, textTheme),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: Responsive.spacing(context) * 1.5),
-                      if (!_isHackatimeBanned) ...[
-                        _buildNavigationGrid(colorScheme, textTheme),
-                        SizedBox(height: Responsive.spacing(context) * 1.5),
-                        _buildBottomSection(colorScheme, textTheme),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavigationRail(ColorScheme colorScheme, TextTheme textTheme) {
-    final user = UserService.currentUser;
-    final railWidth = _isRailExpanded ? 240.0 : 72.0;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isRailExpanded = true),
-      onExit: (_) => setState(() => _isRailExpanded = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: railWidth,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerLowest,
-          border: Border(
-            right: BorderSide(
-              color: colorScheme.outline.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outline.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: _isRailExpanded
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Symbols.terminal,
-                                color: colorScheme.primary,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Boot',
-                                style: textTheme.titleLarge?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (user != null)
-                            Text(
-                              '${user.username}@ysws',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
-                    )
-                  : Center(
-                      child: Icon(
-                        Symbols.terminal,
-                        color: colorScheme.primary,
-                        size: 28,
-                      ),
-                    ),
-            ),
-            // Navigation items
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _buildRailItem(
-                    icon: Symbols.home,
-                    title: 'Dashboard',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    onTap: () {
-                      NavigationService.navigateTo(
-                        context: context,
-                        destination: AppDestination.home,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      );
-                    },
-                  ),
-                  _buildRailItem(
-                    icon: Symbols.construction,
-                    title: 'My Projects',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    onTap: () {
-                      NavigationService.navigateTo(
-                        context: context,
-                        destination: AppDestination.project,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      );
-                    },
-                  ),
-                  _buildRailItem(
-                    icon: Symbols.explore,
-                    title: 'Explore',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    onTap: () {
-                      NavigationService.navigateTo(
-                        context: context,
-                        destination: AppDestination.explore,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      );
-                    },
-                  ),
-                  _buildRailItem(
-                    icon: Symbols.leaderboard,
-                    title: 'Leaderboard',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    onTap: () {
-                      NavigationService.navigateTo(
-                        context: context,
-                        destination: AppDestination.leaderboard,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      );
-                    },
-                  ),
-                  _buildRailItem(
-                    icon: Symbols.mountain_flag,
-                    title: 'Challenges',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    onTap: () {
-                      NavigationService.navigateTo(
-                        context: context,
-                        destination: AppDestination.challenges,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      );
-                    },
-                  ),
-                  _buildRailItem(
-                    icon: Symbols.question_mark,
-                    title: '???',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    isExpanded: _isRailExpanded,
-                    isDisabled: true,
-                    onTap: () {},
-                  ),
-                  if (user?.role == UserRole.reviewer ||
-                      user?.role == UserRole.admin ||
-                      user?.role == UserRole.owner)
-                    _buildRailItem(
-                      icon: Symbols.grading,
-                      title: 'Reviewer Center',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isExpanded: _isRailExpanded,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/reviewer');
-                      },
-                    ),
-                  if (user?.role == UserRole.admin ||
-                      user?.role == UserRole.owner)
-                    _buildRailItem(
-                      icon: Symbols.admin_panel_settings,
-                      title: 'Admin Panel',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isExpanded: _isRailExpanded,
-                      onTap: () {},
-                    ),
-                  if (user?.role == UserRole.owner)
-                    _buildRailItem(
-                      icon: Symbols.bug_report,
-                      title: 'Debug Console',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      isExpanded: _isRailExpanded,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/debug');
-                      },
-                    ),
-                ],
-              ),
-            ),
-            // Profile section
-            if (user != null) _buildRailProfile(user, colorScheme, textTheme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRailItem({
-    required IconData icon,
-    required String title,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    required bool isExpanded,
-    required VoidCallback onTap,
-    bool isDisabled = false,
-  }) {
-    final iconColor = isDisabled
-        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.38)
-        : colorScheme.primary;
-    final textColor = isDisabled
-        ? colorScheme.onSurface.withValues(alpha: 0.38)
-        : colorScheme.onSurface;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: InkWell(
-        onTap: isDisabled ? null : onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Opacity(
-          opacity: isDisabled ? 0.5 : 1.0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-            child: isExpanded
-                ? Row(
-                    children: [
-                      Icon(icon, color: iconColor, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Center(child: Icon(icon, color: iconColor, size: 24)),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRailProfile(
-    BootUser user,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    final hasProfileImage = user.profilePicture.isNotEmpty;
-
-    if (!_isRailExpanded) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: CircleAvatar(
-          radius: 20,
-          backgroundColor: hasProfileImage
-              ? Colors.transparent
-              : colorScheme.primary.withValues(alpha: 0.2),
-          backgroundImage: hasProfileImage
-              ? NetworkImage(user.profilePicture)
-              : null,
-          child: hasProfileImage
-              ? null
-              : Text(
-                  user.username.isNotEmpty
-                      ? user.username[0].toUpperCase()
-                      : '?',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.surfaceContainer,
-            colorScheme.surfaceContainerLowest,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () {
-              NavigationService.navigateTo(
-                context: context,
-                destination: AppDestination.profile,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
+    return SharedNavigationRail(
+      appBarActions: [
+        Builder(
+          builder: (context) {
+            final manager = NotificationScope.of(context);
+            if (manager == null) {
+              return IconButton(
+                icon: Icon(Symbols.notifications, color: colorScheme.primary),
+                onPressed: () {},
+                tooltip: 'Notifications',
               );
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: _isRailExpanded
-                  ? Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colorScheme.primary.withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                          ),
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: hasProfileImage
-                                ? Colors.transparent
-                                : colorScheme.primary.withValues(alpha: 0.2),
-                            backgroundImage: hasProfileImage
-                                ? NetworkImage(user.profilePicture)
-                                : null,
-                            child: hasProfileImage
-                                ? null
-                                : Text(
-                                    user.username.isNotEmpty
-                                        ? user.username[0].toUpperCase()
-                                        : '?',
-                                    style: textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                user.username,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              const SizedBox(height: 4),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: TerminalColors.yellow.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: TerminalColors.yellow.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Symbols.toll,
-                                        size: 11,
-                                        color: TerminalColors.yellow,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        '${user.bootCoins}',
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: TerminalColors.yellow,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  : CircleAvatar(
-                      radius: 20,
-                      backgroundColor: hasProfileImage
-                          ? Colors.transparent
-                          : colorScheme.primary.withValues(alpha: 0.2),
-                      backgroundImage: hasProfileImage
-                          ? NetworkImage(user.profilePicture)
-                          : null,
-                      child: hasProfileImage
-                          ? null
-                          : Text(
-                              user.username.isNotEmpty
-                                  ? user.username[0].toUpperCase()
-                                  : '?',
-                              style: textTheme.labelLarge?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+            }
+            return NotificationBellButton(manager: manager);
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: Responsive.pagePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTerminalHeader(colorScheme, textTheme),
+                SizedBox(height: Responsive.spacing(context)),
+                if (_isHackatimeBanned) ...[
+                  _buildHackatimeBanWarning(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSystemStatus(colorScheme, textTheme),
                     ),
+                  ],
+                ),
+                SizedBox(height: Responsive.spacing(context) * 1.5),
+                if (!_isHackatimeBanned) ...[
+                  _buildNavigationGrid(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context) * 1.5),
+                  _buildBottomSection(colorScheme, textTheme),
+                ],
+              ],
             ),
           ),
-          if (_isRailExpanded) ...[
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: colorScheme.outline.withValues(alpha: 0.2),
-                    width: 1,
-                  ),
-                ),
-              ),
-              padding: const EdgeInsets.only(top: 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Authentication.signOut();
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.login,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                  icon: Icon(
-                    Symbols.logout,
-                    size: 16,
-                    color: TerminalColors.red,
-                  ),
-                  label: Text(
-                    'Logout',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: TerminalColors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: TerminalColors.red.withValues(alpha: 0.5),
-                      width: 1.5,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -853,6 +342,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     colorScheme.secondary,
                     colorScheme,
                     textTheme,
+                    onTap: () {
+                      final user = UserService.currentUser;
+                      if (user != null) {
+                        NavigationService.openProfile(user, context);
+                      }
+                    },
                   ),
                   _buildStatusItem(
                     'Status',
@@ -896,9 +391,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     IconData icon,
     Color color,
     ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Column(
+    TextTheme textTheme, {
+    VoidCallback? onTap,
+  }) {
+    final content = Column(
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 8),
@@ -917,6 +413,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       ],
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: content,
+        ),
+      );
+    }
+    return content;
   }
 
   Widget _buildBottomSection(ColorScheme colorScheme, TextTheme textTheme) {
@@ -968,32 +476,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         else if (_userProjects.isEmpty)
           Card(
             color: colorScheme.surfaceContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Symbols.add_circle,
-                      size: 48,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No projects yet',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+            child: InkWell(
+              onTap: () => NavigationService.navigateTo(
+                context: context,
+                destination: AppDestination.createProject,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Symbols.add_circle,
+                        size: 48,
+                        color: colorScheme.primary,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Start building your OS!',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 12),
+                      Text(
+                        'No projects yet',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Click here to create your first OS!',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => NavigationService.navigateTo(
+                          context: context,
+                          destination: AppDestination.createProject,
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        ),
+                        icon: const Icon(Symbols.add),
+                        label: const Text('Create Project'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

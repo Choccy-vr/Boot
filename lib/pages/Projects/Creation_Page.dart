@@ -6,6 +6,7 @@ import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/notifications/notifications.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class CreateProjectPage extends StatefulWidget {
   const CreateProjectPage({super.key});
@@ -867,45 +868,48 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Create Project',
+                  style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          automaticallyImplyLeading: false,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+        ),
+        body: Stack(
           children: [
-            Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Create Project',
-              style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTerminalHeader(colorScheme, textTheme),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _buildProjectForm(colorScheme, textTheme),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back, color: colorScheme.onSurface),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back',
-        ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-      ),
-      body: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTerminalHeader(colorScheme, textTheme),
-                const SizedBox(height: 24),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: _buildProjectForm(colorScheme, textTheme),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

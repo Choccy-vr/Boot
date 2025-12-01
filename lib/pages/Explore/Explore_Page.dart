@@ -5,6 +5,7 @@ import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/theme/responsive.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -161,41 +162,49 @@ class _ExplorePageState extends State<ExplorePage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Symbols.explore, color: colorScheme.primary, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              'Explore Projects',
-              style: textTheme.headlineSmall?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.explore, color: colorScheme.primary, size: 28),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  'Explore Projects',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+          automaticallyImplyLeading: false,
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(icon: Icon(Symbols.public), text: 'All Projects'),
+              Tab(icon: Icon(Symbols.favorite), text: 'Liked Projects'),
+            ],
+            labelColor: colorScheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            indicatorColor: colorScheme.primary,
+          ),
         ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Symbols.public), text: 'All Projects'),
-            Tab(icon: Icon(Symbols.favorite), text: 'Liked Projects'),
+          children: [
+            _buildAllProjectsTab(colorScheme, textTheme),
+            _buildLikedProjectsTab(colorScheme, textTheme),
           ],
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant,
-          indicatorColor: colorScheme.primary,
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAllProjectsTab(colorScheme, textTheme),
-          _buildLikedProjectsTab(colorScheme, textTheme),
-        ],
       ),
     );
   }

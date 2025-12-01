@@ -10,6 +10,7 @@ import '/services/users/User.dart';
 import '/theme/terminal_theme.dart';
 import '/theme/responsive.dart';
 import '/services/notifications/notifications.dart';
+import '/widgets/shared_navigation_rail.dart';
 
 class ChallengePage extends StatefulWidget {
   const ChallengePage({super.key});
@@ -129,68 +130,71 @@ class _ChallengePageState extends State<ChallengePage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surfaceContainerLowest,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back, color: colorScheme.primary),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back',
-        ),
-        title: Row(
-          children: [
-            Icon(Symbols.mountain_flag, color: colorScheme.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Challenges',
-              style: textTheme.titleLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: colorScheme.surfaceContainerLowest,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.mountain_flag, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Challenges',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          Builder(
-            builder: (context) {
-              final manager = NotificationScope.of(context);
-              if (manager == null) {
-                return IconButton(
-                  icon: Icon(Symbols.notifications, color: colorScheme.primary),
-                  onPressed: () {},
-                  tooltip: 'Notifications',
-                );
-              }
-              return NotificationBellButton(manager: manager);
-            },
+            ],
           ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Active'),
-            Tab(text: 'Expired'),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Filters section
-            _buildFilters(colorScheme, textTheme),
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : _filteredChallenges.isEmpty
-                  ? _buildEmptyState(colorScheme, textTheme)
-                  : _buildChallengesList(colorScheme, textTheme),
+          actions: [
+            Builder(
+              builder: (context) {
+                final manager = NotificationScope.of(context);
+                if (manager == null) {
+                  return IconButton(
+                    icon: Icon(Symbols.notifications, color: colorScheme.primary),
+                    onPressed: () {},
+                    tooltip: 'Notifications',
+                  );
+                }
+                return NotificationBellButton(manager: manager);
+              },
             ),
+            const SizedBox(width: 8),
           ],
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'All'),
+              Tab(text: 'Active'),
+              Tab(text: 'Expired'),
+            ],
+          ),
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Filters section
+              _buildFilters(colorScheme, textTheme),
+              // Content
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredChallenges.isEmpty
+                    ? _buildEmptyState(colorScheme, textTheme)
+                    : _buildChallengesList(colorScheme, textTheme),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -2908,47 +2909,46 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _project.title,
-                style: textTheme.titleLarge?.copyWith(
-                  color: colorScheme.primary,
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _project.title,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          automaticallyImplyLeading: false,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+        ),
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: Responsive.pagePadding(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTerminalHeader(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
+                  _buildAboutSection(colorScheme, textTheme),
+                  SizedBox(height: Responsive.spacing(context)),
+                  _buildDevlogSection(colorScheme, textTheme),
+                ],
               ),
             ),
+            if (_showDevlogEditor) _buildDevlogEditor(),
           ],
         ),
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back, color: colorScheme.onSurface),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back to Projects',
-        ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: Responsive.pagePadding(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTerminalHeader(colorScheme, textTheme),
-                SizedBox(height: Responsive.spacing(context)),
-                _buildAboutSection(colorScheme, textTheme),
-                SizedBox(height: Responsive.spacing(context)),
-                _buildDevlogSection(colorScheme, textTheme),
-              ],
-            ),
-          ),
-          if (_showDevlogEditor) _buildDevlogEditor(),
-        ],
       ),
     );
   }

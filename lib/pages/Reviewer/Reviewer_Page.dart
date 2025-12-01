@@ -9,6 +9,7 @@ import 'package:boot_app/services/users/User.dart';
 import 'package:boot_app/services/notifications/notifications.dart';
 import 'package:boot_app/pages/Projects/Project_Page.dart';
 import 'package:boot_app/theme/responsive.dart';
+import 'package:boot_app/widgets/shared_navigation_rail.dart';
 
 class ReviewerPage extends StatefulWidget {
   const ReviewerPage({super.key});
@@ -75,74 +76,82 @@ class _ReviewerPageState extends State<ReviewerPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Symbols.rate_review, color: colorScheme.primary),
-            const SizedBox(width: 12),
-            Text(
-              'Ships to Review',
-              style: textTheme.titleLarge?.copyWith(
-                color: colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: colorScheme.surfaceContainerLow,
-        elevation: 1,
-      ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: colorScheme.primary,
-              ),
-            )
-          : _unreviewedShips.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Symbols.check_circle,
-                        size: 64,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No ships to review',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'All ships have been reviewed!',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+    return SharedNavigationRail(
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.rate_review, color: colorScheme.primary),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  'Ships to Review',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadUnreviewedShips,
-                  child: ListView.builder(
-                    padding: Responsive.pagePadding(context),
-                    itemCount: _unreviewedShips.length,
-                    itemBuilder: (context, index) {
-                      final ship = _unreviewedShips[index];
-                      final project = _projectCache[ship.project];
-                      
-                      if (project == null) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return _buildShipCard(ship, project, colorScheme, textTheme);
-                    },
-                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+            ],
+          ),
+          automaticallyImplyLeading: false,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          elevation: 1,
+        ),
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: colorScheme.primary,
+                ),
+              )
+            : _unreviewedShips.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Symbols.check_circle,
+                          size: 64,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No ships to review',
+                          style: textTheme.titleLarge?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'All ships have been reviewed!',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadUnreviewedShips,
+                    child: ListView.builder(
+                      padding: Responsive.pagePadding(context),
+                      itemCount: _unreviewedShips.length,
+                      itemBuilder: (context, index) {
+                        final ship = _unreviewedShips[index];
+                        final project = _projectCache[ship.project];
+                        
+                        if (project == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return _buildShipCard(ship, project, colorScheme, textTheme);
+                      },
+                    ),
+                  ),
+      ),
     );
   }
 
