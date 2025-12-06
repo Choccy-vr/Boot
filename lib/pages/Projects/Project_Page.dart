@@ -65,6 +65,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       TextEditingController();
   final List<PlatformFile> _cachedMediaFiles = [];
   bool _isUploadingMedia = false;
+  bool _isSubmittingDevlog = false;
   bool _devlogTitleDirty = false;
   bool _devlogDescriptionDirty = false;
   bool _devlogMediaDirty = false;
@@ -291,9 +292,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   DateTime _ensureUtc(DateTime date) => date.isUtc ? date : date.toUtc();
 
   String timeAgoSinceDate(DateTime date) {
-    final now = DateTime.now();
-    final localDate = date.isUtc ? date.toLocal() : date;
-    final difference = now.difference(localDate);
+    final now = DateTime.now().toUtc();
+    final utcDate = date.isUtc ? date : date.toUtc();
+    final difference = now.difference(utcDate);
     if (difference.isNegative) return 'just now';
     if (difference.inSeconds < 60) {
       return 'just now';
@@ -466,6 +467,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Future<void> _handleSaveDevlog() async {
+    if (_isSubmittingDevlog) return;
+
     setState(() {
       _devlogValidationAttempted = true;
       _devlogTitleDirty = true;
@@ -495,6 +498,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       );
       return;
     }
+
+    setState(() => _isSubmittingDevlog = true);
 
     try {
       final updatedProject = await HackatimeService.getProjectTime(
@@ -531,9 +536,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       setState(() {
         _project.time = updatedProject.time;
         _project.readableTime = updatedProject.readableTime;
+        _isSubmittingDevlog = false;
       });
       _closeDevlogEditor();
     } catch (e) {
+      setState(() => _isSubmittingDevlog = false);
       if (!mounted) return;
       GlobalNotificationService.instance.showError(
         'Failed to publish devlog: $e',
@@ -1690,9 +1697,20 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
               SizedBox(width: 12),
               ElevatedButton.icon(
-                onPressed: _handleSaveDevlog,
-                icon: Icon(Symbols.save, size: 20),
-                label: Text('Publish Devlog'),
+                onPressed: _isSubmittingDevlog ? null : _handleSaveDevlog,
+                icon: _isSubmittingDevlog
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      )
+                    : Icon(Symbols.save, size: 20),
+                label: Text(_isSubmittingDevlog ? 'Publishing...' : 'Publish Devlog'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -3094,7 +3112,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
     entries.add(
       _TimelineEntry(
-        date: _ensureUtc(_project.createdAt),
+        date: _project.createdAt,
         sortDate: _ensureUtc(_project.createdAt),
         title: 'Project created',
         subtitle: _formatTimelineDate(_project.createdAt),
@@ -3108,7 +3126,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     )) {
       entries.add(
         _TimelineEntry(
-          date: _ensureUtc(_project.lastModified),
+          date: _project.lastModified,
           sortDate: _ensureUtc(_project.lastModified),
           title: 'Project updated',
           subtitle: _formatTimelineDate(_project.lastModified),
@@ -3122,7 +3140,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       // Ship submission entry
       entries.add(
         _TimelineEntry(
-          date: _ensureUtc(ship.createdAt),
+          date: ship.createdAt,
           sortDate: _ensureUtc(ship.createdAt),
           title: 'Ship submitted',
           subtitle: '${_formatTimelineDate(ship.createdAt)} · ${ship.time.toStringAsFixed(1)}h tracked',
@@ -3135,7 +3153,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       if (ship.reviewed) {
         entries.add(
           _TimelineEntry(
-            date: _ensureUtc(ship.createdAt),
+            date: ship.createdAt,
             sortDate: _ensureUtc(ship.createdAt).add(const Duration(minutes: 1)), // small offset for ordering without affecting display
             title: ship.approved ? 'Ship approved ✓' : 'Ship reviewed',
             subtitle: _formatTimelineDate(ship.createdAt),
@@ -3212,7 +3230,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     for (final devlog in _devlogs) {
       entries.add(
         _TimelineEntry(
-          date: _ensureUtc(devlog.createdAt),
+          date: devlog.createdAt,
           sortDate: _ensureUtc(devlog.createdAt),
           title: devlog.title,
           subtitle: _formatTimelineDate(devlog.createdAt),
