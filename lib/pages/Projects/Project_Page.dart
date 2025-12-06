@@ -4,9 +4,11 @@ import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/services/users/Boot_User.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,6 +18,7 @@ import 'package:file_picker/file_picker.dart';
 //Services
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
+import '/services/navigation/navigation_service.dart';
 import '../../services/Storage/storage.dart';
 import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/Devlog.dart';
@@ -45,7 +48,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   List<Devlog> _devlogs = [];
   bool _isLoading = false;
   bool _isHovering = false;
-  String owner = "";
+  BootUser? owner;
   bool _isLiked = false;
   bool _isLiking = false;
   bool _showDevlogEditor = false;
@@ -62,6 +65,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _githubRepoController = TextEditingController();
+  final TextEditingController _tagsController = TextEditingController();
+  TextEditingController? _currentTagController;
+  List<String> _filteredTagSuggestions = [];
+  bool _showTagSuggestions = false;
   List<Challenge> _projectChallenges = [];
   List<Challenge> _filteredProjectChallenges = [];
   Map<String, Prize> _prizeCacheForChallenges = {};
@@ -71,6 +78,52 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   String _timeToAddReadable = '0m';
   bool _isFetchingTime = false;
 
+  final List<String> _popularTags = [
+    // Build Type
+    'From Scratch',
+    'Based On Distro',
+    // Operating Systems / Bases
+    'Ubuntu',
+    'Debian',
+    'Fedora',
+    'Arch',
+    'Alpine',
+    'Red Hat',
+    'Gentoo',
+    // Architectures
+    'x86-64',
+    'ARM',
+    'ARM64',
+    'RISC-V',
+    'PowerPC',
+    // Technologies
+    'Linux',
+    'Kernel',
+    'SystemD',
+    'Busybox',
+    'Musl',
+    'glibc',
+    // Features
+    'Minimal',
+    'Desktop',
+    'Server',
+    'Embedded',
+    'IoT',
+    'Container',
+    'Virtual Machine',
+    // Tools & Utilities
+    'Docker',
+    'Buildroot',
+    'LFS',
+    'Yocto',
+    'OpenWrt',
+    // Languages
+    'C',
+    'Rust',
+    'Shell Script',
+    'Python',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +131,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _titleController.text = _project.title;
     _descriptionController.text = _project.description;
     _githubRepoController.text = _project.githubRepo;
+    _tagsController.text = _project.tags.join(', ');
     _loadOwner();
     _loadDevlogs();
     _loadProjectChallenges();
@@ -91,7 +145,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _loadOwner() async {
     final user = await UserService.getUserById(_project.owner);
     setState(() {
-      owner = user?.username ?? '';
+      owner = user;
     });
   }
 
@@ -195,6 +249,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _titleController.dispose();
     _descriptionController.dispose();
     _githubRepoController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -1355,12 +1410,24 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Description',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Description',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Markdown supported',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: 8),
           Expanded(
@@ -1537,7 +1604,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
           const SizedBox(height: 4),
           Text(
-            'Owner: ${owner.isNotEmpty ? owner : 'Unknown User'}',
+            'Owner: ${owner?.username ?? 'Unknown User'}',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -1867,7 +1934,93 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Created by',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        if (owner != null) {
+                          NavigationService.openProfile(owner!, context);
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: owner != null
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (owner!.profilePicture.isNotEmpty)
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundImage: NetworkImage(
+                                      owner!.profilePicture,
+                                    ),
+                                  )
+                                else
+                                  CircleAvatar(
+                                    radius: 16,
+                                    child: Icon(
+                                      Symbols.person,
+                                      size: 14,
+                                    ),
+                                  ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  owner!.username,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              'Unknown',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Description',
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (_isEditMode)
+                Text(
+                  'Markdown supported',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _isEditMode
               ? TextField(
                   controller: _descriptionController,
@@ -1889,14 +2042,70 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                 )
-              : Text(
-                  _project.description,
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                    height: 1.5,
+              : MarkdownBody(
+                  data: _project.description,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      height: 1.5,
+                    ),
+                    h1: textTheme.headlineSmall?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    h2: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    h3: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    code: TextStyle(
+                      backgroundColor: colorScheme.surfaceContainerHigh,
+                      color: colorScheme.onSurface,
+                      fontFamily: 'monospace',
+                    ),
+                    blockquote: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                    a: TextStyle(
+                      color: colorScheme.primary,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
           const SizedBox(height: 32),
+          if (_project.tags.isNotEmpty) ...[
+            Row(
+              children: [
+                Icon(
+                  Symbols.label,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _project.tags
+                        .map((tag) => Chip(
+                          label: Text(tag),
+                          onDeleted: _isEditMode
+                              ? () {
+                                  setState(() {
+                                    _project.tags.remove(tag);
+                                  });
+                                }
+                              : null,
+                        ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+          ],
           if (_isEditMode) ...[
             Row(
               children: [
@@ -1928,6 +2137,80 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ],
             ),
             const SizedBox(height: 16),
+            Text(
+              'Tags',
+              style: textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return _popularTags.where((tag) => !_project.tags.contains(tag)).toList();
+                }
+                final input = textEditingValue.text.toLowerCase();
+                return _popularTags.where((tag) => 
+                  tag.toLowerCase().contains(input) && 
+                  !_project.tags.contains(tag)
+                ).toList();
+              },
+              onSelected: (String selection) {
+                setState(() {
+                  if (!_project.tags.contains(selection)) {
+                    _project.tags.add(selection);
+                  }
+                });
+                _currentTagController?.clear();
+              },
+              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                _currentTagController = controller;
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: textTheme.bodyMedium,
+                  decoration: InputDecoration(
+                    hintText: 'Add a tag',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  onSubmitted: (value) {
+                    final tag = value.trim();
+                    if (tag.isNotEmpty && !_project.tags.contains(tag)) {
+                      setState(() => _project.tags.add(tag));
+                    }
+                    _currentTagController?.clear();
+                    onFieldSubmitted();
+                  },
+                );
+              },
+            ),
+            if (_project.tags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _project.tags.map((tag) {
+                  return Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() => _project.tags.remove(tag));
+                    },
+                    backgroundColor: colorScheme.primaryContainer,
+                    labelStyle: TextStyle(color: colorScheme.onPrimaryContainer),
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1938,6 +2221,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       _titleController.text = _project.title;
                       _descriptionController.text = _project.description;
                       _githubRepoController.text = _project.githubRepo;
+                      _tagsController.text = _project.tags.join(', ');
                     });
                   },
                   child: Text('Cancel'),
@@ -2773,11 +3057,37 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             ],
                           ),
                         const SizedBox(height: 12),
-                        Text(
-                          devlog.description,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            height: 1.5,
+                        MarkdownBody(
+                          data: devlog.description,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              height: 1.5,
+                            ),
+                            h1: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                            h2: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                            h3: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            code: TextStyle(
+                              backgroundColor: colorScheme.surfaceContainerHigh,
+                              color: colorScheme.onSurface,
+                              fontFamily: 'monospace',
+                            ),
+                            blockquote: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 14,
+                            ),
+                            a: TextStyle(
+                              color: colorScheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                         if (devlog.mediaUrls.isNotEmpty) ...[
@@ -2882,9 +3192,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isOwner()
+                        _isOwner()
                           ? 'Start documenting your development process and share your insights'
-                          : 'Check back later for development updates and insights from ${owner.isNotEmpty ? owner : 'the project owner'}',
+                          : 'Check back later for development updates and insights from ${owner?.username ?? 'the project owner'}',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.8,

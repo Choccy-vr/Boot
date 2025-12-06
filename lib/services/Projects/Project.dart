@@ -24,6 +24,7 @@ class Project {
   int coinsEarned;
   String readableTime;
   double time;
+  List<String> tags;
 
   Project({
     required this.title,
@@ -47,6 +48,7 @@ class Project {
     this.challenges = const [],
     this.challengeIds = const [],
     this.coinsEarned = 0,
+    this.tags = const [],
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -75,6 +77,9 @@ class Project {
       challenges: const [],
       challengeIds: List<int>.from(challengeIds),
       coinsEarned: row['coins_earned'] ?? 0,
+      tags: row['tags'] != null
+          ? List<String>.from(row['tags'])
+          : [],
     );
   }
 
@@ -97,6 +102,7 @@ class Project {
     int? coinsEarned,
     String? readableTime,
     double? time,
+    List<String>? tags,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -125,6 +131,7 @@ class Project {
     if (coinsEarned != null) map['coins_earned'] = coinsEarned;
     if (readableTime != null) map['time_readable'] = readableTime;
     if (time != null) map['time'] = time;
+    if (tags != null) map['tags'] = tags;
     return map;
   }
 

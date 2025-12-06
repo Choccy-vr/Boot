@@ -27,10 +27,15 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _repositoryController = TextEditingController();
+  final TextEditingController _tagsController = TextEditingController();
 
   String _selectedOSType = 'scratch';
   String _selectedArchitecture = 'x86_64';
   final List<String> _selectedHackatimeProjects = [];
+  final List<String> _projectTags = [];
+  List<String> _filteredSuggestions = [];
+  bool _showTagSuggestions = false;
+  TextEditingController? _currentTagController;
   Set<String> _claimedHackatimeProjects = {};
   bool _showNameValidation = false;
   bool _showDescriptionValidation = false;
@@ -43,9 +48,55 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   };
 
   final Map<String, String> _architectures = {
-    'x86_64': 'x86-64 (64-bit)',
-    'x86': 'x86 (32-bit)',
+    'x86_64': '64-bit',
+    'x86': '32-bit',
   };
+
+  final List<String> _popularTags = [
+    // Build Type
+    'From Scratch',
+    'Based On Distro',
+    // Operating Systems / Bases
+    'Ubuntu',
+    'Debian',
+    'Fedora',
+    'Arch',
+    'Alpine',
+    'Red Hat',
+    'Gentoo',
+    // Architectures
+    'x86-64',
+    'ARM',
+    'ARM64',
+    'RISC-V',
+    'PowerPC',
+    // Technologies
+    'Linux',
+    'Kernel',
+    'SystemD',
+    'Busybox',
+    'Musl',
+    'glibc',
+    // Features
+    'Minimal',
+    'Desktop',
+    'Server',
+    'Embedded',
+    'IoT',
+    'Container',
+    'Virtual Machine',
+    // Tools & Utilities
+    'Docker',
+    'Buildroot',
+    'LFS',
+    'Yocto',
+    'OpenWrt',
+    // Languages
+    'C',
+    'Rust',
+    'Shell Script',
+    'Python',
+  ];
   List<HackatimeProject> _hackatimeProjects = [];
 
   String? get _projectNameError {
@@ -296,6 +347,118 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+            Text(
+              'Add Tags',
+              style: textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return _popularTags.where((tag) => !_projectTags.contains(tag)).toList();
+                }
+                final input = textEditingValue.text.toLowerCase();
+                return _popularTags.where((tag) => 
+                  tag.toLowerCase().contains(input) && 
+                  !_projectTags.contains(tag)
+                ).toList();
+              },
+              onSelected: (String selection) {
+                setState(() {
+                  if (!_projectTags.contains(selection)) {
+                    _projectTags.add(selection);
+                  }
+                });
+                _currentTagController?.clear();
+              },
+              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                _currentTagController = controller;
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Search and add tags',
+                    hintText: 'Start typing (e.g., "LFS", "Ubuntu")',
+                    helperText: '${_projectTags.length} tag(s) added',
+                    prefixIcon: Icon(
+                      Symbols.label,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty && !_projectTags.contains(value)) {
+                      setState(() {
+                        _projectTags.add(value.trim());
+                        controller.clear();
+                      });
+                    }
+                  },
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 300,
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        itemBuilder: (context, index) {
+                          final option = options.elementAt(index);
+                          return ListTile(
+                            title: Text(option),
+                            onTap: () => onSelected(option),
+                            hoverColor: colorScheme.surfaceContainerHighest,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (_projectTags.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Selected Tags',
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _projectTags.map((tag) {
+                  return Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() => _projectTags.remove(tag));
+                    },
+                    backgroundColor: colorScheme.primaryContainer,
+                    labelStyle: TextStyle(color: colorScheme.onPrimaryContainer),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
@@ -843,6 +1006,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         reviewed: false,
         hackatimeProjects: _selectedHackatimeProjects,
         owner: ownerId,
+        tags: _projectTags,
       );
       if (!mounted) return;
       GlobalNotificationService.instance.showSuccess(

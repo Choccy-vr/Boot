@@ -96,6 +96,7 @@ class ProjectService {
     required bool? reviewed,
     required List<String>? hackatimeProjects,
     required String owner,
+    List<String>? tags,
   }) async {
     await SupabaseDB.insertData(
       table: 'projects',
@@ -111,6 +112,7 @@ class ProjectService {
         reviewed: reviewed,
         hackatimeProjects: hackatimeProjects,
         owner: owner,
+        tags: tags,
       ),
     );
     await SupabaseDBFunctions.callIncrementFunction(

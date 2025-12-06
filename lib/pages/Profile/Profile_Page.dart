@@ -29,7 +29,9 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoadingLikedProjects = true;
   bool _isHoveringProfilePic = false;
   bool _isEditingBio = false;
+  bool _isEditingUsername = false;
   final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
   bool get _isOwnProfile => UserService.currentUser?.id == widget.user.id;
 
@@ -42,6 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void dispose() {
     _bioController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -468,14 +471,69 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 16),
 
             // Username
-            Text(
-              widget.user.username,
-              style: textTheme.headlineMedium?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
+            if (_isEditingUsername && _isOwnProfile)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.primary.withAlpha(77)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your username...',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.all(12),
+                          ),
+                          style: textTheme.headlineMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Column(
+                        children: [
+                          IconButton(
+                            icon: Icon(Symbols.check, color: colorScheme.primary),
+                            onPressed: _saveUsername,
+                            tooltip: 'Save',
+                          ),
+                          IconButton(
+                            icon: Icon(Symbols.close, color: colorScheme.error),
+                            onPressed: _cancelUsernameEdit,
+                            tooltip: 'Cancel',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              MouseRegion(
+                cursor: _isOwnProfile
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
+                child: GestureDetector(
+                  onTap: _isOwnProfile ? _startUsernameEdit : null,
+                  child: Text(
+                    widget.user.username,
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
             const SizedBox(height: 12),
 
             //bio
@@ -1016,10 +1074,24 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  void _startUsernameEdit() {
+    setState(() {
+      _isEditingUsername = true;
+      _usernameController.text = widget.user.username;
+    });
+  }
+
   void _cancelBioEdit() {
     setState(() {
       _isEditingBio = false;
       _bioController.clear();
+    });
+  }
+
+  void _cancelUsernameEdit() {
+    setState(() {
+      _isEditingUsername = false;
+      _usernameController.clear();
     });
   }
 
@@ -1054,6 +1126,53 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update bio: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveUsername() async {
+    try {
+      final newUsername = _usernameController.text.trim();
+      
+      if (newUsername.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Username cannot be empty!'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return;
+      }
+
+      // Update the user's username
+      final updatedUser = widget.user;
+      updatedUser.username = newUsername;
+
+      // Update in the current user service if it's the current user
+      if (_isOwnProfile) {
+        UserService.currentUser?.username = newUsername;
+        await UserService.updateUser();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isEditingUsername = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Username updated successfully!'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update username: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
