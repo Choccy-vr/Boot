@@ -7,6 +7,7 @@ import '/services/challenges/Challenge_Service.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/services/users/User.dart';
+import '/services/navigation/navigation_service.dart';
 import '/theme/terminal_theme.dart';
 import '/theme/responsive.dart';
 import '/services/notifications/notifications.dart';
@@ -1484,7 +1485,7 @@ class ChallengeDetailDialog extends StatelessWidget {
 
     if (routeProject != null) {
       if (!_projectHasChallenge(routeProject)) {
-        await _completeChallengeForProject(context, routeProject);
+        await _redirectToDevlog(context, routeProject);
         return;
       } else {
         GlobalNotificationService.instance.showInfo(
@@ -1496,24 +1497,19 @@ class ChallengeDetailDialog extends StatelessWidget {
     await _showProjectSelectionDialog(context, projects);
   }
 
+  Future<void> _redirectToDevlog(BuildContext context, Project project) async {
+    Navigator.pop(context);
+    GlobalNotificationService.instance.showInfo(
+      'Create a devlog to document completing this challenge',
+    );
+    NavigationService.openProject(project, context, challengeId: challenge.id);
+  }
+
   Future<void> _completeChallengeForProject(
     BuildContext context,
     Project project,
   ) async {
-    try {
-      await ChallengeService.markChallengeAsCompleted(
-        project: project,
-        challenge: challenge,
-      );
-      Navigator.of(context).pop();
-      GlobalNotificationService.instance.showSuccess(
-        '${challenge.title} marked as completed for ${project.title}.',
-      );
-    } catch (e) {
-      GlobalNotificationService.instance.showError(
-        'Failed to mark challenge as complete: $e',
-      );
-    }
+    await _redirectToDevlog(context, project);
   }
 
   Future<void> _showProjectSelectionDialog(

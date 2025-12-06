@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
+import 'package:boot_app/services/ships/Boot_Ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:boot_app/services/users/Boot_User.dart';
@@ -9,6 +10,7 @@ import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,8 +36,13 @@ import '/pages/Challenges/Challenge_page.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
+  final int? challengeId;
 
-  const ProjectDetailPage({super.key, required this.project});
+  const ProjectDetailPage({
+    super.key,
+    required this.project,
+    this.challengeId,
+  });
 
   @override
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
@@ -46,6 +53,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   AnimationController? _refreshController;
   late Project _project;
   List<Devlog> _devlogs = [];
+  List<Ship> _ships = [];
   bool _isLoading = false;
   bool _isHovering = false;
   BootUser? owner;
@@ -77,6 +85,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   double _timeToAdd = 0.0;
   String _timeToAddReadable = '0m';
   bool _isFetchingTime = false;
+  List<int> _selectedChallengeIds = [];
+  int? _preselectedChallengeId;
 
   final List<String> _popularTags = [
     // Build Type
@@ -134,12 +144,22 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _tagsController.text = _project.tags.join(', ');
     _loadOwner();
     _loadDevlogs();
+    _loadShips();
     _loadProjectChallenges();
     _refreshController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
     _userLiked();
+
+    // Check if opened with challengeId to auto-open devlog editor
+    if (widget.challengeId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_isOwner()) {
+          _handleCreateDevlog(challengeId: widget.challengeId);
+        }
+      });
+    }
   }
 
   Future<void> _loadOwner() async {
@@ -159,6 +179,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       });
     } catch (e) {
       // Error loading devlogs: $e
+    }
+  }
+
+  Future<void> _loadShips() async {
+    try {
+      final ships = await ShipService.getShipsByProject(
+        _project.id.toString(),
+      );
+      ships.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (!mounted) return;
+      setState(() {
+        _ships = ships;
+      });
+    } catch (e) {
+      // Error loading ships: $e
     }
   }
 
@@ -253,10 +288,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     super.dispose();
   }
 
+  DateTime _ensureUtc(DateTime date) => date.isUtc ? date : date.toUtc();
+
   String timeAgoSinceDate(DateTime date) {
-    final now = DateTime.now().toUtc();
-    final utcDate = date.isUtc ? date : date.toUtc();
-    final difference = now.difference(utcDate);
+    final now = DateTime.now();
+    final localDate = date.isUtc ? date.toLocal() : date;
+    final difference = now.difference(localDate);
+    if (difference.isNegative) return 'just now';
     if (difference.inSeconds < 60) {
       return 'just now';
     } else if (difference.inMinutes < 60) {
@@ -339,7 +377,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }*/
 
-  Future<void> _handleCreateDevlog() async {
+  Future<void> _handleCreateDevlog({int? challengeId}) async {
     setState(() {
       _showDevlogEditor = true;
       _devlogValidationAttempted = false;
@@ -347,6 +385,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogDescriptionDirty = false;
       _devlogMediaDirty = false;
       _isFetchingTime = true;
+      _selectedChallengeIds = [];
+      _preselectedChallengeId = challengeId;
+      if (challengeId != null && !_project.challengeIds.contains(challengeId)) {
+        _selectedChallengeIds.add(challengeId);
+      }
     });
 
     // Fetch current time to calculate difference
@@ -391,6 +434,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogMediaDirty = false;
       _timeToAdd = 0.0;
       _timeToAddReadable = '0m';
+      _selectedChallengeIds = [];
+      _preselectedChallengeId = null;
     });
   }
 
@@ -465,10 +510,24 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         cachedMediaFiles: _cachedMediaFiles,
         readableTime: updatedProject.readableTime,
         time: updatedProject.time,
-
+        challengeIds: _selectedChallengeIds,
       );
+
+      // Mark challenges as completed on the project
+      if (_selectedChallengeIds.isNotEmpty) {
+        final updatedChallengeIds = List<int>.from(_project.challengeIds);
+        for (final challengeId in _selectedChallengeIds) {
+          if (!updatedChallengeIds.contains(challengeId)) {
+            updatedChallengeIds.add(challengeId);
+          }
+        }
+        _project.challengeIds = updatedChallengeIds;
+        await ProjectService.updateProject(_project);
+      }
+
       // Refresh devlogs to include new entry with media URLs
       await _loadDevlogs();
+      await _loadProjectChallenges();
       setState(() {
         _project.time = updatedProject.time;
         _project.readableTime = updatedProject.readableTime;
@@ -765,7 +824,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   textTheme,
                 ),
                 _buildRequirementItem(
-                  'Ready for community review',
+                  'Ready for review',
                   colorScheme,
                   textTheme,
                 ),
@@ -780,7 +839,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                   child: Text(
-                    'Once shipped, your project will be submitted for community review and voting.',
+                    'Once shipped, your project will be submitted for review.',
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontStyle: FontStyle.italic,
@@ -842,7 +901,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleShipProject() async {
     try {
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
-      await ShipService.addShip(project: _project.id, time: _project.time, challengesRequested: _project.challengeIds);
+      final newShip = await ShipService.addShip(
+        project: _project.id,
+        time: _project.time,
+        challengesRequested: _project.challengeIds,
+      );
+
+      setState(() {
+        _ships.insert(0, newShip);
+        _project.status = 'Shipped / Awaiting Review';
+      });
 
       _showShipSuccessDialog();
     } catch (e) {
@@ -896,7 +964,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Your project is now available for the community to review and vote on. Good luck!',
+                      'Your project is now being reviewed. You will be notified once the review is complete.',
                       style: textTheme.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -968,7 +1036,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             children: [
               _buildDevlogEditorHeader(),
               Expanded(
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -978,6 +1046,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       _buildDevlogTitleField(),
                       SizedBox(height: 24),
                       _buildDevlogDescriptionField(),
+                      SizedBox(height: 24),
+                      _buildChallengeSelector(),
                     ],
                   ),
                 ),
@@ -1406,68 +1476,129 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Widget _buildDevlogDescriptionField() {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Description',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Markdown supported',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8),
-          Expanded(
-            child: TextField(
-              controller: _devlogDescriptionController,
-              maxLines: null,
-              maxLength: 2000,
-              expands: true,
-              onChanged: (_) => setState(() => _devlogDescriptionDirty = true),
-              textAlignVertical: TextAlignVertical.top,
-              decoration: InputDecoration(
-                hintText:
-                    'Share your development progress, challenges, insights, and learnings...',
-                helperText:
-                    _showDevlogDescriptionError &&
-                        _devlogDescriptionError != null
-                    ? null
-                    : 'Must be more than 150 characters',
-                errorText: _showDevlogDescriptionError
-                    ? _devlogDescriptionError
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                contentPadding: EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Description',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
+            Text(
+              'Markdown supported',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        SizedBox(
+          height: 240,
+          child: TextField(
+            controller: _devlogDescriptionController,
+            maxLines: null,
+            maxLength: 2000,
+            expands: true,
+            onChanged: (_) => setState(() => _devlogDescriptionDirty = true),
+            textAlignVertical: TextAlignVertical.top,
+            decoration: InputDecoration(
+              hintText:
+                  'Share your development progress, challenges, insights, and learnings...',
+              helperText:
+                  _showDevlogDescriptionError &&
+                          _devlogDescriptionError != null
+                      ? null
+                      : 'Must be more than 150 characters',
+              errorText:
+                  _showDevlogDescriptionError ? _devlogDescriptionError : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+              contentPadding: EdgeInsets.all(16),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChallengeSelector() {
+    final availableChallenges = _projectChallenges
+        .where((c) => !_project.challengeIds.contains(c.id))
+        .toList();
+
+    if (availableChallenges.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Symbols.flag,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Challenges Completed',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Select challenges you completed in this devlog',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: availableChallenges.map((challenge) {
+            final isSelected = _selectedChallengeIds.contains(challenge.id);
+            return FilterChip(
+              label: Text(challenge.title),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    _selectedChallengeIds.add(challenge.id);
+                  } else {
+                    _selectedChallengeIds.remove(challenge.id);
+                  }
+                });
+              },
+              selectedColor: Theme.of(context).colorScheme.primaryContainer,
+              checkmarkColor: Theme.of(context).colorScheme.primary,
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -2958,7 +3089,369 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
+  List<_TimelineEntry> _buildTimelineEntries() {
+    final entries = <_TimelineEntry>[];
+
+    entries.add(
+      _TimelineEntry(
+        date: _ensureUtc(_project.createdAt),
+        sortDate: _ensureUtc(_project.createdAt),
+        title: 'Project created',
+        subtitle: _formatTimelineDate(_project.createdAt),
+        icon: Symbols.flag,
+        color: TerminalColors.green,
+      ),
+    );
+
+    if (_project.lastModified.isAfter(
+      _project.createdAt.add(const Duration(minutes: 1)),
+    )) {
+      entries.add(
+        _TimelineEntry(
+          date: _ensureUtc(_project.lastModified),
+          sortDate: _ensureUtc(_project.lastModified),
+          title: 'Project updated',
+          subtitle: _formatTimelineDate(_project.lastModified),
+          icon: Symbols.edit,
+          color: TerminalColors.cyan,
+        ),
+      );
+    }
+
+    for (final ship in _ships) {
+      // Ship submission entry
+      entries.add(
+        _TimelineEntry(
+          date: _ensureUtc(ship.createdAt),
+          sortDate: _ensureUtc(ship.createdAt),
+          title: 'Ship submitted',
+          subtitle: '${_formatTimelineDate(ship.createdAt)} · ${ship.time.toStringAsFixed(1)}h tracked',
+          icon: Symbols.directions_boat,
+          color: TerminalColors.yellow,
+        ),
+      );
+
+      // Ship review entry (if reviewed)
+      if (ship.reviewed) {
+        entries.add(
+          _TimelineEntry(
+            date: _ensureUtc(ship.createdAt),
+            sortDate: _ensureUtc(ship.createdAt).add(const Duration(minutes: 1)), // small offset for ordering without affecting display
+            title: ship.approved ? 'Ship approved ✓' : 'Ship reviewed',
+            subtitle: _formatTimelineDate(ship.createdAt),
+            icon: ship.approved ? Symbols.check_circle : Symbols.rate_review,
+            color: TerminalColors.yellow,
+            body: FutureBuilder<BootUser?>(
+              future: ship.reviewer.isNotEmpty 
+                  ? UserService.getUserById(ship.reviewer)
+                  : Future.value(null),
+              builder: (context, snapshot) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (snapshot.hasData && snapshot.data != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.person,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Reviewed by: ',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          InkWell(
+                            onTap: () {
+                              NavigationService.openProfile(snapshot.data!, context);
+                            },
+                            child: Text(
+                              snapshot.data!.username,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (ship.comment.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          ship.comment,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontStyle: FontStyle.italic,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+
+    for (final devlog in _devlogs) {
+      entries.add(
+        _TimelineEntry(
+          date: _ensureUtc(devlog.createdAt),
+          sortDate: _ensureUtc(devlog.createdAt),
+          title: devlog.title,
+          subtitle: _formatTimelineDate(devlog.createdAt),
+          icon: Symbols.edit_note,
+          color: TerminalColors.blue,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (devlog.timeReadable.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Symbols.schedule,
+                      size: 14,
+                      color: TerminalColors.blue,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Time tracked: ${devlog.timeReadable}',
+                      style: TextStyle(
+                        color: TerminalColors.blue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (devlog.challenges.isNotEmpty) ...[
+                FutureBuilder<List<Challenge>>(
+                  future: Future.wait(
+                    devlog.challenges.map(
+                      (id) => ChallengeService.getChallengeById(id),
+                    ),
+                  ).then((challenges) => challenges.whereType<Challenge>().toList()),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Symbols.flag,
+                                size: 14,
+                                color: TerminalColors.green,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Challenges completed:',
+                                style: TextStyle(
+                                  color: TerminalColors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: snapshot.data!.map((challenge) {
+                              return Chip(
+                                label: Text(
+                                  challenge.title,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                avatar: Icon(
+                                  Symbols.check_circle,
+                                  size: 16,
+                                  color: TerminalColors.green,
+                                ),
+                                backgroundColor: TerminalColors.green.withValues(alpha: 0.1),
+                                side: BorderSide(
+                                  color: TerminalColors.green.withValues(alpha: 0.3),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    }
+                    return SizedBox.shrink();
+                  },
+                ),
+              ],
+              MarkdownBody(
+                data: devlog.description,
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        height: 1.5,
+                      ) ??
+                      const TextStyle(),
+                  h1: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  h3: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  code: TextStyle(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceContainerHigh,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontFamily: 'monospace',
+                  ),
+                  blockquote: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                  a: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              if (devlog.mediaUrls.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildDevlogMediaViewer(
+                  devlog.mediaUrls,
+                  Theme.of(context).colorScheme,
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    entries.sort((a, b) => b.sortDate.toUtc().compareTo(a.sortDate.toUtc()));
+    return entries;
+  }
+
+  Widget _buildTimelineTile(
+    _TimelineEntry entry,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isLast,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: entry.color ?? colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                entry.icon,
+                size: 10,
+                color: colorScheme.onPrimary,
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 40,
+                color: colorScheme.outlineVariant,
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.3),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        entry.title,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: entry.color ?? colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      timeAgoSinceDate(entry.date),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  entry.subtitle,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (entry.body != null) ...[
+                  const SizedBox(height: 10),
+                  entry.body!,
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTimelineDate(DateTime date) {
+    final localDate = date.isUtc ? date.toLocal() : date;
+    return DateFormat('MMM d, yyyy • h:mm a').format(localDate);
+  }
+
   Widget _buildDevlogSection(ColorScheme colorScheme, TextTheme textTheme) {
+    final timelineEntries = _buildTimelineEntries();
+    final hasDevlogsOrShips = _devlogs.isNotEmpty || _ships.isNotEmpty;
+
     return Card(
       color: colorScheme.surfaceContainer,
       elevation: 2,
@@ -2969,10 +3462,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           children: [
             Row(
               children: [
-                Icon(Symbols.edit_note, color: colorScheme.primary, size: 24),
+                Icon(Symbols.timeline, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  'Development Logs',
+                  'Timeline',
                   style: textTheme.titleLarge?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -2996,115 +3489,28 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ),
             const SizedBox(height: 20),
 
-            // Display devlogs or empty state
-            if (_devlogs.isNotEmpty) ...[
-              // Display devlogs
-              ListView.builder(
+            if (timelineEntries.isNotEmpty) ...[
+              ListView.separated(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),
-                itemCount: _devlogs.length,
+                itemCount: timelineEntries.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
-                  final devlog = _devlogs[index];
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 16),
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colorScheme.outline.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                devlog.title,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              timeAgoSinceDate(devlog.createdAt),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        if (devlog.timeReadable.isNotEmpty)
-                          Row(
-                            children: [
-                              Icon(
-                                Symbols.schedule,
-                                size: 14,
-                                color: colorScheme.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Time tracked: ${devlog.timeReadable}',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 12),
-                        MarkdownBody(
-                          data: devlog.description,
-                          selectable: true,
-                          styleSheet: MarkdownStyleSheet(
-                            p: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                              height: 1.5,
-                            ),
-                            h1: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                            ),
-                            h2: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                            ),
-                            h3: textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            code: TextStyle(
-                              backgroundColor: colorScheme.surfaceContainerHigh,
-                              color: colorScheme.onSurface,
-                              fontFamily: 'monospace',
-                            ),
-                            blockquote: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                            ),
-                            a: TextStyle(
-                              color: colorScheme.primary,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                        if (devlog.mediaUrls.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildDevlogMediaViewer(
-                            devlog.mediaUrls,
-                            colorScheme,
-                          ),
-                        ],
-                      ],
-                    ),
+                  final entry = timelineEntries[index];
+                  final isLast = index == timelineEntries.length - 1;
+                  return _buildTimelineTile(
+                    entry,
+                    colorScheme,
+                    textTheme,
+                    isLast,
                   );
                 },
               ),
-            ] else ...[
-              // Owner section for empty state
+            ],
+
+            if (!hasDevlogsOrShips) ...[
               if (_isOwner()) ...[
+                const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -3159,10 +3565,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
               ],
 
-              // Empty state
+              const SizedBox(height: 20),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(32),
@@ -3192,7 +3597,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                        _isOwner()
+                      _isOwner()
                           ? 'Start documenting your development process and share your insights'
                           : 'Check back later for development updates and insights from ${owner?.username ?? 'the project owner'}',
                       style: textTheme.bodyMedium?.copyWith(
@@ -3737,4 +4142,24 @@ class _FilterItem {
   final VoidCallback onTap;
 
   _FilterItem({required this.label, required this.value, required this.onTap});
+}
+
+class _TimelineEntry {
+  final DateTime date;
+  final DateTime sortDate;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color? color;
+  final Widget? body;
+
+  _TimelineEntry({
+    required this.date,
+    DateTime? sortDate,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    this.color,
+    this.body,
+  }) : sortDate = sortDate ?? date;
 }

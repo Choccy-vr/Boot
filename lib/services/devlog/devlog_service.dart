@@ -31,6 +31,7 @@ class DevlogService {
     required String readableTime,
     required double time,
     List<PlatformFile> cachedMediaFiles = const [],
+    List<int> challengeIds = const [],
   }) async {
     final trimmedTitle = title.trim();
     final trimmedDescription = description.trim();
@@ -66,6 +67,7 @@ class DevlogService {
           'description': trimmedDescription,
           'time_tracked': time,
           'time_tracked_readable': readableTime,
+          'challenges': challengeIds,
         },
       );
       final tempDevlog = Devlog.fromJson(response.first);

@@ -80,10 +80,17 @@ class NavigationService {
     }
   }
 
-  static Future<T?> openProject<T>(Project project, BuildContext context) {
+  static Future<T?> openProject<T>(
+    Project project,
+    BuildContext context, {
+    int? challengeId,
+  }) {
     return Navigator.of(
       context,
-    ).pushNamed<T>('/projects/${project.id}', arguments: project);
+    ).pushNamed<T>(
+      '/projects/${project.id}',
+      arguments: {'project': project, 'challengeId': challengeId},
+    );
   }
 
   static Future<T?> openProfile<T>(BootUser user, BuildContext context) {

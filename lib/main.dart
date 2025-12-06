@@ -136,10 +136,17 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
         } else {
           final projectId = int.tryParse(second);
           if (projectId != null) {
-            final projectArg = settings.arguments as Project?;
+            Project? prefetchedProject;
+            Object? arg = settings.arguments;
+            if (arg is Map) {
+              prefetchedProject = arg['project'] as Project?;
+            } else if (arg is Project) {
+              prefetchedProject = arg;
+            }
+
             page = ProjectLoaderPage(
               projectId: projectId,
-              prefetchedProject: projectArg,
+              prefetchedProject: prefetchedProject,
             );
             routeName = '/projects/$projectId';
           }
@@ -234,21 +241,49 @@ class ProjectLoaderPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (prefetchedProject != null) {
-      return ProjectDetailPage(project: prefetchedProject!);
+    final args = ModalRoute.of(context)?.settings.arguments;
+    Project? project;
+    int? challengeId;
+    
+    // Handle different argument types
+    try {
+      if (args != null) {
+        // Try to handle as Map first (most common case)
+        if (args is Map) {
+          final map = args as Map;
+          project = map['project'] as Project?;
+          challengeId = map['challengeId'] as int?;
+        }
+        // Fallback to direct Project if not a Map
+        if (project == null && args is Project) {
+          project = args;
+        }
+      }
+    } catch (e) {
+      // If extraction fails, project will be null and we'll fetch by ID
     }
 
+    // Fallback to prefetched project if available
+    if (project == null && prefetchedProject != null) {
+      project = prefetchedProject;
+    }
+
+    if (project != null) {
+      return ProjectDetailPage(project: project, challengeId: challengeId);
+    }
+
+    // Fetch project by ID if not in arguments
     return FutureBuilder<Project?>(
       future: ProjectService.getProjectById(projectId),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const _LoadingScaffold();
         }
-        final project = snapshot.data;
-        if (project == null) {
+        final fetchedProject = snapshot.data;
+        if (fetchedProject == null) {
           return NotFoundPage(path: '/projects/$projectId');
         }
-        return ProjectDetailPage(project: project);
+        return ProjectDetailPage(project: fetchedProject);
       },
     );
   }
