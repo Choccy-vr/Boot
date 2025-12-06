@@ -1,11 +1,9 @@
 import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '/services/notifications/notifications.dart';
-import '/services/users/User.dart';
 
 class HackatimeService {
   static String _getErrorMessage(int statusCode, String defaultMessage) {
@@ -15,67 +13,20 @@ class HackatimeService {
     return '$defaultMessage (Status: $statusCode)';
   }
 
-  static Future<void> initHackatimeUser({
-    required String apiKey,
-    required String username,
-    BuildContext? context,
-  }) async {
-    try {
-      // Check if the user is valid
-      final url = Uri.parse(
-        'https://hackatime.hackclub.com/api/v1/users/$username/stats',
-      );
-      final response = await http.get(
-        url,
-        headers: {HttpHeaders.authorizationHeader: 'Bearer $apiKey'},
-      );
-      if (response.statusCode == 200) {
-        UserService.currentUser?.hackatimeApiKey = apiKey;
-        final decoded = response.body.isNotEmpty
-            ? jsonDecode(response.body)
-            : {};
-        final userIdValue = decoded['data']?['user_id'];
-        UserService.currentUser?.hackatimeID = userIdValue is int
-            ? userIdValue
-            : int.tryParse(userIdValue.toString()) ?? 0;
-        UserService.updateUser();
-      } else {
-        AppLogger.warning(
-          'Hackatime init failed for $username with status ${response.statusCode}: ${response.body}',
-        );
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => GlobalNotificationService.instance.showError(
-            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to initialize user')}',
-          ),
-        );
-      }
-    } catch (e, stack) {
-      AppLogger.error(
-        'Network error during Hackatime initialization',
-        e,
-        stack,
-      );
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => GlobalNotificationService.instance.showError(
-          'Hackatime Error: Network error during initialization',
-        ),
-      );
-    }
-  }
-
   static Future<List<HackatimeProject>> fetchHackatimeProjects({
-    required int userId,
-    required String apiKey,
+    required String slackUserId,
     BuildContext? context,
   }) async {
+    if (slackUserId.isEmpty) {
+      AppLogger.warning('Cannot fetch Hackatime projects: No Slack user ID');
+      return [];
+    }
+    
     try {
       final url = Uri.parse(
-        'https://hackatime.hackclub.com/api/v1/users/$userId/stats?features=projects',
+        'https://hackatime.hackclub.com/api/v1/users/$slackUserId/stats?features=projects',
       );
-      final response = await http.get(
-        url,
-        headers: {HttpHeaders.authorizationHeader: 'Bearer $apiKey'},
-      );
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         final decoded = response.body.isNotEmpty
             ? jsonDecode(response.body)
@@ -86,7 +37,7 @@ class HackatimeService {
         }).toList();
       } else {
         AppLogger.warning(
-          'Hackatime project fetch failed for user $userId with status ${response.statusCode}: ${response.body}',
+          'Hackatime project fetch failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
         );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => GlobalNotificationService.instance.showError(
@@ -97,7 +48,7 @@ class HackatimeService {
       }
     } catch (e, stack) {
       AppLogger.error(
-        'Network error loading Hackatime projects for user $userId',
+        'Network error loading Hackatime projects for user $slackUserId',
         e,
         stack,
       );
@@ -111,18 +62,16 @@ class HackatimeService {
   }
 
   static Future<bool> isHackatimeBanned({
-    required int userId,
-    required String apiKey,
+    required String slackUserId,
     BuildContext? context,
   }) async {
+    if (slackUserId.isEmpty) return false;
+    
     try {
       final url = Uri.parse(
-        'https://hackatime.hackclub.com/api/v1/users/$userId/trust_factor',
+        'https://hackatime.hackclub.com/api/v1/users/$slackUserId/trust_factor',
       );
-      final response = await http.get(
-        url,
-        headers: {HttpHeaders.authorizationHeader: 'Bearer $apiKey'},
-      );
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         final decoded = response.body.isNotEmpty
             ? jsonDecode(response.body)
@@ -132,25 +81,15 @@ class HackatimeService {
         return false;
       } else {
         AppLogger.warning(
-          'Hackatime ban check failed for user $userId with status ${response.statusCode}: ${response.body}',
-        );
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => GlobalNotificationService.instance.showError(
-            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to check ban status')}',
-          ),
+          'Hackatime ban check failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
         );
         return false;
       }
     } catch (e, stack) {
       AppLogger.error(
-        'Network error checking Hackatime ban status for user $userId',
+        'Network error checking Hackatime ban status for user $slackUserId',
         e,
         stack,
-      );
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => GlobalNotificationService.instance.showError(
-          'Hackatime Error: Network error checking ban status',
-        ),
       );
       return false;
     }
@@ -158,23 +97,16 @@ class HackatimeService {
 
   static Future<Project> getProjectTime({
     required Project project,
-    required int userId,
-    required String apiKey,
+    required String slackUserId,
     BuildContext? context,
   }) async {
     try {
       final projects = await fetchHackatimeProjects(
-        userId: userId,
-        apiKey: apiKey,
+        slackUserId: slackUserId,
         context: context,
       );
       if (projects.isEmpty) {
-        AppLogger.warning('Hackatime projects list empty for user $userId');
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => GlobalNotificationService.instance.showError(
-            'Hackatime Error: No Hackatime projects found for ${project.id}',
-          ),
-        );
+        AppLogger.warning('Hackatime projects list empty for user $slackUserId');
       }
       if (project.hackatimeProjects.isEmpty) {
         project.time = 0;
@@ -196,7 +128,7 @@ class HackatimeService {
       if (missingProjects.isNotEmpty) {
         final missingList = missingProjects.join(', ');
         AppLogger.warning(
-          'Hackatime project(s) $missingList not found for user $userId',
+          'Hackatime project(s) $missingList not found for user $slackUserId',
         );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => GlobalNotificationService.instance.showError(

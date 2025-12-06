@@ -135,7 +135,21 @@ class Authentication {
       AuthResponse response = await SupabaseAuth.supabase.auth.recoverSession(
         sessionJson,
       );
-      await UserService.setCurrentUser(response.user!.id);
+      
+      if (response.user == null) return false;
+      
+      // Try to get existing user, or create new one for OAuth users
+      try {
+        await UserService.setCurrentUser(response.user!.id);
+      } catch (e) {
+        // User doesn't exist - this is likely a new OAuth user
+        // Initialize them in the database
+        await UserService.initializeUser(
+          id: response.user!.id,
+          email: response.user!.email ?? '',
+        );
+      }
+      
       return response.session != null;
     } catch (e, stack) {
       AppLogger.error('Error restoring saved session', e, stack);

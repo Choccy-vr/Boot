@@ -1,4 +1,3 @@
-import 'package:boot_app/services/supabase/auth/Auth.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import '/theme/responsive.dart';
@@ -40,6 +39,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _typewriterController.forward();
     _scheduleHackatimeBanCheck();
     _loadUserProjects();
+    _checkProfileSetup();
+  }
+
+  void _checkProfileSetup() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = UserService.currentUser;
+      if (user != null && _needsProfileSetup(user)) {
+        NavigationService.navigateTo(
+          context: context,
+          destination: AppDestination.signupProfile,
+          colorScheme: Theme.of(context).colorScheme,
+          textTheme: Theme.of(context).textTheme,
+        );
+      }
+    });
+  }
+
+  bool _needsProfileSetup(BootUser user) {
+    final hasDefaultUsername = user.username.startsWith('User ') && 
+        user.username.substring(5) == user.id;
+    final hasDefaultBio = user.bio == "Nothing Yet" || user.bio.isEmpty;
+    return hasDefaultUsername || hasDefaultBio;
   }
 
   Future<void> _loadUserProjects() async {
@@ -65,11 +86,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _checkHackatimeBanStatus() async {
-    if (UserService.currentUser?.hackatimeID != null &&
-        UserService.currentUser?.hackatimeApiKey != null) {
+    final slackUserId = UserService.currentUser?.slackUserId ?? '';
+    if (slackUserId.isNotEmpty) {
       final isBanned = await HackatimeService.isHackatimeBanned(
-        userId: UserService.currentUser!.hackatimeID,
-        apiKey: UserService.currentUser!.hackatimeApiKey,
+        slackUserId: slackUserId,
         context: context,
       );
       if (mounted) {
@@ -88,12 +108,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _attemptHackatimeBanCheck(int attempt) async {
     if (!mounted) return;
     final user = UserService.currentUser;
-    if (user?.hackatimeID != null && user?.hackatimeApiKey != null) {
+    if (user?.slackUserId != null && user!.slackUserId.isNotEmpty) {
       await _checkHackatimeBanStatus();
       return;
     }
     if (attempt >= 10) {
-      // Gave up waiting
       return;
     }
     await Future.delayed(const Duration(milliseconds: 200));

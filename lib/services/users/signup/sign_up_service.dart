@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
 import '/services/supabase/auth/Auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/users/User.dart';
-import '/services/hackatime/hackatime_service.dart';
 
 class SignupService {
   static SignUpUser signUpUser = SignUpUser(
@@ -11,8 +9,6 @@ class SignupService {
     username: '',
     bio: '',
     profilePictureUrl: '',
-    hackatimeApiKey: '',
-    hackatimeUsername: '',
   );
 
   static Future<void> signUp(SignUpUser user) async {
@@ -40,23 +36,6 @@ class SignupService {
       throw Exception('Profile update failed: ${e.toString()}');
     }
   }
-
-  static Future<void> signUpUserWithHackatime(
-    SignUpUser user,
-    BuildContext context,
-  ) async {
-    try {
-      SignupService.signUpUser.hackatimeApiKey = user.hackatimeApiKey;
-      SignupService.signUpUser.hackatimeUsername = user.hackatimeUsername;
-      await HackatimeService.initHackatimeUser(
-        apiKey: user.hackatimeApiKey,
-        username: user.hackatimeUsername,
-        context: context,
-      );
-    } catch (e) {
-      throw Exception('Hackatime setup failed: ${e.toString()}');
-    }
-  }
 }
 
 class SignUpUser {
@@ -65,8 +44,6 @@ class SignUpUser {
   String username;
   String bio;
   String profilePictureUrl;
-  String hackatimeApiKey;
-  String hackatimeUsername;
 
   SignUpUser({
     required this.email,
@@ -74,7 +51,5 @@ class SignUpUser {
     required this.username,
     required this.bio,
     required this.profilePictureUrl,
-    required this.hackatimeApiKey,
-    required this.hackatimeUsername,
   });
 }

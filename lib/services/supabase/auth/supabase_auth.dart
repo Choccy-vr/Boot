@@ -2,6 +2,7 @@ import 'package:universal_html/html.dart' as html;
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'Auth.dart';
+import '/services/users/User.dart';
 
 class AuthFailure implements Exception {
   final String message;
@@ -81,8 +82,27 @@ class SupabaseAuth {
 
         // Persist session so app routing that relies on storage works
         final session = Supabase.instance.client.auth.currentSession;
+        final user = Supabase.instance.client.auth.currentUser;
         if (session != null) {
           await Authentication.refreshSession(session);
+          
+          // Also initialize the user profile for OAuth users
+          if (user != null) {
+            // Extract Slack user ID from OAuth provider metadata
+            final slackUserId = user.userMetadata?['provider_id'] ?? 
+                                user.userMetadata?['sub'] ?? 
+                                '';
+            try {
+              await UserService.setCurrentUser(user.id);
+            } catch (e) {
+              // User doesn't exist - create new one for OAuth user
+              await UserService.initializeUser(
+                id: user.id,
+                email: user.email ?? '',
+                slackUserId: slackUserId.toString(),
+              );
+            }
+          }
         }
         final redirectUri = Uri(
           scheme: uri.scheme,

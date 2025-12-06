@@ -17,7 +17,7 @@ enum AppDestination {
   signup,
   signupPass,
   signupProfile,
-  signupHackatime,
+  signupSlack,
   createProject,
 }
 
@@ -51,8 +51,8 @@ class NavigationService {
       case AppDestination.signupProfile:
         navigator.pushNamed('/signup/profile');
         break;
-      case AppDestination.signupHackatime:
-        navigator.pushNamed('/signup/hackatime');
+      case AppDestination.signupSlack:
+        navigator.pushNamed('/signup/slack');
         break;
 
       case AppDestination.createProject:

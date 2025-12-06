@@ -16,9 +16,8 @@ class BootUser {
   int votes;
   //Currency
   int bootCoins;
-  //Hackatime
-  String hackatimeApiKey;
-  int hackatimeID;
+  //Slack
+  String slackUserId;
   //Projects
   List<int> likedProjects;
   //Role
@@ -36,8 +35,7 @@ class BootUser {
     required this.updatedAt,
     this.votes = 0,
     required this.bootCoins,
-    required this.hackatimeApiKey,
-    required this.hackatimeID,
+    this.slackUserId = '',
     this.likedProjects = const [],
     this.role = UserRole.normal,
   });
@@ -78,8 +76,7 @@ class BootUser {
           : DateTime.now(),
       votes: json['total_votes'] ?? 0,
       bootCoins: json['boot_coins'] ?? 0,
-      hackatimeApiKey: json['hackatime_api_key'] ?? '',
-      hackatimeID: json['hackatime_user'] ?? 0,
+      slackUserId: json['slack_user_id'] ?? '',
       likedProjects: likedProjectsParsed,
       role: UserRole.values.firstWhere(
         (r) => r.name == (json['role'] ?? 'normal'),
@@ -101,8 +98,7 @@ class BootUser {
       'updated_at': updatedAt.toIso8601String(),
       'total_votes': votes,
       'boot_coins': bootCoins,
-      'hackatime_api_key': hackatimeApiKey,
-      'hackatime_user': hackatimeID,
+      'slack_user_id': slackUserId,
       'projects_liked': likedProjects,
     };
   }

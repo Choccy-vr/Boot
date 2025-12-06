@@ -89,8 +89,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   Future<void> _fetchHackatimeProjects() async {
     final projects = await HackatimeService.fetchHackatimeProjects(
-      userId: UserService.currentUser?.hackatimeID ?? 0,
-      apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+      slackUserId: UserService.currentUser?.slackUserId ?? '',
       context: context,
     );
     setState(() {

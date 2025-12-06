@@ -298,8 +298,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     try {
       final updatedProject = await HackatimeService.getProjectTime(
         project: _project,
-        userId: UserService.currentUser?.hackatimeID ?? 0,
-        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+        slackUserId: UserService.currentUser?.slackUserId ?? '',
         context: context,
       );
 
@@ -400,8 +399,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     try {
       final updatedProject = await HackatimeService.getProjectTime(
         project: _project,
-        userId: UserService.currentUser?.hackatimeID ?? 0,
-        apiKey: UserService.currentUser?.hackatimeApiKey ?? '',
+        slackUserId: UserService.currentUser?.slackUserId ?? '',
         context: context,
       );
 

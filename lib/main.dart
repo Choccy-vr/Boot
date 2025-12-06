@@ -8,9 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pages/Home_Page.dart';
 import 'pages/Login/Login_Page.dart';
 import 'pages/Login/SignUp/Signup_Pass_page.dart';
-import 'pages/Login/SignUp/sign_up_hackatime_page.dart';
 import 'pages/Login/SignUp/sign_up_page.dart';
 import 'pages/Login/SignUp/sign_up_profile_page.dart';
+import 'pages/Login/SignUp/sign_up_slack_page.dart';
 import 'pages/Projects/Creation_Page.dart';
 import 'pages/Projects/My_Projects_Page.dart';
 import 'pages/Projects/Project_Page.dart';
@@ -46,7 +46,12 @@ void main() async {
   await SupabaseAuth.redirectCheck();
   final sessionRestored = await Authentication.restoreStoredSession();
   await StorageService.initialize();
-  final initialRoute = sessionRestored ? '/dashboard' : '/login';
+  
+  String initialRoute = '/login';
+  if (sessionRestored) {
+    initialRoute = '/dashboard';
+  }
+  
   runApp(MainApp(initialRoute: initialRoute));
 }
 
@@ -108,9 +113,9 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
             page = const SignUpProfilePage();
             routeName = '/signup/profile';
             break;
-          case 'hackatime':
-            page = const SignupHackatimePage();
-            routeName = '/signup/hackatime';
+          case 'slack':
+            page = const SignUpSlackPage();
+            routeName = '/signup/slack';
             break;
         }
       }
@@ -184,7 +189,9 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     return _buildRoute(child: const LoginPage(), name: '/login');
   }
 
-  if (isLoggedIn && !requiresAuth) {
+  // Allow logged-in users to access signup flow pages (profile, hackatime setup)
+  // but redirect them from login page to dashboard
+  if (isLoggedIn && !requiresAuth && segments.first == 'login') {
     return _buildRoute(child: const HomePage(), name: '/dashboard');
   }
 

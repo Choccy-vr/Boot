@@ -19,11 +19,49 @@ class UserService {
     }
   }
 
-  static Future<void> setCurrentUser(String id) async {
-    final user = await getUserById(id);
+  static Future<BootUser?> getUserByEmail(String email) async {
+    try {
+      final response = await SupabaseDB.supabase
+          .from('users')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
+      if (response == null) return null;
+      return BootUser.fromJson(response);
+    } catch (e, stack) {
+      AppLogger.error('Error getting user by email $email', e, stack);
+      return null;
+    }
+  }
+
+  static Future<void> setCurrentUser(String id, {String? email}) async {
+    // First try by ID
+    var user = await getUserById(id);
+    
+    // If not found by ID but we have email, try by email
+    if (user == null && email != null && email.isNotEmpty) {
+      AppLogger.info('User not found by ID, trying by email: $email');
+      user = await getUserByEmail(email);
+      
+      // If found by email, update the ID to match the auth user
+      if (user != null && user.id != id) {
+        AppLogger.info('Updating user ID from ${user.id} to $id');
+        try {
+          await SupabaseDB.supabase
+              .from('users')
+              .update({'id': id})
+              .eq('email', email);
+          await Future.delayed(Duration(milliseconds: 100));
+          user = await getUserById(id);
+        } catch (e) {
+          AppLogger.error('Failed to update user ID: $e');
+        }
+      }
+    }
+    
     if (user == null) {
       throw Exception(
-        'User initialization failed: Could not retrieve user after creation',
+        'User initialization failed: Could not retrieve user',
       );
     }
 
@@ -41,9 +79,38 @@ class UserService {
   static Future<void> initializeUser({
     required String id,
     required String email,
+    String slackUserId = '',
   }) async {
-    await SupabaseDB.insertData(
+    // First, check if a user with this email already exists (might have different ID)
+    try {
+      final existingByEmail = await SupabaseDB.supabase
+          .from('users')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
+      
+      if (existingByEmail != null) {
+        // User exists with this email - update the ID and slack_user_id to match auth user
+        await SupabaseDB.supabase
+            .from('users')
+            .update({'id': id, 'slack_user_id': slackUserId})
+            .eq('email', email);
+        
+        await Future.delayed(Duration(milliseconds: 100));
+        final user = await getUserById(id);
+        if (user != null) {
+          currentUser = user;
+          return;
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Error checking existing user by email: $e');
+    }
+
+    // No existing user with this email, create new one
+    await SupabaseDB.upsertData(
       table: 'users',
+      onConflict: 'id',
       data: {
         'id': id,
         'username': 'User $id',
@@ -54,10 +121,11 @@ class UserService {
         'total_projects': 0,
         'total_devlogs': 0,
         'total_votes': 0,
+        'slack_user_id': slackUserId,
       },
     );
 
-    // Give the database a moment to process the insert
+    // Give the database a moment to process the upsert
     await Future.delayed(Duration(milliseconds: 100));
 
     final user = await getUserById(id);

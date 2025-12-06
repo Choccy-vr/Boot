@@ -226,7 +226,7 @@ class _DebugPageState extends State<DebugPage> {
                         'User: ${user.username} (ID: ${user.id})\n'
                         'Email: ${user.email}\n'
                         'Coins: ${user.bootCoins}\n'
-                        'Hackatime ID: ${user.hackatimeID}',
+                        'Slack ID: ${user.slackUserId}',
                       );
                     } else {
                       _setStatus('No user logged in');
@@ -256,14 +256,13 @@ class _DebugPageState extends State<DebugPage> {
                   TerminalColors.red,
                   () async {
                     final user = UserService.currentUser;
-                    if (user?.hackatimeID != null &&
-                        user?.hackatimeApiKey != null) {
+                    if (user?.slackUserId != null &&
+                        user!.slackUserId.isNotEmpty) {
                       _setLoading(true);
                       try {
                         final isBanned =
                             await HackatimeService.isHackatimeBanned(
-                              userId: user!.hackatimeID,
-                              apiKey: user.hackatimeApiKey,
+                              slackUserId: user.slackUserId,
                             );
                         _setStatus(
                           'Hackatime ban status: ${isBanned ? "BANNED" : "OK"}',
@@ -273,7 +272,7 @@ class _DebugPageState extends State<DebugPage> {
                       }
                       _setLoading(false);
                     } else {
-                      _setStatus('No Hackatime credentials available');
+                      _setStatus('No Slack user ID available');
                     }
                   },
                   colorScheme,
@@ -653,7 +652,7 @@ class _DebugPageState extends State<DebugPage> {
                           'Email: ${user.email}\n'
                           'ID: ${user.id}\n'
                           'Coins: ${user.bootCoins}\n'
-                          'Hackatime ID: ${user.hackatimeID}\n'
+                          'Slack ID: ${user.slackUserId}\n'
                           'Profile: ${user.profilePicture}',
                         );
                       } else {
@@ -674,13 +673,13 @@ class _DebugPageState extends State<DebugPage> {
                     final user = await UserService.getUserById(
                       _selectedUserId!,
                     );
-                    if (user?.hackatimeID != null) {
+                    if (user?.slackUserId != null && user!.slackUserId.isNotEmpty) {
                       _setStatus(
-                        'Check Hackatime ban status for user ${user!.hackatimeID}\n'
+                        'Check Hackatime ban status for user ${user.slackUserId}\n'
                         '(Note: You cannot actually ban users from here - this is read-only)',
                       );
                     } else {
-                      _setStatus('User has no Hackatime ID');
+                      _setStatus('User has no Slack ID');
                     }
                   },
                   colorScheme,
@@ -718,12 +717,11 @@ class _DebugPageState extends State<DebugPage> {
                       final user = await UserService.getUserById(
                         _selectedUserId!,
                       );
-                      if (user?.hackatimeID != null &&
-                          user?.hackatimeApiKey != null) {
+                      if (user?.slackUserId != null &&
+                          user!.slackUserId.isNotEmpty) {
                         final projects =
                             await HackatimeService.fetchHackatimeProjects(
-                              userId: user!.hackatimeID,
-                              apiKey: user.hackatimeApiKey,
+                              slackUserId: user.slackUserId,
                             );
                         _setStatus(
                           'Hackatime projects: ${projects.length}\n' +
@@ -733,7 +731,7 @@ class _DebugPageState extends State<DebugPage> {
                                   .join('\n'),
                         );
                       } else {
-                        _setStatus('User has no Hackatime credentials');
+                        _setStatus('User has no Slack user ID');
                       }
                     } catch (e) {
                       _setStatus('Error: $e');
