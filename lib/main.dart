@@ -250,7 +250,7 @@ class ProjectLoaderPage extends StatelessWidget {
       if (args != null) {
         // Try to handle as Map first (most common case)
         if (args is Map) {
-          final map = args as Map;
+          final map = args;
           project = map['project'] as Project?;
           challengeId = map['challengeId'] as int?;
         }

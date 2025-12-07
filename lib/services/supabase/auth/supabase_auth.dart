@@ -49,8 +49,10 @@ class SupabaseAuth {
         scheme: base.scheme,
         host: base.host,
         port: base.hasPort ? base.port : null,
-        path: base.path,
+        path: '/', // Always redirect to root path for consistency
       ).toString();
+      
+      AppLogger.info('OAuth redirect URL: $cleanRedirect');
       await supabase.auth.signInWithOAuth(provider, redirectTo: cleanRedirect);
     } on AuthException catch (e) {
       AppLogger.warning('Supabase OAuth sign in failed: ${e.message}');
