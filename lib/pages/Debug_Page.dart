@@ -303,7 +303,7 @@ class _DebugPageState extends State<DebugPage> {
                         _setStatus(
                           'Found ${projects.length} projects:\n' +
                               projects
-                                  .map((p) => '- ${p.title} (${p.status})')
+                                  .map((p) => '- ${p.title}')
                                   .join('\n'),
                         );
                       } catch (e) {
@@ -697,7 +697,7 @@ class _DebugPageState extends State<DebugPage> {
                       _setStatus(
                         'User has ${projects.length} projects:\n' +
                             projects
-                                .map((p) => '- ${p.title} (${p.status})')
+                                .map((p) => '- ${p.title}')
                                 .join('\n'),
                       );
                     } catch (e) {
@@ -808,7 +808,7 @@ class _DebugPageState extends State<DebugPage> {
                         _setStatus(
                           'Title: ${project.title}\n'
                           'Description: ${project.description}\n'
-                          'Status: ${project.status}\n'
+                          'Shipped: ${project.shipped}\n'
                           'Level: ${project.level}\n'
                           'Likes: ${project.likes}\n'
                           'Created: ${project.createdAt}\n'

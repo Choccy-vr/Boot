@@ -30,12 +30,21 @@ class _ExplorePageState extends State<ExplorePage>
   List<Project> _likedProjects = [];
   bool _isLoadingLikedProjects = false;
 
+  // Search and filter state
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _sortBy = 'recent'; // recent, favorites, hours
+  List<String> _selectedTags = [];
+  List<String> _allAvailableTags = [];
+  List<Project> _filteredProjects = [];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadAllProjects();
     _loadLikedProjects();
+    _searchController.addListener(_applyFiltersAndSort);
 
     _allProjectsScrollController.addListener(() {
       if (_allProjectsScrollController.position.pixels >=
@@ -49,6 +58,7 @@ class _ExplorePageState extends State<ExplorePage>
   void dispose() {
     _tabController.dispose();
     _allProjectsScrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -130,6 +140,49 @@ class _ExplorePageState extends State<ExplorePage>
     }
   }
 
+  void _applyFiltersAndSort() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase().trim();
+      
+      // Start with all projects
+      List<Project> filtered = List.from(_allProjects);
+
+      // Apply search filter
+      if (_searchQuery.isNotEmpty) {
+        filtered = filtered.where((project) {
+          final titleMatch = project.title.toLowerCase().contains(_searchQuery);
+          final descMatch = project.description.toLowerCase().contains(_searchQuery);
+          final tagsMatch = project.tags.any((tag) => tag.toLowerCase().contains(_searchQuery));
+          return titleMatch || descMatch || tagsMatch;
+        }).toList();
+      }
+
+      // Apply tag filter
+      if (_selectedTags.isNotEmpty) {
+        filtered = filtered.where((project) {
+          return _selectedTags.every((selectedTag) =>
+              project.tags.any((tag) => tag.toLowerCase() == selectedTag.toLowerCase()));
+        }).toList();
+      }
+
+      // Apply sorting
+      switch (_sortBy) {
+        case 'favorites':
+          filtered.sort((a, b) => b.likes.compareTo(a.likes));
+          break;
+        case 'hours':
+          filtered.sort((a, b) => b.time.compareTo(a.time));
+          break;
+        case 'recent':
+        default:
+          filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          break;
+      }
+
+      _filteredProjects = filtered;
+    });
+  }
+
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -191,7 +244,7 @@ class _ExplorePageState extends State<ExplorePage>
             controller: _tabController,
             tabs: const [
               Tab(icon: Icon(Symbols.public), text: 'All Projects'),
-              Tab(icon: Icon(Symbols.favorite), text: 'Liked Projects'),
+              Tab(icon: Icon(Symbols.favorite), text: 'Liked'),
             ],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
@@ -210,56 +263,152 @@ class _ExplorePageState extends State<ExplorePage>
   }
 
   Widget _buildAllProjectsTab(ColorScheme colorScheme, TextTheme textTheme) {
-    return RefreshIndicator(
-      onRefresh: _refreshAllProjects,
-      child: _allProjects.isEmpty && _isLoadingAllProjects
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      children: [
+        // Search and filter section
+        Container(
+          color: colorScheme.surfaceContainerLow,
+          padding: EdgeInsets.all(Responsive.spacing(context)),
+          child: Column(
+            children: [
+              // Search bar
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search projects by title, description, or tags...',
+                  prefixIcon: Icon(Symbols.search, color: colorScheme.onSurfaceVariant),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Symbols.close, color: colorScheme.onSurfaceVariant),
+                          onPressed: () {
+                            _searchController.clear();
+                            _applyFiltersAndSort();
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: colorScheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context) * 0.5),
+              // Sort dropdown
+              Row(
                 children: [
-                  CircularProgressIndicator(color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading projects...',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                  Expanded(
+                    child: DropdownButton<String>(
+                      value: _sortBy,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _sortBy = newValue;
+                            _applyFiltersAndSort();
+                          });
+                        }
+                      },
+                      isExpanded: true,
+                      items: [
+                        DropdownMenuItem(
+                          value: 'recent',
+                          child: Text('Sort by: Recently Created'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'favorites',
+                          child: Text('Sort by: Most Favorites'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'hours',
+                          child: Text('Sort by: Most Hours'),
+                        ),
+                      ],
+                      underline: Container(),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                      ),
                     ),
                   ),
                 ],
               ),
-            )
-          : _allProjects.isEmpty
-          ? _buildEmptyState(
-              icon: Symbols.search_off,
-              title: 'No Projects Found',
-              subtitle: 'There are no projects to explore yet.',
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            )
-          : ListView.builder(
-              controller: _allProjectsScrollController,
-              padding: Responsive.pagePadding(context),
-              itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _allProjects.length) {
-                  // Loading indicator for pagination
-                  return Padding(
-                    padding: EdgeInsets.all(Responsive.spacing(context)),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  );
-                }
-
-                return _buildProjectCard(
-                  _allProjects[index],
-                  colorScheme,
-                  textTheme,
-                );
-              },
-            ),
+            ],
+          ),
+        ),
+        // Projects list
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refreshAllProjects,
+            child: _filteredProjects.isEmpty && _searchQuery.isEmpty && _selectedTags.isEmpty
+                ? (_allProjects.isEmpty && _isLoadingAllProjects
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: colorScheme.primary),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Loading projects...',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : (_allProjects.isEmpty
+                        ? _buildEmptyState(
+                            icon: Symbols.search_off,
+                            title: 'No Projects Found',
+                            subtitle: 'There are no projects to explore yet.',
+                            colorScheme: colorScheme,
+                            textTheme: textTheme,
+                          )
+                        : ListView.builder(
+                            controller: _allProjectsScrollController,
+                            padding: Responsive.pagePadding(context),
+                            itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _allProjects.length) {
+                                return Padding(
+                                  padding: EdgeInsets.all(Responsive.spacing(context)),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return _buildProjectCard(
+                                _allProjects[index],
+                                colorScheme,
+                                textTheme,
+                              );
+                            },
+                          )))
+                : (_filteredProjects.isEmpty
+                    ? _buildEmptyState(
+                        icon: Symbols.search_off,
+                        title: 'No Projects Match',
+                        subtitle: 'Try adjusting your search or filters.',
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      )
+                    : ListView.builder(
+                        padding: Responsive.pagePadding(context),
+                        itemCount: _filteredProjects.length,
+                        itemBuilder: (context, index) {
+                          return _buildProjectCard(
+                            _filteredProjects[index],
+                            colorScheme,
+                            textTheme,
+                          );
+                        },
+                      )),
+          ),
+        ),
+      ],
     );
   }
 

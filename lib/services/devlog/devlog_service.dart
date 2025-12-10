@@ -59,6 +59,10 @@ class DevlogService {
     }
 
     try {
+      final project = await ProjectService.getProjectById(projectID);
+      if (project == null) {
+        throw Exception('Project with ID $projectID not found');
+      }
       final response = await SupabaseDB.insertAndReturnData(
         table: 'devlogs',
         data: {
@@ -91,6 +95,11 @@ class DevlogService {
         column: 'id',
         value: tempDevlog.id.toString(),
       );
+
+      
+
+      final updatedTimeTracked = project.timeTrackedShip + time;
+
       await SupabaseDBFunctions.callIncrementFunction(
         table: 'users',
         column: 'total_devlogs',
@@ -103,6 +112,7 @@ class DevlogService {
         data: {
           'time': time,
           'time_readable': readableTime,
+          'time_tracked_ship': updatedTimeTracked,
         },
         column: 'id',
         value: projectID,

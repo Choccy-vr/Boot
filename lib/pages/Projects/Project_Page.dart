@@ -857,29 +857,82 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ),
           ),
           actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _handleShipProject();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Symbols.directions_boat, size: 16),
-                  const SizedBox(width: 4),
-                  Text('Ship It!'),
-                ],
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Time tracking chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _project.timeTrackedShip <= 0
+                        ? colorScheme.errorContainer.withValues(alpha: 0.3)
+                        : colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _project.timeTrackedShip <= 0
+                          ? colorScheme.error.withValues(alpha: 0.5)
+                          : colorScheme.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Symbols.schedule,
+                        size: 18,
+                        color: _project.timeTrackedShip <= 0
+                            ? colorScheme.error
+                            : colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_project.timeTrackedShip.toStringAsFixed(1)}h',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _project.timeTrackedShip <= 0
+                              ? colorScheme.error
+                              : colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    TextButton(
+                      child: Text('Cancel'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_project.timeTrackedShip <= 0) {
+                          GlobalNotificationService.instance.showError(
+                            'Cannot ship project with 0 hours tracked. Please work on your project and track time before shipping.',
+                          );
+                          return;
+                        }
+                        Navigator.of(context).pop();
+                        _handleShipProject();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Symbols.directions_boat, size: 16),
+                          const SizedBox(width: 4),
+                          Text('Ship It!'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         );
@@ -908,15 +961,24 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleShipProject() async {
     try {
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
+      
+      // Validate that time has been tracked
+      if (_project.timeTrackedShip <= 0) {
+        if (!mounted) return;
+        GlobalNotificationService.instance.showError(
+          'Cannot ship project with 0 hours tracked. Please work on your project and track time before shipping.',
+        );
+        return;
+      }
+      
       final newShip = await ShipService.addShip(
-        project: _project.id,
-        time: _project.time,
+        project: _project,
+        time: _project.timeTrackedShip,
         challengesRequested: _project.challengeIds,
       );
 
       setState(() {
         _ships.insert(0, newShip);
-        _project.status = 'Shipped / Awaiting Review';
       });
 
       _showShipSuccessDialog();
@@ -984,8 +1046,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Reload the page by refreshing the project data
-                _reloadProjectData();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
@@ -999,12 +1059,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
-  void _reloadProjectData() {
-    // Refresh the project data to reflect the new status
-    setState(() {
-      _project.status = 'Shipped / Awaiting Review';
-    });
-  }
+
 
   String _getMediaType(PlatformFile file) {
     final extension = file.extension?.toLowerCase() ?? '';
@@ -2559,16 +2614,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ElevatedButton(
-                    onPressed: _project.status.toLowerCase().contains('shipped')
+                    onPressed: _project.shipped
                         ? null
                         : () => _showShipConfirmationDialog(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          _project.status.toLowerCase().contains('shipped')
+                          _project.shipped
                           ? colorScheme.outline
                           : null,
                       foregroundColor:
-                          _project.status.toLowerCase().contains('shipped')
+                          _project.shipped
                           ? colorScheme.onSurfaceVariant
                           : null,
                       padding: EdgeInsets.symmetric(
@@ -2582,14 +2637,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         Icon(Symbols.directions_boat, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          _project.status.toLowerCase().contains('shipped')
+                          _project.shipped
                               ? 'Already Shipped'
                               : 'Ship Project',
                         ),
                       ],
                     ),
                   ),
-                  if (_project.status.toLowerCase().contains('shipped')) ...[
+                  if (_project.shipped) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [

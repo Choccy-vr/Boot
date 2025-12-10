@@ -12,6 +12,7 @@ class Ship {
   final List<Challenge> challengesRequested;
   final List<Challenge> challengesCompleted;
   final bool reviewed;
+  final int coinsEarned;
 
   Ship({
     required this.id,
@@ -24,6 +25,7 @@ class Ship {
     this.challengesRequested = const [],
     this.challengesCompleted = const [],
     this.reviewed = false,
+    this.coinsEarned = 0,
   });
 
   static Future<Ship> fromJson(Map<String, dynamic> json) async {
@@ -42,6 +44,7 @@ class Ship {
       challengesCompleted:
           await _resolveChallenges(json['challenges_completed']),
       reviewed: json['reviewed'] ?? false,
+      coinsEarned: json['earned'] ?? 0,
     );
   }
 

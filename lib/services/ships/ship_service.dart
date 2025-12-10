@@ -85,7 +85,7 @@ class ShipService {
   }
 
   static Future<Ship> addShip({
-    required int project,
+    required Project project,
     required double time,
     required List<int> challengesRequested,
 
@@ -93,8 +93,17 @@ class ShipService {
     try {
       final response = await SupabaseDB.insertAndReturnData(
         table: 'ships',
-        data: {'project': project, 'time': time, 'challenges_requested': challengesRequested, 'approved': false, 'reviewed': false},
+        data: {
+          'project': project.id,
+          'time': time,
+          'challenges_requested': challengesRequested,
+          'approved': false,
+          'reviewed': false,
+        },
       );
+      project.timeTrackedShip = 0;
+      project.shipped = true;
+      await ProjectService.updateProject(project);
       final rows = List<Map<String, dynamic>>.from(
         (response as List).map((row) => Map<String, dynamic>.from(row)),
       );
@@ -113,7 +122,7 @@ class ShipService {
     required List<int> challengesCompleted,
   }) async {
     try {
-      await SupabaseDB.updateData(
+      final response = await SupabaseDB.updateAndReturnData(
         table: 'ships',
         column: 'id',
         value: shipId,
@@ -125,6 +134,15 @@ class ShipService {
           'challenges_completed': challengesCompleted,
         },
       );
+      final ship = await Ship.fromJson(
+        Map<String, dynamic>.from((response as List).first),
+      );
+      final project = await ProjectService.getProjectById(ship.project);
+      if (project != null) {
+        project.shipped = false;
+        await ProjectService.updateProject(project);
+      }
+
     } catch (e, stack) {
       AppLogger.error('Error approving ship $shipId', e, stack);
       throw Exception('Error approving ship: $e');

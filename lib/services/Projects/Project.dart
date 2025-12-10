@@ -11,11 +11,8 @@ class Project {
   final String owner;
   final DateTime createdAt;
   DateTime lastModified;
-  bool awaitingReview;
-  bool reviewed;
   String level;
   final int id;
-  String status;
   List<String> hackatimeProjects;
   String isoUrl;
   String qemuCMD;
@@ -25,21 +22,20 @@ class Project {
   String readableTime;
   double time;
   List<String> tags;
+  double timeTrackedShip;
+  bool shipped;
 
   Project({
     required this.title,
     required this.description,
-    required this.reviewed,
     required this.lastModified,
     required this.imageURL,
     required this.githubRepo,
     required this.likes,
     required this.owner,
     required this.createdAt,
-    required this.awaitingReview,
     required this.level,
     required this.id,
-    required this.status,
     required this.hackatimeProjects,
     required this.readableTime,
     required this.time,
@@ -49,6 +45,8 @@ class Project {
     this.challengeIds = const [],
     this.coinsEarned = 0,
     this.tags = const [],
+    this.timeTrackedShip = 0.0,
+    this.shipped = false,
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -65,10 +63,7 @@ class Project {
       lastModified: DateTime.parse(
         row['updated_at'] ?? DateTime.now().toString(),
       ),
-      awaitingReview: row['awaiting_review'] ?? false,
       level: row['level'] ?? 'unknown',
-      status: row['status'] ?? 'unknown',
-      reviewed: row['reviewed'] ?? false,
       hackatimeProjects: _parseHackatimeProjects(row['hackatime_projects']),
       readableTime: row['time_readable'] ?? '',
       time: (row['time'] as num?)?.toDouble() ?? 0.0,
@@ -80,6 +75,8 @@ class Project {
       tags: row['tags'] != null
           ? List<String>.from(row['tags'])
           : [],
+      timeTrackedShip: (row['time_tracked_ship'] as num?)?.toDouble() ?? 0.0,
+      shipped: row['shipped'] ?? false,
     );
   }
 
@@ -90,9 +87,7 @@ class Project {
     String? githubRepo,
     int? likes,
     DateTime? lastModified,
-    bool? awaitingReview,
     String? level,
-    bool? reviewed,
     List<String>? hackatimeProjects,
     String? owner,
     String? isoUrl,
@@ -103,6 +98,8 @@ class Project {
     String? readableTime,
     double? time,
     List<String>? tags,
+    double? timeTrackedShip,
+    bool? shipped,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -113,9 +110,7 @@ class Project {
     if (lastModified != null) {
       map['updated_at'] = lastModified.toIso8601String();
     }
-    if (awaitingReview != null) map['awaiting_review'] = awaitingReview;
     if (level != null) map['level'] = level;
-    if (reviewed != null) map['reviewed'] = reviewed;
     if (hackatimeProjects != null) {
       map['hackatime_projects'] = hackatimeProjects;
     }
@@ -132,6 +127,8 @@ class Project {
     if (readableTime != null) map['time_readable'] = readableTime;
     if (time != null) map['time'] = time;
     if (tags != null) map['tags'] = tags;
+    if (timeTrackedShip != null) map['time_tracked_ship'] = timeTrackedShip;
+    if (shipped != null) map['shipped'] = shipped;
     return map;
   }
 
