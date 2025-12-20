@@ -19,6 +19,9 @@ enum AppDestination {
   signupProfile,
   signupSlack,
   createProject,
+  admin,
+  debug,
+  reviewer,
 }
 
 class NavigationService {
@@ -76,6 +79,15 @@ class NavigationService {
           return;
         }
         navigator.pushNamed('/user/${user.id}', arguments: user);
+        break;
+      case AppDestination.admin:
+        navigator.pushNamed('/admin');
+        break;
+      case AppDestination.debug:
+        navigator.pushNamed('/debug');
+        break;
+      case AppDestination.reviewer:
+        navigator.pushNamed('/reviewer');
         break;
     }
   }

@@ -226,7 +226,12 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () {
-                    Navigator.pushNamed(context, '/reviewer');
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.reviewer,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
                   },
                 ),
               if (user?.role == UserRole.admin || user?.role == UserRole.owner)
@@ -235,7 +240,14 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   title: 'Admin Panel',
                   colorScheme: colorScheme,
                   textTheme: textTheme,
-                  onTap: () {},
+                  onTap: () {
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.admin,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
                 ),
               if (user?.role == UserRole.owner)
                 _buildRailItem(
@@ -244,7 +256,12 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   onTap: () {
-                    Navigator.pushNamed(context, '/debug');
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.debug,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
                   },
                 ),
             ],

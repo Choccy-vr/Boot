@@ -20,6 +20,7 @@ import 'pages/Challenges/Challenge_page.dart';
 import 'pages/Reviewer/Reviewer_Page.dart';
 import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
+import 'pages/Admin/Admin_Page.dart';
 import 'services/Projects/Project.dart';
 import 'services/Projects/project_service.dart';
 import 'services/supabase/auth/Auth.dart';
@@ -172,6 +173,10 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'debug':
       page = const DebugPage();
       routeName = '/debug';
+      break;
+    case 'admin':
+      page = const AdminPage();
+      routeName = '/admin';
       break;
     case 'user':
       if (segments.length >= 2) {
