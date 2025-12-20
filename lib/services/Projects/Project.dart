@@ -110,7 +110,7 @@ class Project {
       map['hackatime_projects'] = hackatimeProjects;
     }
     if (owner != null) map['owner'] = owner;
-    if (isoUrl != null) map['ISO_url'] = isoUrl;
+    if (isoUrl != null && isoUrl.isNotEmpty) map['ISO_url'] = isoUrl;
     if (qemuCMD != null) map['qemu_cmd'] = qemuCMD;
     final serializedChallengeIds = (challenges != null && challenges.isNotEmpty)
         ? challenges.map((c) => c.id).toList()
