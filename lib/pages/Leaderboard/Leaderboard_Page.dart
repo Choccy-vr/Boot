@@ -18,10 +18,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Most Liked tab state
-  List<Project> _mostLikedProjects = [];
-  bool _isLoadingMostLiked = false;
-
   // Most Time tab state
   List<Project> _mostTimeProjects = [];
   bool _isLoadingMostTime = false;
@@ -33,8 +29,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadMostLiked();
+    _tabController = TabController(length: 2, vsync: this);
     _loadMostTime();
     _loadMostChallenges();
   }
@@ -43,28 +38,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadMostLiked() async {
-    if (_isLoadingMostLiked) return;
-
-    setState(() {
-      _isLoadingMostLiked = true;
-    });
-
-    try {
-      final projects = await ProjectService.getTopProjectsByLikes(limit: 50);
-
-      setState(() {
-        _mostLikedProjects = projects;
-        _isLoadingMostLiked = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMostLiked = false;
-      });
-      _showErrorSnackbar('Failed to load most liked projects: $e');
-    }
   }
 
   Future<void> _loadMostTime() async {
@@ -122,10 +95,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     );
   }
 
-  Future<void> _refreshMostLiked() async {
-    await _loadMostLiked();
-  }
-
   Future<void> _refreshMostTime() async {
     await _loadMostTime();
   }
@@ -139,8 +108,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     if (!mounted) return;
     // Refresh current tab
     if (_tabController.index == 0) {
-      await _refreshMostLiked();
-    } else if (_tabController.index == 1) {
       await _refreshMostTime();
     } else {
       await _refreshMostChallenges();
@@ -181,7 +148,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
             controller: _tabController,
             isScrollable: true,
             tabs: const [
-              Tab(icon: Icon(Symbols.favorite), text: 'Most Liked'),
               Tab(icon: Icon(Symbols.schedule), text: 'Most Time'),
               Tab(icon: Icon(Symbols.emoji_events), text: 'Most Challenges'),
             ],
@@ -193,7 +159,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _buildMostLikedTab(colorScheme, textTheme),
             _buildMostTimeTab(colorScheme, textTheme),
             _buildMostChallengesTab(colorScheme, textTheme),
           ],
@@ -202,50 +167,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     );
   }
 
-  Widget _buildMostLikedTab(ColorScheme colorScheme, TextTheme textTheme) {
-    return RefreshIndicator(
-      onRefresh: _refreshMostLiked,
-      child: _mostLikedProjects.isEmpty && _isLoadingMostLiked
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading leaderboard...',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _mostLikedProjects.isEmpty
-          ? _buildEmptyState(
-              icon: Symbols.favorite_border,
-              title: 'No Projects Yet',
-              subtitle: 'Be the first to get likes!',
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            )
-          : ListView.builder(
-              padding: Responsive.pagePadding(context),
-              itemCount: _mostLikedProjects.length,
-              itemBuilder: (context, index) {
-                return _buildLeaderboardCard(
-                  project: _mostLikedProjects[index],
-                  rank: index + 1,
-                  primaryStat: _mostLikedProjects[index].likes.toString(),
-                  primaryIcon: Symbols.favorite,
-                  primaryColor: TerminalColors.red,
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                );
-              },
-            ),
-    );
-  }
 
   Widget _buildMostTimeTab(ColorScheme colorScheme, TextTheme textTheme) {
     return RefreshIndicator(
@@ -514,13 +435,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          _buildInfoChip(
-                            icon: Symbols.favorite,
-                            label: '${project.likes}',
-                            colorScheme: colorScheme,
-                            textTheme: textTheme,
-                          ),
-                          const SizedBox(width: 8),
                           _buildInfoChip(
                             icon: Symbols.schedule,
                             label: project.readableTime,

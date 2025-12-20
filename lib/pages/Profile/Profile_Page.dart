@@ -51,7 +51,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadUserData() async {
     await _loadUserProjects();
     await _loadUserDevlogs();
-    await _loadLikedProjects();
   }
 
   Future<void> _loadUserProjects() async {
@@ -95,26 +94,6 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         setState(() {
           _isLoadingDevlogs = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadLikedProjects() async {
-    try {
-      final likedProjects = await ProjectService.getLikedProjects(
-        widget.user.likedProjects,
-      );
-      if (mounted) {
-        setState(() {
-          _likedProjects = likedProjects;
-          _isLoadingLikedProjects = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingLikedProjects = false;
         });
       }
     }
@@ -177,8 +156,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           _buildTopProjectsSection(colorScheme, textTheme),
                           SizedBox(height: Responsive.spacing(context)),
-                          _buildLikedProjectsSection(colorScheme, textTheme),
-                          SizedBox(height: Responsive.spacing(context)),
                           _buildRecentDevlogsSection(colorScheme, textTheme),
                         ],
                       ),
@@ -195,8 +172,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     _buildCompactStatsCard(colorScheme, textTheme),
                     SizedBox(height: Responsive.spacing(context)),
                     _buildTopProjectsSection(colorScheme, textTheme),
-                    SizedBox(height: Responsive.spacing(context)),
-                    _buildLikedProjectsSection(colorScheme, textTheme),
                     SizedBox(height: Responsive.spacing(context)),
                     _buildRecentDevlogsSection(colorScheme, textTheme),
                   ],
@@ -257,71 +232,6 @@ class _ProfilePageState extends State<ProfilePage> {
             else
               Column(
                 children: _userProjects
-                    .map(
-                      (project) => _buildProjectListItem(
-                        project,
-                        colorScheme,
-                        textTheme,
-                      ),
-                    )
-                    .toList(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLikedProjectsSection(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Card(
-      color: colorScheme.surfaceContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Symbols.favorite, color: colorScheme.error, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  'Liked Projects',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${_likedProjects.length} total',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            if (_isLoadingLikedProjects)
-              Center(
-                child: CircularProgressIndicator(color: colorScheme.error),
-              )
-            else if (_likedProjects.isEmpty)
-              _buildEmptyState(
-                'No liked projects',
-                _isOwnProfile
-                    ? 'You haven\'t liked any projects yet.'
-                    : 'This user hasn\'t liked any projects yet.',
-                Symbols.favorite,
-                colorScheme,
-                textTheme,
-              )
-            else
-              Column(
-                children: _likedProjects
                     .map(
                       (project) => _buildProjectListItem(
                         project,
@@ -821,23 +731,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Symbols.favorite,
-                        color: colorScheme.error,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        project.likes.toString(),
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ],

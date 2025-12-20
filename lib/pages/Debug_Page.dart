@@ -317,15 +317,6 @@ class _DebugPageState extends State<DebugPage> {
                   colorScheme,
                 ),
                 _buildTestButton(
-                  'Test Project Likes',
-                  Symbols.favorite,
-                  TerminalColors.red,
-                  () {
-                    _setStatus('Like functionality test - implement as needed');
-                  },
-                  colorScheme,
-                ),
-                _buildTestButton(
                   'Get All Projects',
                   Symbols.public,
                   colorScheme.secondary,
@@ -810,7 +801,6 @@ class _DebugPageState extends State<DebugPage> {
                           'Description: ${project.description}\n'
                           'Shipped: ${project.shipped}\n'
                           'Level: ${project.level}\n'
-                          'Likes: ${project.likes}\n'
                           'Created: ${project.createdAt}\n'
                           'Owner: ${project.owner}',
                         );
@@ -830,24 +820,6 @@ class _DebugPageState extends State<DebugPage> {
                   TerminalColors.magenta,
                   () {
                     _setStatus('Devlog fetching not implemented yet');
-                  },
-                  colorScheme,
-                ),
-                _buildTestButton(
-                  'Get Project Likes',
-                  Symbols.favorite,
-                  TerminalColors.red,
-                  () async {
-                    _setLoading(true);
-                    try {
-                      final project = await ProjectService.getProjectById(
-                        _selectedProjectId!,
-                      );
-                      _setStatus('Project has ${project?.likes ?? 0} likes');
-                    } catch (e) {
-                      _setStatus('Error: $e');
-                    }
-                    _setLoading(false);
                   },
                   colorScheme,
                 ),

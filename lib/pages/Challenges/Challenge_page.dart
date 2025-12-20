@@ -1704,13 +1704,6 @@ class ChallengeDetailDialog extends StatelessWidget {
                                                   color: TerminalColors.yellow,
                                                   textTheme: textTheme,
                                                 ),
-                                                if (project.likes > 0)
-                                                  _buildProjectStatChip(
-                                                    icon: Symbols.favorite,
-                                                    label: '${project.likes}',
-                                                    color: TerminalColors.red,
-                                                    textTheme: textTheme,
-                                                  ),
                                               ],
                                             ),
                                           ],

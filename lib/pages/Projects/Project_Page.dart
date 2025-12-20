@@ -57,8 +57,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _isLoading = false;
   bool _isHovering = false;
   BootUser? owner;
-  bool _isLiked = false;
-  bool _isLiking = false;
   bool _showDevlogEditor = false;
   final TextEditingController _devlogTitleController = TextEditingController();
   final TextEditingController _devlogDescriptionController =
@@ -151,7 +149,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
-    _userLiked();
 
     // Check if opened with challengeId to auto-open devlog editor
     if (widget.challengeId != null) {
@@ -196,16 +193,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     } catch (e) {
       // Error loading ships: $e
     }
-  }
-
-  Future<void> _userLiked() async {
-    try {
-      setState(() {
-        _isLiked =
-            UserService.currentUser?.likedProjects.contains(_project.id) ??
-            false;
-      });
-    } catch (_) {}
   }
 
   Future<void> _loadProjectChallenges() async {
@@ -310,56 +297,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       return '${(difference.inDays / 30).floor()} month${(difference.inDays / 30).floor() == 1 ? '' : 's'} ago';
     } else {
       return '${(difference.inDays / 365).floor()} year${(difference.inDays / 365).floor() == 1 ? '' : 's'} ago';
-    }
-  }
-
-  Future<void> _handleLikeProject() async {
-    if (_isLiking) return;
-    if (_project.owner == UserService.currentUser?.id) {
-      if (!mounted) return;
-      GlobalNotificationService.instance.showWarning(
-        "You can't like your own OS.\nSilly Goose",
-      );
-      return;
-    }
-    try {
-      setState(() => _isLiking = true);
-      if (_isLiked) {
-        await SupabaseDBFunctions.callDbFunction(
-          functionName: 'decrement_likes',
-          parameters: {'project_id': _project.id},
-        );
-        UserService.currentUser?.likedProjects.remove(_project.id);
-        setState(() {
-          _project.likes = (_project.likes - 1).clamp(0, 1 << 31);
-          _isLiked = false;
-        });
-        if (!mounted) return;
-        GlobalNotificationService.instance.showInfo(
-          'You unliked ${_project.title}.',
-        );
-      } else {
-        await SupabaseDBFunctions.callDbFunction(
-          functionName: 'increment_likes',
-          parameters: {'project_id': _project.id},
-        );
-        UserService.currentUser?.likedProjects.add(_project.id);
-        setState(() {
-          _project.likes += 1;
-          _isLiked = true;
-        });
-        if (!mounted) return;
-        GlobalNotificationService.instance.showSuccess(
-          'You liked ${_project.title}!',
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'Failed to like/unlike project: $e',
-      );
-    } finally {
-      if (mounted) setState(() => _isLiking = false);
     }
   }
 
@@ -2469,19 +2406,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   ],
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: _isLiking ? null : _handleLikeProject,
-                icon: _isLiked
-                    ? Icon(Symbols.favorite, size: 18, fill: 1)
-                    : Icon(Symbols.favorite, size: 18, fill: 0),
-                label: Text('${_project.likes}'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: _handleOpenGitHubRepo,
                 icon: Icon(Symbols.folder_data, size: 18),

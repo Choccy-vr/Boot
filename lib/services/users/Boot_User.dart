@@ -18,8 +18,6 @@ class BootUser {
   int bootCoins;
   //Slack
   String slackUserId;
-  //Projects
-  List<int> likedProjects;
   //Role
   UserRole role;
   //constructor
@@ -36,28 +34,10 @@ class BootUser {
     this.votes = 0,
     required this.bootCoins,
     this.slackUserId = '',
-    this.likedProjects = const [],
     this.role = UserRole.normal,
   });
 
   factory BootUser.fromJson(Map<String, dynamic> json) {
-    // Handle liked projects coming from different possible keys/types
-    final dynamic likedProjectsRaw = json['projects_liked'] ?? '';
-
-    List<int> likedProjectsParsed = [];
-    if (likedProjectsRaw is List) {
-      for (final e in likedProjectsRaw) {
-        if (e is int) {
-          likedProjectsParsed.add(e);
-        } else if (e is double) {
-          likedProjectsParsed.add(e.toInt());
-        } else if (e is String) {
-          final v = int.tryParse(e);
-          if (v != null) likedProjectsParsed.add(v);
-        }
-      }
-    }
-
     return BootUser(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
@@ -77,7 +57,6 @@ class BootUser {
       votes: json['total_votes'] ?? 0,
       bootCoins: json['boot_coins'] ?? 0,
       slackUserId: json['slack_user_id'] ?? '',
-      likedProjects: likedProjectsParsed,
       role: UserRole.values.firstWhere(
         (r) => r.name == (json['role'] ?? 'normal'),
         orElse: () => UserRole.normal,
@@ -99,7 +78,6 @@ class BootUser {
       'total_votes': votes,
       'boot_coins': bootCoins,
       'slack_user_id': slackUserId,
-      'projects_liked': likedProjects,
     };
   }
 }

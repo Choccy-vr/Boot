@@ -631,20 +631,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Symbols.favorite, size: 16, color: TerminalColors.red),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${project.likes}',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                ),
               ],
             ),
           ),

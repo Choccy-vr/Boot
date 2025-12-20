@@ -50,26 +50,6 @@ class ProjectService {
     }
   }
 
-  static Future<List<Project>> getLikedProjects(
-    List<int> likedProjectIds,
-  ) async {
-    if (likedProjectIds.isEmpty) return [];
-
-    try {
-      final response = await SupabaseDB.getMultipleRowData(
-        table: 'projects',
-        column: 'id',
-        columnValue: likedProjectIds.map((id) => id.toString()).toList(),
-      );
-
-      if (response.isEmpty) return [];
-      return response.map<Project>((row) => Project.fromRow(row)).toList();
-    } catch (e, stack) {
-      AppLogger.error('Error fetching liked projects', e, stack);
-      return [];
-    }
-  }
-
   static Future<Project?> getProjectById(int projectId) async {
     try {
       final response = await SupabaseDB.getRowData(
@@ -88,7 +68,6 @@ class ProjectService {
     required String? description,
     required String? imageURL,
     required String? githubRepo,
-    required int? likes,
     required DateTime? lastModified,
     required bool? awaitingReview,
     required String? level,
@@ -105,7 +84,6 @@ class ProjectService {
         description: description,
         imageURL: imageURL,
         githubRepo: githubRepo,
-        likes: likes,
         lastModified: lastModified,
         level: level,
         hackatimeProjects: hackatimeProjects,
@@ -148,7 +126,6 @@ class ProjectService {
         description: project.description,
         imageURL: project.imageURL,
         githubRepo: project.githubRepo,
-        likes: project.likes,
         lastModified: project.lastModified,
         level: project.level,
         hackatimeProjects: project.hackatimeProjects,
@@ -164,27 +141,6 @@ class ProjectService {
         shipped: project.shipped,
       ),
     );
-  }
-
-  static Future<List<Project>> getTopProjectsByLikes({int limit = 50}) async {
-    try {
-      final response = await SupabaseDB.selectData(table: 'projects');
-
-      if (response.isEmpty) return [];
-
-      final projects = response
-          .map<Project>((row) => Project.fromRow(row))
-          .toList();
-
-      // Sort by likes descending
-      projects.sort((a, b) => b.likes.compareTo(a.likes));
-
-      // Return top projects
-      return projects.take(limit).toList();
-    } catch (e, stack) {
-      AppLogger.error('Error fetching top projects by likes', e, stack);
-      return [];
-    }
   }
 
   static Future<List<Project>> getTopProjectsByTime({int limit = 50}) async {

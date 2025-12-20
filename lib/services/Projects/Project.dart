@@ -7,7 +7,6 @@ class Project {
   String description;
   String imageURL;
   String githubRepo;
-  int likes;
   final String owner;
   final DateTime createdAt;
   DateTime lastModified;
@@ -31,7 +30,6 @@ class Project {
     required this.lastModified,
     required this.imageURL,
     required this.githubRepo,
-    required this.likes,
     required this.owner,
     required this.createdAt,
     required this.level,
@@ -57,7 +55,6 @@ class Project {
       description: row['description'] ?? 'No description provided',
       imageURL: row['image_url'] ?? '',
       githubRepo: row['github_repo'] ?? '',
-      likes: row['total_likes'] ?? 0,
       owner: row['owner'] ?? 'unknown',
       createdAt: DateTime.parse(row['created_at'] ?? DateTime.now().toString()),
       lastModified: DateTime.parse(
@@ -85,7 +82,6 @@ class Project {
     String? description,
     String? imageURL,
     String? githubRepo,
-    int? likes,
     DateTime? lastModified,
     String? level,
     List<String>? hackatimeProjects,
@@ -106,7 +102,6 @@ class Project {
     if (description != null) map['description'] = description;
     if (imageURL != null) map['image_url'] = imageURL;
     if (githubRepo != null) map['github_repo'] = githubRepo;
-    if (likes != null) map['total_likes'] = likes;
     if (lastModified != null) {
       map['updated_at'] = lastModified.toIso8601String();
     }

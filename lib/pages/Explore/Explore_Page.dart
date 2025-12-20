@@ -26,10 +26,6 @@ class _ExplorePageState extends State<ExplorePage>
   final int _pageSize = 20;
   final ScrollController _allProjectsScrollController = ScrollController();
 
-  // Liked Projects tab state
-  List<Project> _likedProjects = [];
-  bool _isLoadingLikedProjects = false;
-
   // Search and filter state
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -41,9 +37,8 @@ class _ExplorePageState extends State<ExplorePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 1, vsync: this);
     _loadAllProjects();
-    _loadLikedProjects();
     _searchController.addListener(_applyFiltersAndSort);
 
     _allProjectsScrollController.addListener(() {
@@ -117,29 +112,6 @@ class _ExplorePageState extends State<ExplorePage>
     }
   }
 
-  Future<void> _loadLikedProjects() async {
-    if (_isLoadingLikedProjects) return;
-
-    setState(() {
-      _isLoadingLikedProjects = true;
-    });
-
-    try {
-      final likedProjectIds = UserService.currentUser?.likedProjects ?? [];
-      final projects = await ProjectService.getLikedProjects(likedProjectIds);
-
-      setState(() {
-        _likedProjects = projects;
-        _isLoadingLikedProjects = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingLikedProjects = false;
-      });
-      _showErrorSnackbar('Failed to load liked projects: $e');
-    }
-  }
-
   void _applyFiltersAndSort() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase().trim();
@@ -168,7 +140,6 @@ class _ExplorePageState extends State<ExplorePage>
       // Apply sorting
       switch (_sortBy) {
         case 'favorites':
-          filtered.sort((a, b) => b.likes.compareTo(a.likes));
           break;
         case 'hours':
           filtered.sort((a, b) => b.time.compareTo(a.time));
@@ -196,18 +167,10 @@ class _ExplorePageState extends State<ExplorePage>
     await _loadAllProjects();
   }
 
-  Future<void> _refreshLikedProjects() async {
-    await _loadLikedProjects();
-  }
-
   Future<void> _navigateToProject(Project project) async {
     await NavigationService.openProject(project, context);
     if (!mounted) return;
-    if (_tabController.index == 0) {
-      await _refreshAllProjects();
-    } else {
-      await _refreshLikedProjects();
-    }
+    await _refreshAllProjects();
   }
 
   @override
@@ -244,7 +207,6 @@ class _ExplorePageState extends State<ExplorePage>
             controller: _tabController,
             tabs: const [
               Tab(icon: Icon(Symbols.public), text: 'All Projects'),
-              Tab(icon: Icon(Symbols.favorite), text: 'Liked'),
             ],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
@@ -255,7 +217,6 @@ class _ExplorePageState extends State<ExplorePage>
           controller: _tabController,
           children: [
             _buildAllProjectsTab(colorScheme, textTheme),
-            _buildLikedProjectsTab(colorScheme, textTheme),
           ],
         ),
       ),
@@ -412,47 +373,6 @@ class _ExplorePageState extends State<ExplorePage>
     );
   }
 
-  Widget _buildLikedProjectsTab(ColorScheme colorScheme, TextTheme textTheme) {
-    return RefreshIndicator(
-      onRefresh: _refreshLikedProjects,
-      child: _likedProjects.isEmpty && _isLoadingLikedProjects
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading liked projects...',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _likedProjects.isEmpty
-          ? _buildEmptyState(
-              icon: Symbols.favorite_border,
-              title: 'No Liked Projects',
-              subtitle: 'Projects you like will appear here.',
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            )
-          : ListView.builder(
-              padding: Responsive.pagePadding(context),
-              itemCount: _likedProjects.length,
-              itemBuilder: (context, index) {
-                return _buildProjectCard(
-                  _likedProjects[index],
-                  colorScheme,
-                  textTheme,
-                );
-              },
-            ),
-    );
-  }
-
   Widget _buildEmptyState({
     required IconData icon,
     required String title,
@@ -577,13 +497,6 @@ class _ExplorePageState extends State<ExplorePage>
               const SizedBox(height: 16),
               Row(
                 children: [
-                  _buildInfoChip(
-                    icon: Symbols.favorite,
-                    label: '${project.likes}',
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  ),
-                  const SizedBox(width: 8),
                   _buildInfoChip(
                     icon: Symbols.schedule,
                     label: project.time > 0

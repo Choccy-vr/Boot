@@ -998,7 +998,6 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         description: description,
         imageURL: '',
         githubRepo: repoUrl,
-        likes: 0,
         lastModified: DateTime.now(),
         awaitingReview: false,
         level: _selectedOSType,
