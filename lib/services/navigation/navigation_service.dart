@@ -12,6 +12,7 @@ enum AppDestination {
   explore,
   leaderboard,
   challenges,
+  shop,
   profile,
   login,
   signup,
@@ -69,6 +70,9 @@ class NavigationService {
         break;
       case AppDestination.challenges:
         navigator.pushNamed('/challenges');
+        break;
+      case AppDestination.shop:
+        navigator.pushNamed('/shop');
         break;
       case AppDestination.profile:
         final user = UserService.currentUser;

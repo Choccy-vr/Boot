@@ -322,6 +322,34 @@ class _AdminPageState extends State<AdminPage> {
               ],
             ),
           ),
+          const SizedBox(width: 12),
+          // Edit button
+          IconButton(
+            onPressed: () => _showEditPrizeDialog(prize),
+            icon: Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+                side: BorderSide(color: colorScheme.outline),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Delete button
+          IconButton(
+            onPressed: () => _showDeletePrizeDialog(prize),
+            icon: Icon(Symbols.delete, color: TerminalColors.red, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+                side: BorderSide(
+                  color: TerminalColors.red.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -519,7 +547,9 @@ class _AdminPageState extends State<AdminPage> {
     final descriptionController = TextEditingController();
     final costController = TextEditingController();
     final stockController = TextEditingController();
+    final multiplierController = TextEditingController(text: '0');
     String? imageUrl;
+    bool isUnlisted = false;
 
     showDialog(
       context: context,
@@ -529,6 +559,32 @@ class _AdminPageState extends State<AdminPage> {
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // Add listeners to update preview
+            void updatePreview() => setDialogState(() {});
+
+            titleController.addListener(updatePreview);
+            descriptionController.addListener(updatePreview);
+            costController.addListener(updatePreview);
+            stockController.addListener(updatePreview);
+            multiplierController.addListener(updatePreview);
+
+            // Create preview prize
+            final previewPrize = Prize(
+              id: 'preview',
+              createdAt: DateTime.now(),
+              title: titleController.text.isEmpty
+                  ? 'Prize Title'
+                  : titleController.text,
+              description: descriptionController.text.isEmpty
+                  ? 'Prize description will appear here...'
+                  : descriptionController.text,
+              picture: imageUrl,
+              cost: int.tryParse(costController.text) ?? 0,
+              stock: int.tryParse(stockController.text) ?? 0,
+              unlisted: isUnlisted,
+              multiplier: double.tryParse(multiplierController.text) ?? 1.0,
+            );
+
             return AlertDialog(
               backgroundColor: colorScheme.surface,
               shape: RoundedRectangleBorder(
@@ -549,80 +605,176 @@ class _AdminPageState extends State<AdminPage> {
               ),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: 500,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  width: 900,
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTextField(
-                        controller: titleController,
-                        label: 'Title',
-                        icon: Symbols.title,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: descriptionController,
-                        label: 'Description',
-                        icon: Symbols.description,
-                        maxLines: 3,
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: costController,
-                              label: 'Cost (coins)',
-                              icon: Symbols.paid,
-                              keyboardType: TextInputType.number,
+                      // Form Section
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(
+                              controller: titleController,
+                              label: 'Title',
+                              icon: Symbols.title,
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: stockController,
-                              label: 'Stock',
-                              icon: Symbols.inventory_2,
-                              keyboardType: TextInputType.number,
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: descriptionController,
+                              label: 'Description',
+                              icon: Symbols.description,
+                              maxLines: 3,
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          try {
-                            final url = await StorageService.uploadFileWithPicker(
-                              path:
-                                  'prizes/${DateTime.now().millisecondsSinceEpoch}',
-                            );
-                            if (url != 'User cancelled') {
-                              final publicUrl =
-                                  await StorageService.getPublicUrl(path: url);
-                              setDialogState(() => imageUrl = publicUrl);
-                            }
-                          } catch (e) {
-                            AppLogger.error('Failed to upload image', e);
-                          }
-                        },
-                        icon: Icon(Symbols.upload),
-                        label: Text(
-                          imageUrl == null
-                              ? 'Upload Image (Optional)'
-                              : 'Image Uploaded',
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: costController,
+                                    label: 'Cost (coins)',
+                                    icon: Symbols.paid,
+                                    keyboardType: TextInputType.number,
+                                    colorScheme: colorScheme,
+                                    textTheme: textTheme,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: stockController,
+                                    label: 'Stock',
+                                    icon: Symbols.inventory_2,
+                                    keyboardType: TextInputType.number,
+                                    colorScheme: colorScheme,
+                                    textTheme: textTheme,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: multiplierController,
+                              label: 'Coin Multiplier',
+                              icon: Symbols.percent,
+                              keyboardType: TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final url =
+                                      await StorageService.uploadFileWithPicker(
+                                        path:
+                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                      );
+                                  if (url != 'User cancelled') {
+                                    final publicUrl =
+                                        await StorageService.getPublicUrl(
+                                          path: url,
+                                        );
+                                    setDialogState(() => imageUrl = publicUrl);
+                                  }
+                                } catch (e) {
+                                  AppLogger.error('Failed to upload image', e);
+                                }
+                              },
+                              icon: Icon(Symbols.upload),
+                              label: Text(
+                                imageUrl == null
+                                    ? 'Upload Image'
+                                    : 'Image Uploaded',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: imageUrl == null
+                                    ? colorScheme.primary
+                                    : TerminalColors.green,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Unlisted toggle
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerLowest,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: colorScheme.outline),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Symbols.visibility_off,
+                                    size: 20,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Unlisted',
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.onSurface,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Hide from shop',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: isUnlisted,
+                                    onChanged: (value) {
+                                      setDialogState(() => isUnlisted = value);
+                                    },
+                                    activeColor: colorScheme.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: imageUrl == null
-                              ? colorScheme.primary
-                              : TerminalColors.green,
+                      ),
+                      const SizedBox(width: 24),
+                      // Preview Section
+                      SizedBox(
+                        width: 280,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Preview',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              height: 400,
+                              child: _buildShopPrizeCard(
+                                previewPrize,
+                                colorScheme,
+                                textTheme,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -639,9 +791,10 @@ class _AdminPageState extends State<AdminPage> {
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
                         costController.text.isEmpty ||
-                        stockController.text.isEmpty) {
+                        stockController.text.isEmpty ||
+                        imageUrl == null) {
                       GlobalNotificationService.instance.showError(
-                        'Please fill all required fields',
+                        'Please fill all required fields and upload an image',
                       );
                       return;
                     }
@@ -655,6 +808,8 @@ class _AdminPageState extends State<AdminPage> {
                           'cost': int.parse(costController.text),
                           'stock': int.parse(stockController.text),
                           'picture': imageUrl,
+                          'unlisted': isUnlisted,
+                          'multiplier': double.parse(multiplierController.text),
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
@@ -674,6 +829,434 @@ class _AdminPageState extends State<AdminPage> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showEditPrizeDialog(Prize prize) {
+    final titleController = TextEditingController(text: prize.title);
+    final descriptionController = TextEditingController(
+      text: prize.description,
+    );
+    final costController = TextEditingController(text: prize.cost.toString());
+    final stockController = TextEditingController(text: prize.stock.toString());
+    final multiplierController = TextEditingController(
+      text: prize.multiplier.toString(),
+    );
+    String? imageUrl = prize.picture;
+    bool isUnlisted = prize.unlisted;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Add listeners to update preview
+            void updatePreview() => setDialogState(() {});
+
+            titleController.addListener(updatePreview);
+            descriptionController.addListener(updatePreview);
+            costController.addListener(updatePreview);
+            stockController.addListener(updatePreview);
+            multiplierController.addListener(updatePreview);
+
+            // Create preview prize
+            final previewPrize = Prize(
+              id: 'preview',
+              createdAt: DateTime.now(),
+              title: titleController.text.isEmpty
+                  ? 'Prize Title'
+                  : titleController.text,
+              description: descriptionController.text.isEmpty
+                  ? 'Prize description will appear here...'
+                  : descriptionController.text,
+              picture: imageUrl,
+              cost: int.tryParse(costController.text) ?? 0,
+              stock: int.tryParse(stockController.text) ?? 0,
+              unlisted: isUnlisted,
+              multiplier: double.tryParse(multiplierController.text) ?? 1.0,
+            );
+
+            return AlertDialog(
+              backgroundColor: colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colorScheme.outline),
+              ),
+              title: Row(
+                children: [
+                  Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Edit Prize',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 900,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Form Section
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(
+                              controller: titleController,
+                              label: 'Title',
+                              icon: Symbols.title,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: descriptionController,
+                              label: 'Description',
+                              icon: Symbols.description,
+                              maxLines: 3,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: costController,
+                                    label: 'Cost (coins)',
+                                    icon: Symbols.paid,
+                                    keyboardType: TextInputType.number,
+                                    colorScheme: colorScheme,
+                                    textTheme: textTheme,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: stockController,
+                                    label: 'Stock',
+                                    icon: Symbols.inventory_2,
+                                    keyboardType: TextInputType.number,
+                                    colorScheme: colorScheme,
+                                    textTheme: textTheme,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: multiplierController,
+                              label: 'Coin Multiplier',
+                              icon: Symbols.percent,
+                              keyboardType: TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final url =
+                                      await StorageService.uploadFileWithPicker(
+                                        path:
+                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                      );
+                                  if (url != 'User cancelled') {
+                                    final publicUrl =
+                                        await StorageService.getPublicUrl(
+                                          path: url,
+                                        );
+                                    setDialogState(() => imageUrl = publicUrl);
+                                  }
+                                } catch (e) {
+                                  AppLogger.error('Failed to upload image', e);
+                                }
+                              },
+                              icon: Icon(Symbols.upload),
+                              label: Text(
+                                imageUrl == null
+                                    ? 'Upload Image'
+                                    : 'Change Image',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: imageUrl == null
+                                    ? colorScheme.primary
+                                    : TerminalColors.green,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Unlisted toggle
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerLowest,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: colorScheme.outline),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Symbols.visibility_off,
+                                    size: 20,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Unlisted',
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.onSurface,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Hide from shop (admin only)',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: isUnlisted,
+                                    onChanged: (value) {
+                                      setDialogState(() => isUnlisted = value);
+                                    },
+                                    activeColor: colorScheme.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Preview Section
+                      SizedBox(
+                        width: 280,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Preview',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              height: 400,
+                              child: _buildShopPrizeCard(
+                                previewPrize,
+                                colorScheme,
+                                textTheme,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.isEmpty ||
+                        descriptionController.text.isEmpty ||
+                        costController.text.isEmpty ||
+                        stockController.text.isEmpty ||
+                        imageUrl == null) {
+                      GlobalNotificationService.instance.showError(
+                        'Please fill all required fields and upload an image',
+                      );
+                      return;
+                    }
+
+                    try {
+                      await SupabaseDB.upsertData(
+                        table: 'prizes',
+                        data: {
+                          'id': prize.id,
+                          'title': titleController.text,
+                          'description': descriptionController.text,
+                          'cost': int.parse(costController.text),
+                          'stock': int.parse(stockController.text),
+                          'picture': imageUrl,
+                          'unlisted': isUnlisted,
+                          'multiplier': double.parse(multiplierController.text),
+                        },
+                      );
+                      GlobalNotificationService.instance.showSuccess(
+                        'Prize updated successfully!',
+                      );
+                      Navigator.pop(context);
+                      _loadData();
+                    } catch (e) {
+                      AppLogger.error('Failed to update prize', e);
+                      GlobalNotificationService.instance.showError(
+                        'Failed to update prize',
+                      );
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showDeletePrizeDialog(Prize prize) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: TerminalColors.red.withValues(alpha: 0.5)),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.warning, color: TerminalColors.red, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Delete Prize',
+                style: textTheme.titleLarge?.copyWith(
+                  color: TerminalColors.red,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete this prize?',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: colorScheme.outline),
+                ),
+                child: Row(
+                  children: [
+                    if (prize.picture != null && prize.picture!.isNotEmpty)
+                      Container(
+                        width: 48,
+                        height: 48,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: colorScheme.outline),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            prize.picture!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Icon(Symbols.image, color: colorScheme.outline),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            prize.title,
+                            style: textTheme.titleSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${prize.cost} coins • ${prize.stock} in stock',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'This action cannot be undone.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: TerminalColors.red.withValues(alpha: 0.8),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await SupabaseDB.deleteData(table: 'prizes', column: 'id', value: prize.id);
+                  GlobalNotificationService.instance.showSuccess(
+                    'Prize deleted successfully!',
+                  );
+                  Navigator.pop(context);
+                  _loadData();
+                } catch (e) {
+                  AppLogger.error('Failed to delete prize', e);
+                  GlobalNotificationService.instance.showError(
+                    'Failed to delete prize',
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TerminalColors.red,
+                foregroundColor: TerminalColors.black,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
         );
       },
     );
@@ -1123,6 +1706,221 @@ class _AdminPageState extends State<AdminPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildShopPrizeCard(
+    Prize prize,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final bool isOutOfStock = prize.stock <= 0;
+    final bool isLowStock = prize.stock > 0 && prize.stock <= 5;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image
+          Expanded(
+            flex: 3,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(11),
+                  topRight: Radius.circular(11),
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // Prize image
+                  if (prize.picture != null && prize.picture!.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(11),
+                        topRight: Radius.circular(11),
+                      ),
+                      child: Image.network(
+                        prize.picture!,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Icon(
+                            Symbols.redeem,
+                            size: 64,
+                            color: colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Center(
+                      child: Icon(
+                        Symbols.redeem,
+                        size: 64,
+                        color: colorScheme.outline,
+                      ),
+                    ),
+
+                  // Stock badge
+                  if (isOutOfStock || isLowStock)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isOutOfStock
+                              ? TerminalColors.red.withValues(alpha: 0.9)
+                              : TerminalColors.yellow.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isOutOfStock
+                                ? TerminalColors.red
+                                : TerminalColors.yellow,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: TerminalColors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Details
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    prize.title,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Description
+                  Expanded(
+                    child: Text(
+                      prize.description,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Price and stock info
+                  Row(
+                    children: [
+                      // Price
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TerminalColors.yellow.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: TerminalColors.yellow.withValues(
+                                alpha: 0.3,
+                              ),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Symbols.toll,
+                                size: 18,
+                                color: TerminalColors.yellow,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${prize.cost}',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: TerminalColors.yellow,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Stock count
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: colorScheme.outline,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Symbols.inventory_2,
+                              size: 16,
+                              color: colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${prize.stock}',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.secondary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

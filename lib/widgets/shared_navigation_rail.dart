@@ -210,12 +210,18 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.question_mark,
-                title: '???',
+                icon: Symbols.storefront,
+                title: 'Shop',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
-                isDisabled: true,
-                onTap: () {},
+                onTap: () {
+                  NavigationService.navigateTo(
+                    context: context,
+                    destination: AppDestination.shop,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                  );
+                },
               ),
               if (user?.role == UserRole.reviewer ||
                   user?.role == UserRole.admin ||
