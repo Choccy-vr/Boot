@@ -1,13 +1,11 @@
 import 'package:boot_app/services/slack/slack_manager.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '/services/supabase/auth/Auth.dart';
+import '../../auth/Auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import '/services/users/User.dart';
 
 class SignupService {
-  
-
   static SignUpUser signUpUser = SignUpUser(
     email: '',
     password: '',
@@ -27,9 +25,10 @@ class SignupService {
   static Future<void> createProfile(SignUpUser user) async {
     try {
       final authUser = Supabase.instance.client.auth.currentUser;
-      final slackUserId = authUser?.userMetadata?['provider_id']?.toString() ?? 
-                        authUser?.userMetadata?['sub']?.toString() ?? 
-                        '';
+      final slackUserId =
+          authUser?.userMetadata?['provider_id']?.toString() ??
+          authUser?.userMetadata?['sub']?.toString() ??
+          '';
       await SupabaseDB.updateData(
         table: 'users',
         column: 'id',
@@ -42,7 +41,11 @@ class SignupService {
         },
       );
       await UserService.setCurrentUser(UserService.currentUser?.id ?? '');
-      await SlackManager.sendMessage(destination: UserService.currentUser?.slackUserId ?? '', message: "Hey ${UserService.currentUser?.username}, welcome to Boot! :roblox-wave:\n\nYS: Your own OS\nWS: Hardware to run it\n\nYou can get started by creating your first project if you haven't already.\n\nHere are some fun things you can do:  \n1. Explore other OSes in the explore page.\n2. See who is ranking the best on the leaderboards\n3. Check out some challenges");
+      await SlackManager.sendMessage(
+        destination: UserService.currentUser?.slackUserId ?? '',
+        message:
+            "Hey ${UserService.currentUser?.username}, welcome to Boot! :roblox-wave:\n\nYS: Your own OS\nWS: Hardware to run it\n\nYou can get started by creating your first project if you haven't already.\n\nHere are some fun things you can do:  \n1. Explore other OSes in the explore page.\n2. See who is ranking the best on the leaderboards\n3. Check out some challenges",
+      );
     } catch (e) {
       throw Exception('Profile update failed: ${e.toString()}');
     }

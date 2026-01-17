@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '/widgets/signup_step_indicator.dart';
-import '/services/supabase/auth/Auth.dart';
+import '../../../services/auth/Auth.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 
@@ -97,7 +97,10 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(_isSlackOAuthUser ? '✅' : '🎉', style: TextStyle(fontSize: 24)),
+              Text(
+                _isSlackOAuthUser ? '✅' : '🎉',
+                style: TextStyle(fontSize: 24),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -197,11 +200,7 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
             color: colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: colorScheme.onPrimaryContainer,
-            size: 20,
-          ),
+          child: Icon(icon, color: colorScheme.onPrimaryContainer, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -228,7 +227,10 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
     );
   }
 
-  Widget _buildAlreadyConnectedInfo(ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildAlreadyConnectedInfo(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -244,11 +246,7 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
               color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.check_circle,
-              size: 48,
-              color: Colors.green,
-            ),
+            child: Icon(Icons.check_circle, size: 48, color: Colors.green),
           ),
           const SizedBox(height: 20),
           Text(
@@ -302,11 +300,7 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.verified,
-                  color: Colors.green,
-                  size: 24,
-                ),
+                Icon(Icons.verified, color: Colors.green, size: 24),
               ],
             ),
           ),
@@ -377,7 +371,9 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -397,7 +393,10 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
                         'assets/images/slack_logo.svg',
                         width: 24,
                         height: 24,
-                        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -446,15 +445,15 @@ class _SignUpSlackPageState extends State<SignUpSlackPage> {
 
     try {
       // This will redirect to Slack OAuth
-      // After successful auth, the user will be redirected back and 
+      // After successful auth, the user will be redirected back and
       // the app will detect they have completed setup and go to dashboard
       await Authentication.signInWithSlack();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect Slack: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to connect Slack: $e')));
       }
     }
   }

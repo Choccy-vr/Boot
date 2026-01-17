@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '/services/supabase/auth/Auth.dart';
+import '../services/auth/Auth.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/services/users/Boot_User.dart';
@@ -47,10 +47,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
       body: Stack(
         children: [
           // Main content with fixed left padding for collapsed rail
-          Positioned.fill(
-            left: collapsedRailWidth,
-            child: widget.child,
-          ),
+          Positioned.fill(left: collapsedRailWidth, child: widget.child),
           // Navigation rail (overlays when expanded)
           Positioned(
             left: 0,
@@ -209,20 +206,28 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   );
                 },
               ),
-              _buildRailItem(
-                icon: Symbols.storefront,
-                title: 'Shop',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-                onTap: () {
-                  NavigationService.navigateTo(
-                    context: context,
-                    destination: AppDestination.shop,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  );
-                },
-              ),
+              (user?.role == UserRole.admin || user?.role == UserRole.owner)
+                  ? _buildRailItem(
+                      icon: Symbols.storefront,
+                      title: 'Shop',
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      onTap: () {
+                        NavigationService.navigateTo(
+                          context: context,
+                          destination: AppDestination.shop,
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        );
+                      },
+                    )
+                  : _buildRailItem(
+                      icon: Symbols.storefront,
+                      title: '???',
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      onTap: () {},
+                    ),
               if (user?.role == UserRole.reviewer ||
                   user?.role == UserRole.admin ||
                   user?.role == UserRole.owner)
@@ -543,11 +548,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                     textTheme: textTheme,
                   );
                 },
-                icon: Icon(
-                  Symbols.logout,
-                  size: 16,
-                  color: TerminalColors.red,
-                ),
+                icon: Icon(Symbols.logout, size: 16, color: TerminalColors.red),
                 label: Text(
                   'Logout',
                   style: textTheme.bodySmall?.copyWith(

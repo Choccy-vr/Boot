@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '/services/supabase/auth/Auth.dart';
+import '../../services/auth/Auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -34,7 +33,9 @@ class _LoginPageState extends State<LoginPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -59,14 +60,16 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 48),
-                  // Slack button
+                  // Hack Club button
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSlackLogin,
+                      onPressed: _isLoading ? null : _handleHackClubLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A154B),
+                        backgroundColor: const Color(
+                          0xFFEC3750,
+                        ), // Hack Club red
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -78,21 +81,22 @@ class _LoginPageState extends State<LoginPage> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.asset(
-                                  'assets/images/slack_logo.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                                Icon(
+                                  Icons.flag_rounded,
+                                  size: 22,
+                                  color: Colors.white,
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Continue with Slack',
+                                  'Continue with Hack Club',
                                   style: textTheme.labelLarge?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
@@ -111,17 +115,20 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _handleSlackLogin() async {
+  Future<void> _handleHackClubLogin() async {
     setState(() => _isLoading = true);
 
     try {
-      await Authentication.signInWithSlack();
+      final user = await Authentication.signInWithHackClub();
+      if (user != null && mounted) {
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Slack login failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Hack Club login failed: $e')));
     }
   }
 }

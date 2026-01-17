@@ -6,7 +6,7 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../../../services/Storage/storage.dart';
 import 'package:boot_app/services/users/User.dart';
 import '/widgets/signup_step_indicator.dart';
-import '/services/supabase/auth/Auth.dart';
+import '../../../services/auth/Auth.dart';
 
 class SignUpProfilePage extends StatefulWidget {
   const SignUpProfilePage({super.key});
@@ -22,7 +22,8 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
   final FocusNode _bioFocusNode = FocusNode();
   bool _isLoading = false;
   bool _isUploading = false;
-  bool _imageLoadError = true; // Start with error state to show icon placeholder
+  bool _imageLoadError =
+      true; // Start with error state to show icon placeholder
   String? _uploadedProfilePicUrl; // Only set after successful upload
 
   // Detect if user signed up via OAuth (Slack) - they won't have gone through email/password steps
@@ -173,10 +174,7 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: colorScheme.outline,
-                    width: 3,
-                  ),
+                  border: Border.all(color: colorScheme.outline, width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: colorScheme.shadow.withValues(alpha: 0.1),
@@ -377,7 +375,10 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: colorScheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -430,7 +431,10 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
                     'assets/images/slack_logo.svg',
                     width: 20,
                     height: 20,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -616,9 +620,9 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
       await Authentication.signInWithSlack();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect Slack: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to connect Slack: $e')));
       }
     }
   }
@@ -655,7 +659,8 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
 
       SignupService.signUpUser.profilePictureUrl = supabasePublicUrl;
       setState(() {
-        _uploadedProfilePicUrl = '$supabasePublicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+        _uploadedProfilePicUrl =
+            '$supabasePublicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
         _imageLoadError = false;
       });
 
@@ -683,9 +688,9 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
     final bio = _bioController.text.trim();
 
     if (username.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter your username')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Please enter your username')));
       return;
     }
 
@@ -697,9 +702,9 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
     }
 
     if (bio.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter your bio')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Please enter your bio')));
       return;
     }
 
@@ -726,9 +731,9 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign up failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

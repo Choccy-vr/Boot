@@ -24,9 +24,9 @@ import 'pages/Admin/Admin_Page.dart';
 import 'pages/Shop/Shop_Page.dart';
 import 'services/Projects/Project.dart';
 import 'services/Projects/project_service.dart';
-import 'services/supabase/auth/Auth.dart';
-import 'services/supabase/auth/supabase_auth.dart';
-import 'services/supabase/auth/auth_listener.dart';
+import 'services/auth/Auth.dart';
+import 'services/auth/supabase_auth.dart';
+import 'services/auth/auth_listener.dart';
 import 'services/misc/logger.dart';
 import 'services/notifications/notifications.dart';
 import 'services/users/Boot_User.dart';
@@ -36,7 +36,7 @@ import 'theme/terminal_theme.dart';
 const supabaseUrl = 'https://zbtphhtuaovleoxkoemt.supabase.co';
 const supabaseKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpidHBoaHR1YW92bGVveGtvZW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NjU4MDEsImV4cCI6MjA3MTA0MTgwMX0.qogFGForru9M9rutCcMQSNJuGpP46LpLdWo03lvYqMQ';
-
+const hcClientSecret = String.fromEnvironment('CLIENT_SECRET');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -46,14 +46,21 @@ void main() async {
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   AuthListener.startListening();
   await SupabaseAuth.redirectCheck();
+
+  await Authentication.initHackClubOidc(
+    clientId: 'f95f9b01574322ba6363154b7ce1ace8',
+    clientSecret: hcClientSecret,
+    redirectUri: Uri.parse('${Uri.base.origin}/redirect.html'),
+  );
+
   final sessionRestored = await Authentication.restoreStoredSession();
   await StorageService.initialize();
-  
+
   String initialRoute = '/login';
   if (sessionRestored) {
     initialRoute = '/dashboard';
   }
-  
+
   runApp(MainApp(initialRoute: initialRoute));
 }
 
@@ -254,7 +261,7 @@ class ProjectLoaderPage extends StatelessWidget {
     final args = ModalRoute.of(context)?.settings.arguments;
     Project? project;
     int? challengeId;
-    
+
     // Handle different argument types
     try {
       if (args != null) {
