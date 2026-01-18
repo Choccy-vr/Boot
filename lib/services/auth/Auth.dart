@@ -189,13 +189,11 @@ class Authentication {
         value: jsonEncode(supabaseUser.toJson()),
       );
 
-      // Load the user record (edge function already created/updated it)
-      final user = await UserService.getUserById(supabaseUser.id);
-      if (user != null) {
-        UserService.currentUser = user;
-      } else {
-        throw AuthFailure('User record not found after Hack Club login');
-      }
+      // Set current user
+      await UserService.setCurrentUser(
+        supabaseUser.id,
+        email: supabaseUser.email,
+      );
 
       AppLogger.info('Successfully logged in with Hack Club');
     }

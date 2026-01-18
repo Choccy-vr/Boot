@@ -18,6 +18,10 @@ class BootUser {
   int bootCoins;
   //Slack
   String slackUserId;
+  //Hack Club
+  String? hcUserId;
+  bool? yswsEligible;
+  bool? verificationStatus;
   //Role
   UserRole role;
   //constructor
@@ -34,6 +38,9 @@ class BootUser {
     this.votes = 0,
     required this.bootCoins,
     this.slackUserId = '',
+    this.hcUserId,
+    this.yswsEligible,
+    this.verificationStatus,
     this.role = UserRole.normal,
   });
 
@@ -57,6 +64,9 @@ class BootUser {
       votes: json['total_votes'] ?? 0,
       bootCoins: json['boot_coins'] ?? 0,
       slackUserId: json['slack_user_id'] ?? '',
+      hcUserId: json['hc_user_id'],
+      yswsEligible: json['ysws_eligible'],
+      verificationStatus: json['verification_status'],
       role: UserRole.values.firstWhere(
         (r) => r.name == (json['role'] ?? 'normal'),
         orElse: () => UserRole.normal,
@@ -78,6 +88,9 @@ class BootUser {
       'total_votes': votes,
       'boot_coins': bootCoins,
       'slack_user_id': slackUserId,
+      'hc_user_id': hcUserId,
+      'ysws_eligible': yswsEligible,
+      'verification_status': verificationStatus,
     };
   }
 }

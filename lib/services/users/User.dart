@@ -12,7 +12,14 @@ class UserService {
   static Future<BootUser?> getUserById(String id) async {
     try {
       final response = await SupabaseDB.getRowData(table: 'users', rowID: id);
-      return BootUser.fromJson(response);
+      AppLogger.info(
+        '[getUserById] Raw DB response slack_user_id: "${response['slack_user_id']}"',
+      );
+      final user = BootUser.fromJson(response);
+      AppLogger.info(
+        '[getUserById] Parsed user slack_user_id: "${user.slackUserId}"',
+      );
+      return user;
     } catch (e, stack) {
       AppLogger.error('Error getting user by ID $id', e, stack);
       return null;
@@ -26,8 +33,18 @@ class UserService {
           .select()
           .eq('email', email)
           .maybeSingle();
-      if (response == null) return null;
-      return BootUser.fromJson(response);
+      if (response == null) {
+        AppLogger.info('[getUserByEmail] No user found for email: $email');
+        return null;
+      }
+      AppLogger.info(
+        '[getUserById] Raw DB response slack_user_id: "${response['slack_user_id']}"',
+      );
+      final user = BootUser.fromJson(response);
+      AppLogger.info(
+        '[getUserById] Parsed user slack_user_id: "${user.slackUserId}"',
+      );
+      return user;
     } catch (e, stack) {
       AppLogger.error('Error getting user by email $email', e, stack);
       return null;
@@ -35,14 +52,18 @@ class UserService {
   }
 
   static Future<void> setCurrentUser(String id, {String? email}) async {
+    AppLogger.info('[setCurrentUser] Called with ID: $id, email: $email');
     // First try by ID
     var user = await getUserById(id);
-    
+    AppLogger.info(
+      '[setCurrentUser] After getUserById - slack_user_id: "${user?.slackUserId}"',
+    );
+
     // If not found by ID but we have email, try by email
     if (user == null && email != null && email.isNotEmpty) {
       AppLogger.info('User not found by ID, trying by email: $email');
       user = await getUserByEmail(email);
-      
+
       // If found by email, update the ID to match the auth user
       if (user != null && user.id != id) {
         AppLogger.info('Updating user ID from ${user.id} to $id');
@@ -58,18 +79,27 @@ class UserService {
         }
       }
     }
-    
+
     if (user == null) {
-      throw Exception(
-        'User initialization failed: Could not retrieve user',
-      );
+      throw Exception('User initialization failed: Could not retrieve user');
     }
 
+    AppLogger.info(
+      '[setCurrentUser] Setting currentUser - slack_user_id: "${user.slackUserId}"',
+    );
     currentUser = user;
+    AppLogger.info(
+      '[setCurrentUser] currentUser set - slack_user_id: "${currentUser?.slackUserId}"',
+    );
   }
 
   static Future<void> updateUser() async {
-    SupabaseDB.upsertData(table: 'users', data: currentUser?.toJson());
+    final userData = currentUser?.toJson();
+    AppLogger.info(
+      '[updateUser] Called with slack_user_id: "${currentUser?.slackUserId}"',
+    );
+    AppLogger.info('[updateUser] toJson data: ${userData}');
+    SupabaseDB.upsertData(table: 'users', data: userData);
   }
 
   static Future<void> updateCurrentUser() async {
@@ -88,14 +118,33 @@ class UserService {
           .select()
           .eq('email', email)
           .maybeSingle();
-      
+
       if (existingByEmail != null) {
-        // User exists with this email - update the ID and slack_user_id to match auth user
+        AppLogger.info(
+          '[initializeUser] User exists with email, current slack_user_id in DB: "${existingByEmail['slack_user_id']}"',
+        );
+        AppLogger.info(
+          '[initializeUser] slackUserId parameter: "$slackUserId"',
+        );
+        // User exists with this email - update the ID to match auth user
+        final updateData = {'id': id};
+        // Only update slack_user_id if a value is provided (don't overwrite with empty string)
+        if (slackUserId.isNotEmpty) {
+          updateData['slack_user_id'] = slackUserId;
+          AppLogger.info(
+            '[initializeUser] Will update slack_user_id to: "$slackUserId"',
+          );
+        } else {
+          AppLogger.info(
+            '[initializeUser] NOT updating slack_user_id (parameter is empty)',
+          );
+        }
+        AppLogger.info('[initializeUser] Update data: $updateData');
         await SupabaseDB.supabase
             .from('users')
-            .update({'id': id, 'slack_user_id': slackUserId})
+            .update(updateData)
             .eq('email', email);
-        
+
         await Future.delayed(Duration(milliseconds: 100));
         final user = await getUserById(id);
         if (user != null) {
@@ -135,7 +184,13 @@ class UserService {
       );
     }
 
+    AppLogger.info(
+      '[setCurrentUser] Setting currentUser - slack_user_id: "${user.slackUserId}"',
+    );
     currentUser = user;
+    AppLogger.info(
+      '[setCurrentUser] currentUser set - slack_user_id: "${currentUser?.slackUserId}"',
+    );
   }
 
   static Future<String> uploadProfilePic(BuildContext context) async {

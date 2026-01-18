@@ -24,11 +24,6 @@ class SignupService {
 
   static Future<void> createProfile(SignUpUser user) async {
     try {
-      final authUser = Supabase.instance.client.auth.currentUser;
-      final slackUserId =
-          authUser?.userMetadata?['provider_id']?.toString() ??
-          authUser?.userMetadata?['sub']?.toString() ??
-          '';
       await SupabaseDB.updateData(
         table: 'users',
         column: 'id',
@@ -37,7 +32,6 @@ class SignupService {
           'username': user.username,
           'bio': user.bio,
           'profile_picture_url': user.profilePictureUrl,
-          'slack_user_id': slackUserId,
         },
       );
       await UserService.setCurrentUser(UserService.currentUser?.id ?? '');
