@@ -1,70 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:oidc/oidc.dart';
-import 'package:oidc_default_store/oidc_default_store.dart';
 import 'supabase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/services/misc/logger.dart';
 import '/services/users/User.dart';
 import '/main.dart' show supabaseUrl, supabaseKey;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
 
 class Authentication {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  static OidcUserManager? _hackClubManager;
+  // Hack Club OAuth configuration
+  static String? _hackClubClientId;
+  static String? _hackClubRedirectUri;
+  static String? _hackClubState;
 
-  static Future<void> initHackClubOidc({
+  /// Initialize Hack Club OAuth configuration
+  static void configureHackClubOAuth({
     required String clientId,
-    required String clientSecret,
-    required Uri redirectUri,
-    Uri? postLogoutRedirectUri,
-    List<String> scopes = const [
-      'openid',
-      'profile',
-      'email',
-      'name',
-      'slack_id',
-      'verification_status',
-    ],
-  }) async {
-    _hackClubManager = OidcUserManager.lazy(
-      discoveryDocumentUri: Uri.parse(
-        'https://auth.hackclub.com/.well-known/openid-configuration',
-      ),
-      clientCredentials: OidcClientAuthentication.clientSecretPost(
-        clientId: clientId,
-        clientSecret: clientSecret,
-      ),
-      store: OidcDefaultStore(),
-      settings: OidcUserManagerSettings(
-        redirectUri: redirectUri,
-        postLogoutRedirectUri: postLogoutRedirectUri,
-        scope: scopes,
-
-        refreshBefore: (token) => null,
-      ),
-    );
-    await _hackClubManager!.init();
+    required String redirectUri,
+  }) {
+    _hackClubClientId = clientId;
+    _hackClubRedirectUri = redirectUri;
   }
-
-  /// Get the current Hack Club OIDC user
-  static OidcUser? get hackClubUser => _hackClubManager?.currentUser;
-
-  /// Stream of Hack Club user changes
-  static Stream<OidcUser?>? hackClubUserChanges() =>
-      _hackClubManager?.userChanges();
-
-  /// Get the current Hack Club access token
-  static String? get hackClubAccessToken =>
-      _hackClubManager?.currentUser?.token.accessToken;
-
-  /// Get the current Hack Club ID token
-  static String? get hackClubIdToken => _hackClubManager?.currentUser?.idToken;
-
-  /// Get claims from the Hack Club ID token
-  static Map<String, dynamic>? get hackClubClaims =>
-      _hackClubManager?.currentUser?.aggregatedClaims;
 
   static Future<void> signUp(String email, String password) async {
     try {
@@ -121,81 +81,106 @@ class Authentication {
     }
   }
 
-  /// Sign in with Hack Club OIDC and exchange for Supabase session
-  /// Make sure to call initHackClubOidc() first
-  static Future<OidcUser?> signInWithHackClub({
-    List<String>? promptOverride,
-    Duration? maxAgeOverride,
-    Map<String, dynamic>? extraParameters,
-  }) async {
-    if (_hackClubManager == null) {
+  /// Sign in with Hack Club OAuth
+  /// Redirects to Hack Club authorization endpoint
+  static Future<void> signInWithHackClub() async {
+    if (_hackClubClientId == null || _hackClubRedirectUri == null) {
       throw AuthFailure(
-        'Hack Club OIDC not initialized. Call initHackClubOidc() first.',
+        'Hack Club OAuth not configured. Call configureHackClubOAuth() first.',
       );
     }
-    try {
-      final user = await _hackClubManager!.loginAuthorizationCodeFlow(
-        promptOverride: promptOverride,
-        maxAgeOverride: maxAgeOverride,
-        extraParameters: extraParameters,
-      );
 
-      if (user != null) {
-        // Exchange Hack Club token for Supabase session
-        await _exchangeHackClubTokenForSupabase(user);
+    try {
+      // Generate random state for CSRF protection
+      _hackClubState = _generateRandomString(32);
+      await _storage.write(key: 'hackclub_state', value: _hackClubState);
+
+      // Build authorization URL
+      final authUrl = Uri.parse('https://auth.hackclub.com/oauth/authorize')
+          .replace(
+            queryParameters: {
+              'client_id': _hackClubClientId!,
+              'redirect_uri': _hackClubRedirectUri!,
+              'response_type': 'code',
+              'scope': 'openid profile email slack_id verification_status',
+              'state': _hackClubState!,
+            },
+          );
+
+      AppLogger.info('Redirecting to Hack Club: ${authUrl.toString()}');
+
+      // Launch browser for OAuth flow
+      if (kIsWeb) {
+        // On web, redirect current window
+        await launchUrl(authUrl, webOnlyWindowName: '_self');
+      } else {
+        // On mobile/desktop, open external browser
+        await launchUrl(authUrl, mode: LaunchMode.externalApplication);
       }
-      return user;
     } catch (e, stack) {
-      AppLogger.error('Hack Club OIDC sign in failed', e, stack);
-      throw AuthFailure('Hack Club OIDC sign in failed: ${e.toString()}');
+      AppLogger.error('Hack Club OAuth redirect failed', e, stack);
+      throw AuthFailure('Hack Club OAuth redirect failed: ${e.toString()}');
     }
   }
 
-  /// Exchange Hack Club access token for a Supabase session
-  static Future<void> _exchangeHackClubTokenForSupabase(
-    OidcUser hackClubUser,
-  ) async {
-    final accessToken = hackClubUser.token.accessToken;
-    if (accessToken == null) {
-      throw AuthFailure('No Hack Club access token available');
-    }
+  /// Handle OAuth callback with authorization code
+  /// Call this when redirected back from Hack Club
+  static Future<void> handleHackClubCallback(Uri callbackUri) async {
+    try {
+      final code = callbackUri.queryParameters['code'];
+      final state = callbackUri.queryParameters['state'];
+      final error = callbackUri.queryParameters['error'];
 
+      if (error != null) {
+        throw AuthFailure('OAuth error: $error');
+      }
+
+      if (code == null) {
+        throw AuthFailure('No authorization code received');
+      }
+
+      // Verify state to prevent CSRF
+      final savedState = await _storage.read(key: 'hackclub_state');
+      if (state != savedState) {
+        throw AuthFailure('Invalid state parameter - possible CSRF attack');
+      }
+
+      await _storage.delete(key: 'hackclub_state');
+
+      // Exchange code for Supabase session via edge function
+      await _exchangeCodeForSession(code);
+    } catch (e, stack) {
+      AppLogger.error('Hack Club OAuth callback failed', e, stack);
+      throw AuthFailure('Hack Club OAuth callback failed: ${e.toString()}');
+    }
+  }
+
+  /// Exchange authorization code for Supabase session
+  static Future<void> _exchangeCodeForSession(String code) async {
     final response = await http.post(
-      Uri.parse('$supabaseUrl/functions/v1/hackclub-auth'),
+      Uri.parse('$supabaseUrl/functions/v1/hackclub-login'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $supabaseKey',
       },
-      body: jsonEncode({'access_token': accessToken}),
+      body: jsonEncode({'code': code, 'redirect_uri': _hackClubRedirectUri}),
     );
 
     if (response.statusCode != 200) {
-      AppLogger.error('Failed to exchange Hack Club token: ${response.body}');
-      throw AuthFailure(
-        'Failed to exchange Hack Club token for Supabase session',
-      );
+      AppLogger.error('Token exchange failed: ${response.body}');
+      throw AuthFailure('Failed to exchange code for session');
     }
 
     final data = jsonDecode(response.body);
-    final sessionData = data['session'];
+    final accessToken = data['access_token'];
+    final refreshToken = data['refresh_token'];
 
-    if (sessionData == null) {
-      throw AuthFailure('No session returned from token exchange');
+    if (accessToken == null || refreshToken == null) {
+      throw AuthFailure('Invalid session data from server');
     }
 
     // Set the Supabase session
-    final session = Session.fromJson(sessionData);
-    final refreshToken = session?.refreshToken;
-    if (refreshToken == null || refreshToken.isEmpty) {
-      throw AuthFailure('No refresh token in session');
-    }
     await SupabaseAuth.supabase.auth.setSession(refreshToken);
-
-    // Store session locally
-    await _storage.write(
-      key: 'supabase_session',
-      value: jsonEncode(session?.toJson()),
-    );
 
     final supabaseUser = SupabaseAuth.supabase.auth.currentUser;
     if (supabaseUser != null) {
@@ -204,30 +189,25 @@ class Authentication {
         value: jsonEncode(supabaseUser.toJson()),
       );
 
-      // Set current user from Supabase (now using proper UUID)
-      try {
-        await UserService.setCurrentUser(
-          supabaseUser.id,
-          email: supabaseUser.email,
-        );
-      } catch (e) {
-        // User will be created by the edge function, just fetch them
-        await Future.delayed(const Duration(milliseconds: 200));
-        await UserService.setCurrentUser(
-          supabaseUser.id,
-          email: supabaseUser.email,
-        );
-      }
-    }
+      // Set current user
+      await UserService.setCurrentUser(
+        supabaseUser.id,
+        email: supabaseUser.email,
+      );
 
-    AppLogger.info(
-      'Successfully exchanged Hack Club token for Supabase session',
-    );
+      AppLogger.info('Successfully logged in with Hack Club');
+    }
   }
 
-  /// Force re-authentication with Hack Club (for sensitive operations)
-  static Future<OidcUser?> reauthenticateWithHackClub() async {
-    return signInWithHackClub(promptOverride: ['login']);
+  /// Generate random string for state parameter
+  static String _generateRandomString(int length) {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    return List.generate(
+      length,
+      (index) => chars[(random + index) % chars.length],
+    ).join();
   }
 
   static Future<void> signOut() async {
@@ -235,27 +215,10 @@ class Authentication {
       await SupabaseAuth.signOut();
       await _storage.delete(key: 'supabase_session');
       await _storage.delete(key: 'supabase_user');
-      // Also sign out from Hack Club OIDC if initialized
-      await signOutHackClub();
+      await _storage.delete(key: 'hackclub_state');
     } catch (e, stack) {
       AppLogger.error('Sign out failed', e, stack);
       throw AuthFailure('Sign out failed: ${e.toString()}');
-    }
-  }
-
-  /// Sign out from Hack Club OIDC only
-  /// Use forgetOnly: true to just clear local state without notifying the provider
-  static Future<void> signOutHackClub({bool forgetOnly = false}) async {
-    if (_hackClubManager == null) return;
-    try {
-      if (forgetOnly) {
-        await _hackClubManager!.forgetUser();
-      } else {
-        await _hackClubManager!.logout();
-      }
-    } catch (e, stack) {
-      AppLogger.error('Hack Club OIDC sign out failed', e, stack);
-      // Don't rethrow - sign out should be best effort
     }
   }
 
@@ -281,27 +244,6 @@ class Authentication {
       isUtc: true,
     );
     return expiry.isAfter(DateTime.now().toUtc());
-  }
-
-  /// Check if logged in with Hack Club OIDC
-  static bool isHackClubLoggedIn() {
-    return _hackClubManager?.currentUser != null;
-  }
-
-  /// Check if logged in with either Supabase or Hack Club
-  static bool isAnyLoggedIn() {
-    return isLoggedIn() || isHackClubLoggedIn();
-  }
-
-  /// Refresh the Hack Club OIDC token manually
-  static Future<OidcUser?> refreshHackClubToken() async {
-    if (_hackClubManager == null) return null;
-    try {
-      return await _hackClubManager!.refreshToken();
-    } catch (e, stack) {
-      AppLogger.error('Hack Club token refresh failed', e, stack);
-      return null;
-    }
   }
 
   static Future<Session?> getSavedSession() async {

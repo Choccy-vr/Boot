@@ -119,8 +119,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await Authentication.signInWithHackClub();
-      if (user != null && mounted) {
+      await Authentication.signInWithHackClub();
+      if (mounted) {
         Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } catch (e) {

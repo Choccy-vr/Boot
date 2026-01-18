@@ -1,31 +1,49 @@
 <!-- 
-    This HTML page works as a redirect_uri, post_logout_redirect_uri, frontchannel_logout_uri 
-    but for frontchannel_logout_uri to work, it must be called like this:
-
-    /redirect.html?requestType=front-channel-logout
+    OAuth redirect handler for Hack Club authentication
 -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8">
-    <title>Flutter Oidc Redirect</title>
+    <title>Redirecting...</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
     <script type="text/javascript">
-        const stateNamespace = 'state';
-        const stateResponseNamespace = 'response.state';
-        const requestNamespace = 'request';
+        // Check if this is a Hack Club OAuth callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
 
-        const requestBroadcastChannel = 'oidc_flutter_web/request';
-        const redirectBroadcastChannel = 'oidc_flutter_web/redirect';
-
-
-        //if the OP isn't requesting logout, handle redirect.
-        if (!handleFrontChannelLogout()) {
-            handleRedirect();
+        if (code || error) {
+            // This is a Hack Club OAuth callback
+            // Store the full callback URL in sessionStorage for the main app to handle
+            sessionStorage.setItem('hackclub_callback', window.location.href);
+            
+            // Redirect to main app
+            window.location.href = '/';
+        } else {
+            // Not an OAuth callback, might be for OIDC package
+            // Keep the original OIDC redirect logic as fallback
+            handleOidcRedirect();
         }
 
-        function handleRedirect() {
+        function handleOidcRedirect() {
             // For supported browsers: https://caniuse.com/broadcastchannel
             var bc = new BroadcastChannel(redirectBroadcastChannel);
             bc.postMessage(window.location.toString());

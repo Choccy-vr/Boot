@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:html' as html show window;
 
 import 'pages/Home_Page.dart';
 import 'pages/Login/Login_Page.dart';
@@ -36,7 +37,6 @@ import 'theme/terminal_theme.dart';
 const supabaseUrl = 'https://zbtphhtuaovleoxkoemt.supabase.co';
 const supabaseKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpidHBoaHR1YW92bGVveGtvZW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NjU4MDEsImV4cCI6MjA3MTA0MTgwMX0.qogFGForru9M9rutCcMQSNJuGpP46LpLdWo03lvYqMQ';
-const hcClientSecret = String.fromEnvironment('CLIENT_SECRET');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -47,11 +47,25 @@ void main() async {
   AuthListener.startListening();
   await SupabaseAuth.redirectCheck();
 
-  await Authentication.initHackClubOidc(
+  // Configure Hack Club OAuth (no async init needed)
+  Authentication.configureHackClubOAuth(
     clientId: 'f95f9b01574322ba6363154b7ce1ace8',
-    clientSecret: hcClientSecret,
-    redirectUri: Uri.parse('${Uri.base.origin}/redirect.html'),
+    redirectUri: '${Uri.base.origin}/redirect.html',
   );
+
+  // Check for Hack Club OAuth callback (web only)
+  if (kIsWeb) {
+    try {
+      final callbackUrl = html.window.sessionStorage['hackclub_callback'];
+      if (callbackUrl != null && callbackUrl.isNotEmpty) {
+        html.window.sessionStorage.remove('hackclub_callback');
+        final callbackUri = Uri.parse(callbackUrl);
+        await Authentication.handleHackClubCallback(callbackUri);
+      }
+    } catch (e) {
+      AppLogger.error('Error handling Hack Club callback', e);
+    }
+  }
 
   final sessionRestored = await Authentication.restoreStoredSession();
   await StorageService.initialize();
