@@ -38,11 +38,7 @@ class ProjectDetailPage extends StatefulWidget {
   final Project project;
   final int? challengeId;
 
-  const ProjectDetailPage({
-    super.key,
-    required this.project,
-    this.challengeId,
-  });
+  const ProjectDetailPage({super.key, required this.project, this.challengeId});
 
   @override
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
@@ -182,9 +178,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Future<void> _loadShips() async {
     try {
-      final ships = await ShipService.getShipsByProject(
-        _project.id.toString(),
-      );
+      final ships = await ShipService.getShipsByProject(_project.id.toString());
       ships.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       if (!mounted) return;
       setState(() {
@@ -341,11 +335,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
 
       final timeDiff = updatedProject.time - _project.time;
-      
+
       if (mounted) {
         setState(() {
           _timeToAdd = timeDiff;
-          _timeToAddReadable = _formatReadableDuration((timeDiff * 3600).round());
+          _timeToAddReadable = _formatReadableDuration(
+            (timeDiff * 3600).round(),
+          );
           _isFetchingTime = false;
         });
       }
@@ -425,7 +421,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       );
       return;
     }
-    
+
     // Validate minimum 5 minutes of work
     final timeInMinutes = (_timeToAdd * 60).round();
     if (timeInMinutes < 5) {
@@ -657,13 +653,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'Not sure how to get started? We have a comprehensive guide to help you through the process.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -671,26 +660,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text('Close'),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to guide or open guide URL
-                        Navigator.of(context).pop();
-                        GlobalNotificationService.instance.showInfo(
-                          'Guide coming soon!',
-                        );
-                      },
-                      icon: Icon(Symbols.book, size: 20),
-                      label: Text('Go to Guide'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -719,12 +688,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: textTheme.bodyMedium,
-          ),
-        ),
+        Expanded(child: Text(text, style: textTheme.bodyMedium)),
       ],
     );
   }
@@ -799,7 +763,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               children: [
                 // Time tracking chip
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _project.timeTrackedShip <= 0
                         ? colorScheme.errorContainer.withValues(alpha: 0.3)
@@ -898,7 +865,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleShipProject() async {
     try {
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
-      
+
       // Validate that time has been tracked
       if (_project.timeTrackedShip <= 0) {
         if (!mounted) return;
@@ -907,7 +874,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         );
         return;
       }
-      
+
       final newShip = await ShipService.addShip(
         project: _project,
         time: _project.timeTrackedShip,
@@ -995,8 +962,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       },
     );
   }
-
-
 
   String _getMediaType(PlatformFile file) {
     final extension = file.extension?.toLowerCase() ?? '';
@@ -1511,12 +1476,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               hintText:
                   'Share your development progress, challenges, insights, and learnings...',
               helperText:
-                  _showDevlogDescriptionError &&
-                          _devlogDescriptionError != null
-                      ? null
-                      : 'Must be more than 150 characters',
-              errorText:
-                  _showDevlogDescriptionError ? _devlogDescriptionError : null,
+                  _showDevlogDescriptionError && _devlogDescriptionError != null
+                  ? null
+                  : 'Must be more than 150 characters',
+              errorText: _showDevlogDescriptionError
+                  ? _devlogDescriptionError
+                  : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
@@ -1643,13 +1608,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: _timeToAdd > 0
-                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                    : Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                    : Theme.of(
+                        context,
+                      ).colorScheme.errorContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _timeToAdd > 0
-                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
-                      : Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.5)
+                      : Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.5),
                 ),
               ),
               child: Row(
@@ -1683,7 +1656,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 onPressed: _closeDevlogEditor,
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
                 child: Text('Cancel'),
               ),
@@ -1702,7 +1677,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ),
                       )
                     : Icon(Symbols.save, size: 20),
-                label: Text(_isSubmittingDevlog ? 'Publishing...' : 'Publish Devlog'),
+                label: Text(
+                  _isSubmittingDevlog ? 'Publishing...' : 'Publish Devlog',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -2113,10 +2090,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 else
                                   CircleAvatar(
                                     radius: 16,
-                                    child: Icon(
-                                      Symbols.person,
-                                      size: 14,
-                                    ),
+                                    child: Icon(Symbols.person, size: 14),
                                   ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -2230,16 +2204,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     spacing: 8,
                     runSpacing: 8,
                     children: _project.tags
-                        .map((tag) => Chip(
-                          label: Text(tag),
-                          onDeleted: _isEditMode
-                              ? () {
-                                  setState(() {
-                                    _project.tags.remove(tag);
-                                  });
-                                }
-                              : null,
-                        ))
+                        .map(
+                          (tag) => Chip(
+                            label: Text(tag),
+                            onDeleted: _isEditMode
+                                ? () {
+                                    setState(() {
+                                      _project.tags.remove(tag);
+                                    });
+                                  }
+                                : null,
+                          ),
+                        )
                         .toList(),
                   ),
                 ),
@@ -2288,13 +2264,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue textEditingValue) {
                 if (textEditingValue.text.isEmpty) {
-                  return _popularTags.where((tag) => !_project.tags.contains(tag)).toList();
+                  return _popularTags
+                      .where((tag) => !_project.tags.contains(tag))
+                      .toList();
                 }
                 final input = textEditingValue.text.toLowerCase();
-                return _popularTags.where((tag) => 
-                  tag.toLowerCase().contains(input) && 
-                  !_project.tags.contains(tag)
-                ).toList();
+                return _popularTags
+                    .where(
+                      (tag) =>
+                          tag.toLowerCase().contains(input) &&
+                          !_project.tags.contains(tag),
+                    )
+                    .toList();
               },
               onSelected: (String selection) {
                 setState(() {
@@ -2304,35 +2285,36 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 });
                 _currentTagController?.clear();
               },
-              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                _currentTagController = controller;
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  style: textTheme.bodyMedium,
-                  decoration: InputDecoration(
-                    hintText: 'Add a tag',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: colorScheme.primary,
-                        width: 2,
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
+                    _currentTagController = controller;
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      style: textTheme.bodyMedium,
+                      decoration: InputDecoration(
+                        hintText: 'Add a tag',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  onSubmitted: (value) {
-                    final tag = value.trim();
-                    if (tag.isNotEmpty && !_project.tags.contains(tag)) {
-                      setState(() => _project.tags.add(tag));
-                    }
-                    _currentTagController?.clear();
-                    onFieldSubmitted();
+                      onSubmitted: (value) {
+                        final tag = value.trim();
+                        if (tag.isNotEmpty && !_project.tags.contains(tag)) {
+                          setState(() => _project.tags.add(tag));
+                        }
+                        _currentTagController?.clear();
+                        onFieldSubmitted();
+                      },
+                    );
                   },
-                );
-              },
             ),
             if (_project.tags.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -2346,7 +2328,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       setState(() => _project.tags.remove(tag));
                     },
                     backgroundColor: colorScheme.primaryContainer,
-                    labelStyle: TextStyle(color: colorScheme.onPrimaryContainer),
+                    labelStyle: TextStyle(
+                      color: colorScheme.onPrimaryContainer,
+                    ),
                   );
                 }).toList(),
               ),
@@ -2542,12 +2526,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ? null
                         : () => _showShipConfirmationDialog(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _project.shipped
+                      backgroundColor: _project.shipped
                           ? colorScheme.outline
                           : null,
-                      foregroundColor:
-                          _project.shipped
+                      foregroundColor: _project.shipped
                           ? colorScheme.onSurfaceVariant
                           : null,
                       padding: EdgeInsets.symmetric(
@@ -2561,9 +2543,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         Icon(Symbols.directions_boat, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          _project.shipped
-                              ? 'Already Shipped'
-                              : 'Ship Project',
+                          _project.shipped ? 'Already Shipped' : 'Ship Project',
                         ),
                       ],
                     ),
@@ -3122,7 +3102,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           date: ship.createdAt,
           sortDate: _ensureUtc(ship.createdAt),
           title: 'Ship submitted',
-          subtitle: '${_formatTimelineDate(ship.createdAt)} · ${ship.time.toStringAsFixed(1)}h tracked',
+          subtitle:
+              '${_formatTimelineDate(ship.createdAt)} · ${ship.time.toStringAsFixed(1)}h tracked',
           icon: Symbols.directions_boat,
           color: TerminalColors.yellow,
         ),
@@ -3133,13 +3114,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         entries.add(
           _TimelineEntry(
             date: ship.createdAt,
-            sortDate: _ensureUtc(ship.createdAt).add(const Duration(minutes: 1)), // small offset for ordering without affecting display
+            sortDate: _ensureUtc(ship.createdAt).add(
+              const Duration(minutes: 1),
+            ), // small offset for ordering without affecting display
             title: ship.approved ? 'Ship approved ✓' : 'Ship reviewed',
             subtitle: _formatTimelineDate(ship.createdAt),
             icon: ship.approved ? Symbols.check_circle : Symbols.rate_review,
             color: TerminalColors.yellow,
             body: FutureBuilder<BootUser?>(
-              future: ship.reviewer.isNotEmpty 
+              future: ship.reviewer.isNotEmpty
                   ? UserService.getUserById(ship.reviewer)
                   : Future.value(null),
               builder: (context, snapshot) {
@@ -3161,13 +3144,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           ),
                           InkWell(
                             onTap: () {
-                              NavigationService.openProfile(snapshot.data!, context);
+                              NavigationService.openProfile(
+                                snapshot.data!,
+                                context,
+                              );
                             },
                             child: Text(
                               snapshot.data!.username,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                     decoration: TextDecoration.underline,
                                   ),
                             ),
@@ -3180,20 +3169,20 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withValues(alpha: 0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
                           ship.comment,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontStyle: FontStyle.italic,
-                              ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontStyle: FontStyle.italic),
                         ),
                       ),
                     ],
@@ -3240,11 +3229,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ],
               if (devlog.challenges.isNotEmpty) ...[
                 FutureBuilder<List<Challenge>>(
-                  future: Future.wait(
-                    devlog.challenges.map(
-                      (id) => ChallengeService.getChallengeById(id),
-                    ),
-                  ).then((challenges) => challenges.whereType<Challenge>().toList()),
+                  future:
+                      Future.wait(
+                        devlog.challenges.map(
+                          (id) => ChallengeService.getChallengeById(id),
+                        ),
+                      ).then(
+                        (challenges) =>
+                            challenges.whereType<Challenge>().toList(),
+                      ),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                       return Column(
@@ -3282,9 +3275,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                   size: 16,
                                   color: TerminalColors.green,
                                 ),
-                                backgroundColor: TerminalColors.green.withValues(alpha: 0.1),
+                                backgroundColor: TerminalColors.green
+                                    .withValues(alpha: 0.1),
                                 side: BorderSide(
-                                  color: TerminalColors.green.withValues(alpha: 0.3),
+                                  color: TerminalColors.green.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               );
                             }).toList(),
@@ -3301,24 +3297,26 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 data: devlog.description,
                 selectable: true,
                 styleSheet: MarkdownStyleSheet(
-                  p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  p:
+                      Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                         height: 1.5,
                       ) ??
                       const TextStyle(),
                   h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   h3: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
                   code: TextStyle(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.surfaceContainerHigh,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHigh,
                     color: Theme.of(context).colorScheme.onSurface,
                     fontFamily: 'monospace',
                   ),
@@ -3367,11 +3365,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 color: entry.color ?? colorScheme.primary,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                entry.icon,
-                size: 10,
-                color: colorScheme.onPrimary,
-              ),
+              child: Icon(entry.icon, size: 10, color: colorScheme.onPrimary),
             ),
             if (!isLast)
               Container(
