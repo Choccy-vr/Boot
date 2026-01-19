@@ -70,6 +70,7 @@ class _ExplorePageState extends State<ExplorePage>
         offset: 0,
       );
 
+      if (!mounted) return;
       setState(() {
         _allProjects = projects;
         _currentPage = 0;
@@ -77,6 +78,7 @@ class _ExplorePageState extends State<ExplorePage>
         _isLoadingAllProjects = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingAllProjects = false;
       });
@@ -115,7 +117,7 @@ class _ExplorePageState extends State<ExplorePage>
   void _applyFiltersAndSort() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase().trim();
-      
+
       // Start with all projects
       List<Project> filtered = List.from(_allProjects);
 
@@ -123,8 +125,12 @@ class _ExplorePageState extends State<ExplorePage>
       if (_searchQuery.isNotEmpty) {
         filtered = filtered.where((project) {
           final titleMatch = project.title.toLowerCase().contains(_searchQuery);
-          final descMatch = project.description.toLowerCase().contains(_searchQuery);
-          final tagsMatch = project.tags.any((tag) => tag.toLowerCase().contains(_searchQuery));
+          final descMatch = project.description.toLowerCase().contains(
+            _searchQuery,
+          );
+          final tagsMatch = project.tags.any(
+            (tag) => tag.toLowerCase().contains(_searchQuery),
+          );
           return titleMatch || descMatch || tagsMatch;
         }).toList();
       }
@@ -132,8 +138,11 @@ class _ExplorePageState extends State<ExplorePage>
       // Apply tag filter
       if (_selectedTags.isNotEmpty) {
         filtered = filtered.where((project) {
-          return _selectedTags.every((selectedTag) =>
-              project.tags.any((tag) => tag.toLowerCase() == selectedTag.toLowerCase()));
+          return _selectedTags.every(
+            (selectedTag) => project.tags.any(
+              (tag) => tag.toLowerCase() == selectedTag.toLowerCase(),
+            ),
+          );
         }).toList();
       }
 
@@ -205,9 +214,7 @@ class _ExplorePageState extends State<ExplorePage>
           automaticallyImplyLeading: false,
           bottom: TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Symbols.public), text: 'All Projects'),
-            ],
+            tabs: const [Tab(icon: Icon(Symbols.public), text: 'All Projects')],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
             indicatorColor: colorScheme.primary,
@@ -215,9 +222,7 @@ class _ExplorePageState extends State<ExplorePage>
         ),
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _buildAllProjectsTab(colorScheme, textTheme),
-          ],
+          children: [_buildAllProjectsTab(colorScheme, textTheme)],
         ),
       ),
     );
@@ -237,10 +242,16 @@ class _ExplorePageState extends State<ExplorePage>
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Search projects by title, description, or tags...',
-                  prefixIcon: Icon(Symbols.search, color: colorScheme.onSurfaceVariant),
+                  prefixIcon: Icon(
+                    Symbols.search,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Symbols.close, color: colorScheme.onSurfaceVariant),
+                          icon: Icon(
+                            Symbols.close,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             _applyFiltersAndSort();
@@ -301,72 +312,82 @@ class _ExplorePageState extends State<ExplorePage>
         Expanded(
           child: RefreshIndicator(
             onRefresh: _refreshAllProjects,
-            child: _filteredProjects.isEmpty && _searchQuery.isEmpty && _selectedTags.isEmpty
+            child:
+                _filteredProjects.isEmpty &&
+                    _searchQuery.isEmpty &&
+                    _selectedTags.isEmpty
                 ? (_allProjects.isEmpty && _isLoadingAllProjects
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(color: colorScheme.primary),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Loading projects...',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                color: colorScheme.primary,
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : (_allProjects.isEmpty
-                        ? _buildEmptyState(
-                            icon: Symbols.search_off,
-                            title: 'No Projects Found',
-                            subtitle: 'There are no projects to explore yet.',
-                            colorScheme: colorScheme,
-                            textTheme: textTheme,
-                          )
-                        : ListView.builder(
-                            controller: _allProjectsScrollController,
-                            padding: Responsive.pagePadding(context),
-                            itemCount: _allProjects.length + (_hasMoreProjects ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == _allProjects.length) {
-                                return Padding(
-                                  padding: EdgeInsets.all(Responsive.spacing(context)),
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return _buildProjectCard(
-                                _allProjects[index],
-                                colorScheme,
-                                textTheme,
-                              );
-                            },
-                          )))
+                              const SizedBox(height: 16),
+                              Text(
+                                'Loading projects...',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : (_allProjects.isEmpty
+                            ? _buildEmptyState(
+                                icon: Symbols.search_off,
+                                title: 'No Projects Found',
+                                subtitle:
+                                    'There are no projects to explore yet.',
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              )
+                            : ListView.builder(
+                                controller: _allProjectsScrollController,
+                                padding: Responsive.pagePadding(context),
+                                itemCount:
+                                    _allProjects.length +
+                                    (_hasMoreProjects ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == _allProjects.length) {
+                                    return Padding(
+                                      padding: EdgeInsets.all(
+                                        Responsive.spacing(context),
+                                      ),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return _buildProjectCard(
+                                    _allProjects[index],
+                                    colorScheme,
+                                    textTheme,
+                                  );
+                                },
+                              )))
                 : (_filteredProjects.isEmpty
-                    ? _buildEmptyState(
-                        icon: Symbols.search_off,
-                        title: 'No Projects Match',
-                        subtitle: 'Try adjusting your search or filters.',
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                      )
-                    : ListView.builder(
-                        padding: Responsive.pagePadding(context),
-                        itemCount: _filteredProjects.length,
-                        itemBuilder: (context, index) {
-                          return _buildProjectCard(
-                            _filteredProjects[index],
-                            colorScheme,
-                            textTheme,
-                          );
-                        },
-                      )),
+                      ? _buildEmptyState(
+                          icon: Symbols.search_off,
+                          title: 'No Projects Match',
+                          subtitle: 'Try adjusting your search or filters.',
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        )
+                      : ListView.builder(
+                          padding: Responsive.pagePadding(context),
+                          itemCount: _filteredProjects.length,
+                          itemBuilder: (context, index) {
+                            return _buildProjectCard(
+                              _filteredProjects[index],
+                              colorScheme,
+                              textTheme,
+                            );
+                          },
+                        )),
           ),
         ),
       ],

@@ -132,37 +132,56 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       CurvedAnimation(parent: _typewriterController, curve: Curves.easeInOut),
     );
     _typewriterController.forward();
-    _fetchHackatimeProjects();
-    _loadExistingHackatimeAssignments();
+    // Load both data sources in parallel for faster page load
+    _loadHackatimeData();
+  }
+
+  Future<void> _loadHackatimeData() async {
+    // Run both fetches in parallel using Future.wait
+    await Future.wait([
+      _fetchHackatimeProjects(),
+      _loadExistingHackatimeAssignments(),
+    ]);
   }
 
   Future<void> _fetchHackatimeProjects() async {
-    final projects = await HackatimeService.fetchHackatimeProjects(
-      slackUserId: UserService.currentUser?.slackUserId ?? '',
-      context: context,
-    );
-    setState(() {
-      _hackatimeProjects = projects;
-      _filteredHackatimeProjects = projects;
-      _selectedHackatimeProjects.removeWhere(
-        (selected) => !_hackatimeProjects.any(
-          (project) => project.name.toLowerCase() == selected.toLowerCase(),
-        ),
+    try {
+      final projects = await HackatimeService.fetchHackatimeProjects(
+        slackUserId: UserService.currentUser?.slackUserId ?? '',
+        context: context,
       );
-    });
+      if (!mounted) return;
+      setState(() {
+        _hackatimeProjects = projects;
+        _filteredHackatimeProjects = projects;
+        _selectedHackatimeProjects.removeWhere(
+          (selected) => !_hackatimeProjects.any(
+            (project) => project.name.toLowerCase() == selected.toLowerCase(),
+          ),
+        );
+      });
+    } catch (e, stack) {
+      AppLogger.error('Failed to fetch Hackatime projects', e, stack);
+      // Set empty list on error so UI doesn't hang
+      if (!mounted) return;
+      setState(() {
+        _hackatimeProjects = [];
+        _filteredHackatimeProjects = [];
+      });
+    }
   }
 
   void _filterHackatimeProjects(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredHackatimeProjects = _hackatimeProjects;
-      } else {
-        final lowerQuery = query.toLowerCase();
+    if (query.isEmpty) {
+      setState(() => _filteredHackatimeProjects = _hackatimeProjects);
+    } else {
+      final lowerQuery = query.toLowerCase();
+      setState(() {
         _filteredHackatimeProjects = _hackatimeProjects.where((project) {
           return project.name.toLowerCase().contains(lowerQuery);
         }).toList();
-      }
-    });
+      });
+    }
   }
 
   Future<void> _loadExistingHackatimeAssignments() async {
@@ -178,6 +197,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               .where((name) => name.isNotEmpty),
         );
       }
+      if (!mounted) return;
       setState(() {
         _claimedHackatimeProjects = claimed;
         _selectedHackatimeProjects.removeWhere(

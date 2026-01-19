@@ -37,9 +37,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _typewriterController, curve: Curves.easeInOut),
     );
     _typewriterController.forward();
-    _scheduleHackatimeBanCheck();
-    _loadUserProjects();
+    // Load all data in parallel for faster page load
+    _loadPageData();
     _checkProfileSetup();
+  }
+
+  Future<void> _loadPageData() async {
+    // Run both data fetches in parallel
+    await Future.wait([_loadUserProjects(), _scheduleHackatimeBanCheck()]);
   }
 
   void _checkProfileSetup() {
@@ -57,7 +62,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   bool _needsProfileSetup(BootUser user) {
-    final hasDefaultUsername = user.username.startsWith('User ') && 
+    final hasDefaultUsername =
+        user.username.startsWith('User ') &&
         user.username.substring(5) == user.id;
     final hasDefaultBio = user.bio == "Nothing Yet" || user.bio.isEmpty;
     return hasDefaultUsername || hasDefaultBio;
@@ -66,46 +72,49 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadUserProjects() async {
     final userId = UserService.currentUser?.id;
     if (userId == null) {
-      setState(() => _isLoadingProjects = false);
+      if (mounted) setState(() => _isLoadingProjects = false);
       return;
     }
 
     try {
       final projects = await ProjectService.getProjects(userId);
-      if (mounted) {
-        setState(() {
-          _userProjects = projects;
-          _isLoadingProjects = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _userProjects = projects;
+        _isLoadingProjects = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingProjects = false);
-      }
+      if (!mounted) return;
+      setState(() => _isLoadingProjects = false);
     }
   }
 
   Future<void> _checkHackatimeBanStatus() async {
     final slackUserId = UserService.currentUser?.slackUserId ?? '';
-    if (slackUserId.isNotEmpty) {
+    if (slackUserId.isEmpty) return;
+
+    try {
       final isBanned = await HackatimeService.isHackatimeBanned(
         slackUserId: slackUserId,
         context: context,
       );
-      if (mounted) {
-        setState(() {
-          _isHackatimeBanned = isBanned;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isHackatimeBanned = isBanned;
+      });
+    } catch (e) {
+      // Silently fail - assume not banned if check fails
+      if (!mounted) return;
+      setState(() => _isHackatimeBanned = false);
     }
   }
 
-  void _scheduleHackatimeBanCheck() {
+  Future<void> _scheduleHackatimeBanCheck() async {
     // Try up to 10 times (~2s total) for user credentials to load.
-    _attemptHackatimeBanCheck(5);
+    await _attemptHackatimeBanCheck(5);
   }
 
-  void _attemptHackatimeBanCheck(int attempt) async {
+  Future<void> _attemptHackatimeBanCheck(int attempt) async {
     if (!mounted) return;
     final user = UserService.currentUser;
     if (user?.slackUserId != null && user!.slackUserId.isNotEmpty) {
@@ -116,7 +125,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return;
     }
     await Future.delayed(const Duration(milliseconds: 200));
-    _attemptHackatimeBanCheck(attempt + 1);
+    await _attemptHackatimeBanCheck(attempt + 1);
   }
 
   @override
@@ -162,9 +171,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildSystemStatus(colorScheme, textTheme),
-                    ),
+                    Expanded(child: _buildSystemStatus(colorScheme, textTheme)),
                   ],
                 ),
                 SizedBox(height: Responsive.spacing(context) * 1.5),
@@ -437,10 +444,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: content,
-        ),
+        child: Padding(padding: const EdgeInsets.all(8), child: content),
       );
     }
     return content;

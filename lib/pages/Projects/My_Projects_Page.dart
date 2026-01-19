@@ -356,12 +356,18 @@ class _ProjectsPageState extends State<ProjectsPage>
     final userId = UserService.currentUser?.id;
     if (userId == null || userId.isEmpty) return;
 
-    final projects = await ProjectService.getProjects(userId);
-    if (!mounted) return;
+    try {
+      final projects = await ProjectService.getProjects(userId);
+      if (!mounted) return;
 
-    setState(() {
-      _projects = projects;
-    });
+      setState(() {
+        _projects = projects;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Keep existing projects on error
+      setState(() {});
+    }
   }
 
   @override
@@ -382,7 +388,9 @@ class _ProjectsPageState extends State<ProjectsPage>
               Flexible(
                 child: Text(
                   'Projects',
-                  style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -436,7 +444,10 @@ class _ProjectsPageState extends State<ProjectsPage>
               icon: const Icon(Symbols.add, size: 18),
               label: const Text('Create Project'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
             ),
             const SizedBox(width: 16),

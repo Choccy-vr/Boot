@@ -43,9 +43,14 @@ void main() async {
     usePathUrlStrategy();
   }
   AppLogger.init();
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+
+  // Parallelize initialization for faster startup
+  await Future.wait([
+    Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey),
+    StorageService.initialize(),
+  ]);
+
   AuthListener.startListening();
-  await SupabaseAuth.redirectCheck();
 
   // Configure Hack Club OAuth (no async init needed)
   Authentication.configureHackClubOAuth(
@@ -53,6 +58,24 @@ void main() async {
     redirectUri: '${Uri.base.origin}/redirect.html',
   );
 
+  // Run auth checks in parallel
+  final results = await Future.wait([
+    SupabaseAuth.redirectCheck(),
+    _handleHackClubCallback(),
+    Authentication.restoreStoredSession(),
+  ]);
+
+  final sessionRestored = results[2] as bool;
+
+  String initialRoute = '/login';
+  if (sessionRestored) {
+    initialRoute = '/dashboard';
+  }
+
+  runApp(MainApp(initialRoute: initialRoute));
+}
+
+Future<void> _handleHackClubCallback() async {
   // Check for Hack Club OAuth callback (web only)
   if (kIsWeb) {
     try {
@@ -66,16 +89,6 @@ void main() async {
       AppLogger.error('Error handling Hack Club callback', e);
     }
   }
-
-  final sessionRestored = await Authentication.restoreStoredSession();
-  await StorageService.initialize();
-
-  String initialRoute = '/login';
-  if (sessionRestored) {
-    initialRoute = '/dashboard';
-  }
-
-  runApp(MainApp(initialRoute: initialRoute));
 }
 
 class MainApp extends StatelessWidget {

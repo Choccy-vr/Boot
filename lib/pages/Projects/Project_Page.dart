@@ -139,10 +139,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _descriptionController.text = _project.description;
     _githubRepoController.text = _project.githubRepo;
     _tagsController.text = _project.tags.join(', ');
-    _loadOwner();
-    _loadDevlogs();
-    _loadShips();
-    _loadProjectChallenges();
+
+    // Load all data in parallel for faster page load
+    _loadPageData();
+
     _refreshController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
@@ -158,11 +158,26 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
+  Future<void> _loadPageData() async {
+    // Run all data fetches in parallel using Future.wait
+    await Future.wait([
+      _loadOwner(),
+      _loadDevlogs(),
+      _loadShips(),
+      _loadProjectChallenges(),
+    ]);
+  }
+
   Future<void> _loadOwner() async {
-    final user = await UserService.getUserById(_project.owner);
-    setState(() {
-      owner = user;
-    });
+    try {
+      final user = await UserService.getUserById(_project.owner);
+      if (!mounted) return;
+      setState(() {
+        owner = user;
+      });
+    } catch (e) {
+      // Silently fail - owner will be null
+    }
   }
 
   Future<void> _loadDevlogs() async {
@@ -170,6 +185,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       final devlogs = await DevlogService.getDevlogsByProjectId(
         _project.id.toString(),
       );
+      if (!mounted) return;
       setState(() {
         _devlogs = devlogs.reversed.toList();
       });
@@ -221,12 +237,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _prizeCacheForChallenges = {for (var prize in prizes) prize.id: prize};
       }
 
-      if (mounted) {
-        setState(() {
-          _projectChallenges = relevantChallenges;
-          _applyProjectChallengeFilters();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _projectChallenges = relevantChallenges;
+        _applyProjectChallengeFilters();
+      });
     } catch (e) {
       // Error loading challenges
     }
