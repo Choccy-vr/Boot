@@ -14,9 +14,7 @@ class ShipService {
   static Future<Ship> getShipById(String id) async {
     try {
       final response = await SupabaseDB.getRowData(table: 'ships', rowID: id);
-      return await Ship.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
+      return await Ship.fromJson(Map<String, dynamic>.from(response as Map));
     } catch (e, stack) {
       AppLogger.error('Error getting ship by ID $id', e, stack);
       throw Exception('Error getting ship by ID $id: $e');
@@ -92,7 +90,6 @@ class ShipService {
     required Project project,
     required double time,
     required List<int> challengesRequested,
-
   }) async {
     try {
       final response = await SupabaseDB.insertAndReturnData(
@@ -112,7 +109,11 @@ class ShipService {
         (response as List).map((row) => Map<String, dynamic>.from(row)),
       );
       final newShip = await Ship.fromJson(rows.first);
-      await SlackManager.sendMessage(destination: UserService.currentUser?.slackUserId ?? '', message: "And you are off to the races!\n\nYour Boot project ${project.title} has been shipped. :ultrafastparrot:\n\nAll you have to do now is wait until it gets reviewed.\n\ngl :parrot_love:\n\nMay you not commit fraud.");
+      await SlackManager.sendMessage(
+        destination: UserService.currentUser?.slackUserId ?? '',
+        message:
+            "And you are off to the races!\n\nYour Boot project ${project.title} has been shipped. :ultrafastparrot:\n\nAll you have to do now is wait until it gets reviewed.\n\ngl :parrot_love:\n\nMay you not commit fraud.",
+      );
       return newShip;
     } catch (e, stack) {
       AppLogger.error('Error adding ship for project $project', e, stack);
@@ -125,19 +126,29 @@ class ShipService {
     required String reviewerId,
     required String comment,
     required List<int> challengesCompleted,
+    required String screenshotUrl,
+    double? overrideHours,
   }) async {
     try {
+      final updateData = {
+        'reviewed': true,
+        'approved': true,
+        'reviewer': reviewerId,
+        'comment': comment,
+        'challenges_completed': challengesCompleted,
+        'screenshot_url': screenshotUrl,
+      };
+
+      // Add override hours if provided
+      if (overrideHours != null) {
+        updateData['override_hours'] = overrideHours;
+      }
+
       final response = await SupabaseDB.updateAndReturnData(
         table: 'ships',
         column: 'id',
         value: shipId,
-        data: {
-          'reviewed': true,
-          'approved': true,
-          'reviewer': reviewerId,
-          'comment': comment,
-          'challenges_completed': challengesCompleted,
-        },
+        data: updateData,
       );
       final ship = await Ship.fromJson(
         Map<String, dynamic>.from((response as List).first),
@@ -147,8 +158,22 @@ class ShipService {
         project.shipped = false;
         await ProjectService.updateProject(project);
       }
-      final BootUser? user = await UserService.getUserById(project?.owner ?? '');
-      await SlackManager.sendMessage(destination: user?.slackUserId ?? '', message: "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.");
+      final BootUser? user = await UserService.getUserById(
+        project?.owner ?? '',
+      );
+      if (overrideHours == 0) {
+        await SlackManager.sendMessage(
+          destination: user?.slackUserId ?? '',
+          message:
+              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
+        );
+      } else {
+        await SlackManager.sendMessage(
+          destination: user?.slackUserId ?? '',
+          message:
+              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\n However your time has been overridden. The time you earn coins for is now ${overrideHours} hrs\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
+        );
+      }
     } catch (e, stack) {
       AppLogger.error('Error approving ship $shipId', e, stack);
       throw Exception('Error approving ship: $e');
@@ -181,9 +206,15 @@ class ShipService {
         project.timeTrackedShip = ship.time;
         await ProjectService.updateProject(project);
       }
-      final BootUser? user = await UserService.getUserById(project?.owner ?? '');
+      final BootUser? user = await UserService.getUserById(
+        project?.owner ?? '',
+      );
       final BootUser? reviewer = await UserService.getUserById(reviewerId);
-      await SlackManager.sendMessage(destination: user?.slackUserId ?? '', message: "Uh oh! :uhoh:\n\nYour Boot project ${project?.title} has been rejected. :surprised:\n\nDon't worry, you just have to change a few things.\n\nLuckily, @<${reviewer?.slackUserId}> left you some notes\n\n*${comment}*\n\nKeep at it. When you are ready, just ship it again.");
+      await SlackManager.sendMessage(
+        destination: user?.slackUserId ?? '',
+        message:
+            "Uh oh! :uhoh:\n\nYour Boot project ${project?.title} has been rejected. :surprised:\n\nDon't worry, you just have to change a few things.\n\nLuckily, @<${reviewer?.slackUserId}> left you some notes\n\n*${comment}*\n\nKeep at it. When you are ready, just ship it again.",
+      );
     } catch (e, stack) {
       AppLogger.error('Error denying ship $shipId', e, stack);
       throw Exception('Error denying ship: $e');

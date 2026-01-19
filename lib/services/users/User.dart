@@ -12,13 +12,9 @@ class UserService {
   static Future<BootUser?> getUserById(String id) async {
     try {
       final response = await SupabaseDB.getRowData(table: 'users', rowID: id);
-      AppLogger.info(
-        '[getUserById] Raw DB response slack_user_id: "${response['slack_user_id']}"',
-      );
+
       final user = BootUser.fromJson(response);
-      AppLogger.info(
-        '[getUserById] Parsed user slack_user_id: "${user.slackUserId}"',
-      );
+
       return user;
     } catch (e, stack) {
       AppLogger.error('Error getting user by ID $id', e, stack);
@@ -37,13 +33,7 @@ class UserService {
         AppLogger.info('[getUserByEmail] No user found for email: $email');
         return null;
       }
-      AppLogger.info(
-        '[getUserById] Raw DB response slack_user_id: "${response['slack_user_id']}"',
-      );
       final user = BootUser.fromJson(response);
-      AppLogger.info(
-        '[getUserById] Parsed user slack_user_id: "${user.slackUserId}"',
-      );
       return user;
     } catch (e, stack) {
       AppLogger.error('Error getting user by email $email', e, stack);
@@ -55,9 +45,6 @@ class UserService {
     AppLogger.info('[setCurrentUser] Called with ID: $id, email: $email');
     // First try by ID
     var user = await getUserById(id);
-    AppLogger.info(
-      '[setCurrentUser] After getUserById - slack_user_id: "${user?.slackUserId}"',
-    );
 
     // If not found by ID but we have email, try by email
     if (user == null && email != null && email.isNotEmpty) {
@@ -83,22 +70,11 @@ class UserService {
     if (user == null) {
       throw Exception('User initialization failed: Could not retrieve user');
     }
-
-    AppLogger.info(
-      '[setCurrentUser] Setting currentUser - slack_user_id: "${user.slackUserId}"',
-    );
     currentUser = user;
-    AppLogger.info(
-      '[setCurrentUser] currentUser set - slack_user_id: "${currentUser?.slackUserId}"',
-    );
   }
 
   static Future<void> updateUser() async {
     final userData = currentUser?.toJson();
-    AppLogger.info(
-      '[updateUser] Called with slack_user_id: "${currentUser?.slackUserId}"',
-    );
-    AppLogger.info('[updateUser] toJson data: ${userData}');
     SupabaseDB.upsertData(table: 'users', data: userData);
   }
 

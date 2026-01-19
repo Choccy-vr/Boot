@@ -13,6 +13,8 @@ class Ship {
   final List<Challenge> challengesCompleted;
   final bool reviewed;
   final int coinsEarned;
+  final String screenShotUrl;
+  final double overrideTime;
 
   Ship({
     required this.id,
@@ -26,6 +28,8 @@ class Ship {
     this.challengesCompleted = const [],
     this.reviewed = false,
     this.coinsEarned = 0,
+    this.screenShotUrl = '',
+    this.overrideTime = 0.0,
   });
 
   static Future<Ship> fromJson(Map<String, dynamic> json) async {
@@ -39,12 +43,16 @@ class Ship {
       approved: json['approved'] ?? false,
       reviewer: json['reviewer'] ?? '',
       comment: json['comment'] ?? '',
-      challengesRequested:
-          await _resolveChallenges(json['challenges_requested']),
-      challengesCompleted:
-          await _resolveChallenges(json['challenges_completed']),
+      challengesRequested: await _resolveChallenges(
+        json['challenges_requested'],
+      ),
+      challengesCompleted: await _resolveChallenges(
+        json['challenges_completed'],
+      ),
       reviewed: json['reviewed'] ?? false,
       coinsEarned: json['earned'] ?? 0,
+      screenShotUrl: json['screen_shot_url'] ?? '',
+      overrideTime: (json['override_hours'] as num?)?.toDouble() ?? 0.0,
     );
   }
 

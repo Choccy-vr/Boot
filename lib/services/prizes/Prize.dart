@@ -6,8 +6,10 @@ class Prize {
   final String? picture;
   final int cost;
   final int stock;
-  final bool unlisted;
   final double multiplier;
+  final String key;
+  final int coins;
+  final PrizeType type;
 
   Prize({
     required this.id,
@@ -17,8 +19,10 @@ class Prize {
     this.picture,
     required this.cost,
     required this.stock,
-    this.unlisted = false,
-    this.multiplier = 1.0,
+    this.multiplier = 0,
+    this.key = '',
+    this.coins = 0,
+    this.type = PrizeType.normal,
   });
 
   factory Prize.fromJson(Map<String, dynamic> json) {
@@ -32,10 +36,15 @@ class Prize {
       picture: json['picture'],
       cost: json['cost'] ?? 0,
       stock: json['stock'] ?? 0,
-      unlisted: json['unlisted'] ?? false,
       multiplier: json['multiplier'] != null
           ? (json['multiplier'] as num).toDouble()
-          : 1.0,
+          : 0,
+      key: json['key'] ?? '',
+      coins: json['coins'] ?? 0,
+      type: PrizeType.values.firstWhere(
+        (e) => e.toString() == 'PrizeType.${json['type']}',
+        orElse: () => PrizeType.normal,
+      ),
     );
   }
 
@@ -48,8 +57,12 @@ class Prize {
       'picture': picture,
       'cost': cost,
       'stock': stock,
-      'unlisted': unlisted,
       'multiplier': multiplier,
+      'key': key,
+      'coins': coins,
+      'type': type.toString().split('.').last,
     };
   }
 }
+
+enum PrizeType { normal, reward, keyed }

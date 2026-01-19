@@ -24,6 +24,10 @@ class BootUser {
   bool? verificationStatus;
   //Role
   UserRole role;
+  //shop
+  List<String> cart;
+  List<String> keys;
+
   //constructor
   BootUser({
     required this.id,
@@ -42,6 +46,8 @@ class BootUser {
     this.yswsEligible,
     this.verificationStatus,
     this.role = UserRole.normal,
+    this.cart = const [],
+    this.keys = const [],
   });
 
   factory BootUser.fromJson(Map<String, dynamic> json) {
@@ -71,6 +77,8 @@ class BootUser {
         (r) => r.name == (json['role'] ?? 'normal'),
         orElse: () => UserRole.normal,
       ),
+      cart: List<String>.from(json['cart'] ?? []),
+      keys: List<String>.from(json['keys'] ?? []),
     );
   }
 
@@ -91,6 +99,9 @@ class BootUser {
       'hc_user_id': hcUserId,
       'ysws_eligible': yswsEligible,
       'verification_status': verificationStatus,
+      'role': role.name,
+      'cart': cart,
+      'keys': keys,
     };
   }
 }

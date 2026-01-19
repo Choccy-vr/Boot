@@ -548,8 +548,10 @@ class _AdminPageState extends State<AdminPage> {
     final costController = TextEditingController();
     final stockController = TextEditingController();
     final multiplierController = TextEditingController(text: '0');
+    final coinsController = TextEditingController(text: '0');
+    final keyController = TextEditingController();
     String? imageUrl;
-    bool isUnlisted = false;
+    PrizeType selectedType = PrizeType.normal;
 
     showDialog(
       context: context,
@@ -567,6 +569,8 @@ class _AdminPageState extends State<AdminPage> {
             costController.addListener(updatePreview);
             stockController.addListener(updatePreview);
             multiplierController.addListener(updatePreview);
+            coinsController.addListener(updatePreview);
+            keyController.addListener(updatePreview);
 
             // Create preview prize
             final previewPrize = Prize(
@@ -581,8 +585,10 @@ class _AdminPageState extends State<AdminPage> {
               picture: imageUrl,
               cost: int.tryParse(costController.text) ?? 0,
               stock: int.tryParse(stockController.text) ?? 0,
-              unlisted: isUnlisted,
-              multiplier: double.tryParse(multiplierController.text) ?? 1.0,
+              multiplier: double.tryParse(multiplierController.text) ?? 0,
+              key: keyController.text,
+              coins: int.tryParse(coinsController.text) ?? 0,
+              type: selectedType,
             );
 
             return AlertDialog(
@@ -658,17 +664,64 @@ class _AdminPageState extends State<AdminPage> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: multiplierController,
-                              label: 'Coin Multiplier',
-                              icon: Symbols.percent,
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                            _buildDropdown<PrizeType>(
+                              label: 'Prize Type',
+                              value: selectedType,
+                              items: PrizeType.values,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() => selectedType = value);
+                                }
+                              },
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
                             const SizedBox(height: 16),
+                            // Conditional fields based on type
+                            if (selectedType == PrizeType.keyed ||
+                                selectedType == PrizeType.reward) ...[
+                              _buildTextField(
+                                controller: keyController,
+                                label: selectedType == PrizeType.keyed
+                                    ? 'Required Key (required)'
+                                    : 'Key (optional)',
+                                icon: Symbols.key,
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (selectedType == PrizeType.reward) ...[
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: coinsController,
+                                      label: 'Coin Reward',
+                                      icon: Symbols.toll,
+                                      keyboardType: TextInputType.number,
+                                      colorScheme: colorScheme,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: multiplierController,
+                                      label: 'Multiplier',
+                                      icon: Symbols.percent,
+                                      keyboardType:
+                                          TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      colorScheme: colorScheme,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             OutlinedButton.icon(
                               onPressed: () async {
                                 try {
@@ -698,54 +751,6 @@ class _AdminPageState extends State<AdminPage> {
                                 foregroundColor: imageUrl == null
                                     ? colorScheme.primary
                                     : TerminalColors.green,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Unlisted toggle
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerLowest,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: colorScheme.outline),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Symbols.visibility_off,
-                                    size: 20,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Unlisted',
-                                          style: textTheme.bodyMedium?.copyWith(
-                                            color: colorScheme.onSurface,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Hide from shop',
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: isUnlisted,
-                                    onChanged: (value) {
-                                      setDialogState(() => isUnlisted = value);
-                                    },
-                                    activeColor: colorScheme.primary,
-                                  ),
-                                ],
                               ),
                             ),
                           ],
@@ -788,6 +793,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Validation
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
                         costController.text.isEmpty ||
@@ -795,6 +801,15 @@ class _AdminPageState extends State<AdminPage> {
                         imageUrl == null) {
                       GlobalNotificationService.instance.showError(
                         'Please fill all required fields and upload an image',
+                      );
+                      return;
+                    }
+
+                    // Check if keyed type requires a key
+                    if (selectedType == PrizeType.keyed &&
+                        keyController.text.isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Keyed prizes must have a key specified',
                       );
                       return;
                     }
@@ -808,8 +823,13 @@ class _AdminPageState extends State<AdminPage> {
                           'cost': int.parse(costController.text),
                           'stock': int.parse(stockController.text),
                           'picture': imageUrl,
-                          'unlisted': isUnlisted,
-                          'multiplier': double.parse(multiplierController.text),
+                          'type': selectedType.toString().split('.').last,
+                          'key': keyController.text.isEmpty
+                              ? null
+                              : keyController.text,
+                          'coins': int.tryParse(coinsController.text) ?? 0,
+                          'multiplier':
+                              double.tryParse(multiplierController.text) ?? 0,
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
@@ -844,8 +864,10 @@ class _AdminPageState extends State<AdminPage> {
     final multiplierController = TextEditingController(
       text: prize.multiplier.toString(),
     );
+    final coinsController = TextEditingController(text: prize.coins.toString());
+    final keyController = TextEditingController(text: prize.key);
     String? imageUrl = prize.picture;
-    bool isUnlisted = prize.unlisted;
+    PrizeType selectedType = prize.type;
 
     showDialog(
       context: context,
@@ -863,6 +885,8 @@ class _AdminPageState extends State<AdminPage> {
             costController.addListener(updatePreview);
             stockController.addListener(updatePreview);
             multiplierController.addListener(updatePreview);
+            coinsController.addListener(updatePreview);
+            keyController.addListener(updatePreview);
 
             // Create preview prize
             final previewPrize = Prize(
@@ -877,8 +901,10 @@ class _AdminPageState extends State<AdminPage> {
               picture: imageUrl,
               cost: int.tryParse(costController.text) ?? 0,
               stock: int.tryParse(stockController.text) ?? 0,
-              unlisted: isUnlisted,
-              multiplier: double.tryParse(multiplierController.text) ?? 1.0,
+              multiplier: double.tryParse(multiplierController.text) ?? 0,
+              key: keyController.text,
+              coins: int.tryParse(coinsController.text) ?? 0,
+              type: selectedType,
             );
 
             return AlertDialog(
@@ -954,17 +980,64 @@ class _AdminPageState extends State<AdminPage> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: multiplierController,
-                              label: 'Coin Multiplier',
-                              icon: Symbols.percent,
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                            _buildDropdown<PrizeType>(
+                              label: 'Prize Type',
+                              value: selectedType,
+                              items: PrizeType.values,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() => selectedType = value);
+                                }
+                              },
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
                             const SizedBox(height: 16),
+                            // Conditional fields based on type
+                            if (selectedType == PrizeType.keyed ||
+                                selectedType == PrizeType.reward) ...[
+                              _buildTextField(
+                                controller: keyController,
+                                label: selectedType == PrizeType.keyed
+                                    ? 'Required Key (required)'
+                                    : 'Key (optional)',
+                                icon: Symbols.key,
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (selectedType == PrizeType.reward) ...[
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: coinsController,
+                                      label: 'Coin Reward',
+                                      icon: Symbols.toll,
+                                      keyboardType: TextInputType.number,
+                                      colorScheme: colorScheme,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: multiplierController,
+                                      label: 'Multiplier',
+                                      icon: Symbols.percent,
+                                      keyboardType:
+                                          TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      colorScheme: colorScheme,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             OutlinedButton.icon(
                               onPressed: () async {
                                 try {
@@ -994,54 +1067,6 @@ class _AdminPageState extends State<AdminPage> {
                                 foregroundColor: imageUrl == null
                                     ? colorScheme.primary
                                     : TerminalColors.green,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Unlisted toggle
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerLowest,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: colorScheme.outline),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Symbols.visibility_off,
-                                    size: 20,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Unlisted',
-                                          style: textTheme.bodyMedium?.copyWith(
-                                            color: colorScheme.onSurface,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Hide from shop (admin only)',
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: isUnlisted,
-                                    onChanged: (value) {
-                                      setDialogState(() => isUnlisted = value);
-                                    },
-                                    activeColor: colorScheme.primary,
-                                  ),
-                                ],
                               ),
                             ),
                           ],
@@ -1084,6 +1109,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Validation
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
                         costController.text.isEmpty ||
@@ -1095,18 +1121,33 @@ class _AdminPageState extends State<AdminPage> {
                       return;
                     }
 
+                    // Check if keyed type requires a key
+                    if (selectedType == PrizeType.keyed &&
+                        keyController.text.isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Keyed prizes must have a key specified',
+                      );
+                      return;
+                    }
+
                     try {
-                      await SupabaseDB.upsertData(
+                      await SupabaseDB.updateData(
                         table: 'prizes',
+                        column: 'id',
+                        value: prize.id,
                         data: {
-                          'id': prize.id,
                           'title': titleController.text,
                           'description': descriptionController.text,
                           'cost': int.parse(costController.text),
                           'stock': int.parse(stockController.text),
                           'picture': imageUrl,
-                          'unlisted': isUnlisted,
-                          'multiplier': double.parse(multiplierController.text),
+                          'type': selectedType.toString().split('.').last,
+                          'key': keyController.text.isEmpty
+                              ? null
+                              : keyController.text,
+                          'coins': int.tryParse(coinsController.text) ?? 0,
+                          'multiplier':
+                              double.tryParse(multiplierController.text) ?? 0,
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
@@ -1237,7 +1278,11 @@ class _AdminPageState extends State<AdminPage> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await SupabaseDB.deleteData(table: 'prizes', column: 'id', value: prize.id);
+                  await SupabaseDB.deleteData(
+                    table: 'prizes',
+                    column: 'id',
+                    value: prize.id,
+                  );
                   GlobalNotificationService.instance.showSuccess(
                     'Prize deleted successfully!',
                   );

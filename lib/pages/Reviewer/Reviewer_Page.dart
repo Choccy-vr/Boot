@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/ships/Boot_Ship.dart';
 import 'package:boot_app/services/Projects/Project.dart';
@@ -7,6 +8,7 @@ import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/challenges/Challenge.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:boot_app/services/notifications/notifications.dart';
+import 'package:boot_app/services/Storage/storage.dart';
 import 'package:boot_app/pages/Projects/Project_Page.dart';
 import 'package:boot_app/theme/responsive.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
@@ -33,7 +35,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
     setState(() => _isLoading = true);
     try {
       final ships = await ShipService.getAllUnreviewedShips();
-      
+
       // Load projects for all ships
       final projectIds = ships.map((ship) => ship.project).toSet().toList();
       for (final projectId in projectIds) {
@@ -50,9 +52,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'Failed to load ships: $e',
-      );
+      GlobalNotificationService.instance.showError('Failed to load ships: $e');
     }
   }
 
@@ -103,54 +103,59 @@ class _ReviewerPageState extends State<ReviewerPage> {
         ),
         body: _isLoading
             ? Center(
-                child: CircularProgressIndicator(
-                  color: colorScheme.primary,
-                ),
+                child: CircularProgressIndicator(color: colorScheme.primary),
               )
             : _unreviewedShips.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Symbols.check_circle,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No ships to review',
-                          style: textTheme.titleLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'All ships have been reviewed!',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Symbols.check_circle,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _loadUnreviewedShips,
-                    child: ListView.builder(
-                      padding: Responsive.pagePadding(context),
-                      itemCount: _unreviewedShips.length,
-                      itemBuilder: (context, index) {
-                        final ship = _unreviewedShips[index];
-                        final project = _projectCache[ship.project];
-                        
-                        if (project == null) {
-                          return const SizedBox.shrink();
-                        }
+                    const SizedBox(height: 16),
+                    Text(
+                      'No ships to review',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'All ships have been reviewed!',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _loadUnreviewedShips,
+                child: ListView.builder(
+                  padding: Responsive.pagePadding(context),
+                  itemCount: _unreviewedShips.length,
+                  itemBuilder: (context, index) {
+                    final ship = _unreviewedShips[index];
+                    final project = _projectCache[ship.project];
 
-                        return _buildShipCard(ship, project, colorScheme, textTheme);
-                      },
-                    ),
-                  ),
+                    if (project == null) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return _buildShipCard(
+                      ship,
+                      project,
+                      colorScheme,
+                      textTheme,
+                    );
+                  },
+                ),
+              ),
       ),
     );
   }
@@ -232,7 +237,8 @@ class _ReviewerPageState extends State<ReviewerPage> {
                   if (ship.challengesRequested.isNotEmpty)
                     _buildInfoChip(
                       icon: Symbols.emoji_events,
-                      label: '${ship.challengesRequested.length} challenge${ship.challengesRequested.length == 1 ? '' : 's'}',
+                      label:
+                          '${ship.challengesRequested.length} challenge${ship.challengesRequested.length == 1 ? '' : 's'}',
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     ),
@@ -285,9 +291,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -310,13 +314,15 @@ class _ReviewerPageState extends State<ReviewerPage> {
     final now = DateTime.now().toUtc();
     final utcDate = date.isUtc ? date : date.toUtc();
     final difference = now.difference(utcDate);
-    
+
     if (difference.inSeconds < 60) return 'just now';
     if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
     if (difference.inHours < 24) return '${difference.inHours}h ago';
     if (difference.inDays < 7) return '${difference.inDays}d ago';
-    if (difference.inDays < 30) return '${(difference.inDays / 7).floor()}w ago';
-    if (difference.inDays < 365) return '${(difference.inDays / 30).floor()}mo ago';
+    if (difference.inDays < 30)
+      return '${(difference.inDays / 7).floor()}w ago';
+    if (difference.inDays < 365)
+      return '${(difference.inDays / 30).floor()}mo ago';
     return '${(difference.inDays / 365).floor()}y ago';
   }
 }
@@ -426,30 +432,49 @@ class _ReviewDialogState extends State<ReviewDialog> {
   int _step = 0;
   Set<int> _selectedChallenges = {};
   final TextEditingController _commentController = TextEditingController();
+  final TextEditingController _overrideHoursController =
+      TextEditingController();
   bool _isSubmitting = false;
+  PlatformFile? _screenshotFile;
+  String? _uploadedScreenshotUrl;
+  bool _isUploadingScreenshot = false;
 
   @override
   void dispose() {
     _commentController.dispose();
+    _overrideHoursController.dispose();
     super.dispose();
   }
 
   Future<void> _handleApprove() async {
     if (_commentController.text.trim().isEmpty) {
-      GlobalNotificationService.instance.showError(
-        'Please provide a comment',
-      );
+      GlobalNotificationService.instance.showError('Please provide a comment');
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
+      // Parse override hours if provided
+      double? overrideHours;
+      if (_overrideHoursController.text.trim().isNotEmpty) {
+        overrideHours = double.tryParse(_overrideHoursController.text.trim());
+        if (overrideHours == null || overrideHours < 0) {
+          GlobalNotificationService.instance.showError(
+            'Invalid override hours value',
+          );
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+
       await ShipService.approveShip(
         shipId: widget.ship.id,
         reviewerId: UserService.currentUser?.id ?? '',
         comment: _commentController.text.trim(),
         challengesCompleted: _selectedChallenges.toList(),
+        screenshotUrl: _uploadedScreenshotUrl ?? '',
+        overrideHours: overrideHours,
       );
 
       if (!mounted) return;
@@ -484,15 +509,11 @@ class _ReviewDialogState extends State<ReviewDialog> {
       );
 
       if (!mounted) return;
-      GlobalNotificationService.instance.showSuccess(
-        'Ship denied',
-      );
+      GlobalNotificationService.instance.showSuccess('Ship denied');
       widget.onReviewComplete();
     } catch (e) {
       if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'Failed to deny ship: $e',
-      );
+      GlobalNotificationService.instance.showError('Failed to deny ship: $e');
       setState(() => _isSubmitting = false);
     }
   }
@@ -503,9 +524,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
     final textTheme = Theme.of(context).textTheme;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
         padding: const EdgeInsets.all(24),
@@ -514,15 +533,15 @@ class _ReviewDialogState extends State<ReviewDialog> {
           children: [
             Row(
               children: [
-                Icon(
-                  Symbols.rate_review,
-                  color: colorScheme.primary,
-                  size: 28,
-                ),
+                Icon(Symbols.rate_review, color: colorScheme.primary, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _step == 0 ? 'Challenges Completed' : 'Review Comment',
+                    _step == 0
+                        ? 'Challenges Completed'
+                        : _step == 1
+                        ? 'Screenshot & Hours'
+                        : 'Review Comment',
                     style: textTheme.titleLarge?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -531,19 +550,25 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Symbols.close),
-                  onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => Navigator.pop(context),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: (_step + 1) / 2,
+              value: (_step + 1) / 3,
               backgroundColor: colorScheme.surfaceContainerHigh,
               color: colorScheme.primary,
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: _step == 0 ? _buildChallengeSelection() : _buildCommentStep(),
+              child: _step == 0
+                  ? _buildChallengeSelection()
+                  : _step == 1
+                  ? _buildScreenshotAndHoursStep()
+                  : _buildCommentStep(),
             ),
             const SizedBox(height: 16),
             _buildNavigationButtons(colorScheme),
@@ -562,11 +587,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Symbols.info,
-              size: 48,
-              color: colorScheme.onSurfaceVariant,
-            ),
+            Icon(Symbols.info, size: 48, color: colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'No challenges requested',
@@ -628,10 +649,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-                      Text(
-                        challenge.description,
-                        style: textTheme.bodySmall,
-                      ),
+                      Text(challenge.description, style: textTheme.bodySmall),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -710,16 +728,14 @@ class _ReviewDialogState extends State<ReviewDialog> {
             expands: true,
             textAlignVertical: TextAlignVertical.top,
             decoration: InputDecoration(
-              hintText: 'Provide feedback on the project, quality of work, challenges completed, etc...',
+              hintText:
+                  'Provide feedback on the project, quality of work, challenges completed, etc...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: colorScheme.primary,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: colorScheme.primary, width: 2),
               ),
               contentPadding: const EdgeInsets.all(16),
             ),
@@ -727,6 +743,166 @@ class _ReviewDialogState extends State<ReviewDialog> {
         ),
       ],
     );
+  }
+
+  Widget _buildScreenshotAndHoursStep() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Screenshot upload section
+          Text(
+            'Upload OS Screenshot *',
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Required: Upload a screenshot of the OS running',
+            style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+          ),
+          const SizedBox(height: 12),
+          if (_screenshotFile != null || _uploadedScreenshotUrl != null)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Symbols.image, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _screenshotFile?.name ?? 'Screenshot uploaded',
+                        style: textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Symbols.close, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _screenshotFile = null;
+                          _uploadedScreenshotUrl = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: _isUploadingScreenshot
+                  ? null
+                  : _handleScreenshotUpload,
+              icon: _isUploadingScreenshot
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Symbols.upload),
+              label: Text(
+                _isUploadingScreenshot ? 'Uploading...' : 'Choose Screenshot',
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+          const SizedBox(height: 24),
+
+          // Override hours section
+          Text(
+            'Override Hours (Optional):',
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Current tracked time: ${widget.ship.time.toStringAsFixed(1)} hours',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _overrideHoursController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: 'Leave empty to use tracked time',
+              labelText: 'Override hours',
+              helperText: 'Only enter if you need to manually set the hours',
+              prefixIcon: Icon(
+                Symbols.schedule,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              suffixText: 'hrs',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: colorScheme.primary, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleScreenshotUpload() async {
+    setState(() => _isUploadingScreenshot = true);
+
+    try {
+      final supabasePath = 'ships/${widget.ship.id}/screenshot';
+      final supabasePrivateUrl = await StorageService.uploadFileWithPicker(
+        path: supabasePath,
+      );
+
+      if (!mounted) return;
+
+      if (supabasePrivateUrl == 'User cancelled') {
+        setState(() => _isUploadingScreenshot = false);
+        return;
+      }
+
+      final supabasePublicUrl = await StorageService.getPublicUrl(
+        path: supabasePrivateUrl,
+      );
+
+      if (!mounted) return;
+
+      if (supabasePublicUrl == null) {
+        GlobalNotificationService.instance.showError(
+          'Failed to get public URL for screenshot',
+        );
+        setState(() => _isUploadingScreenshot = false);
+        return;
+      }
+
+      setState(() {
+        _uploadedScreenshotUrl = supabasePublicUrl;
+        _isUploadingScreenshot = false;
+      });
+
+      GlobalNotificationService.instance.showSuccess(
+        'Screenshot uploaded successfully!',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      GlobalNotificationService.instance.showError(
+        'Failed to upload screenshot: $e',
+      );
+      setState(() => _isUploadingScreenshot = false);
+    }
   }
 
   Widget _buildNavigationButtons(ColorScheme colorScheme) {
@@ -751,11 +927,32 @@ class _ReviewDialogState extends State<ReviewDialog> {
       );
     }
 
+    if (_step == 1) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          TextButton.icon(
+            onPressed: _isSubmitting ? null : () => setState(() => _step = 0),
+            icon: const Icon(Symbols.arrow_back, size: 20),
+            label: const Text('Back'),
+          ),
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : () => setState(() => _step = 2),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+            ),
+            child: const Text('Next'),
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         TextButton.icon(
-          onPressed: _isSubmitting ? null : () => setState(() => _step = 0),
+          onPressed: _isSubmitting ? null : () => setState(() => _step = 1),
           icon: const Icon(Symbols.arrow_back, size: 20),
           label: const Text('Back'),
         ),
