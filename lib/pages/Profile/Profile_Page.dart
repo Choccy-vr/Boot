@@ -176,10 +176,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     _buildRecentDevlogsSection(colorScheme, textTheme),
                   ],
                 );
-            }
-          },
+              }
+            },
+          ),
         ),
-      ),
       ),
     );
   }
@@ -390,7 +390,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.primary.withAlpha(77)),
+                    border: Border.all(
+                      color: colorScheme.primary.withAlpha(77),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -412,7 +414,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       Column(
                         children: [
                           IconButton(
-                            icon: Icon(Symbols.check, color: colorScheme.primary),
+                            icon: Icon(
+                              Symbols.check,
+                              color: colorScheme.primary,
+                            ),
                             onPressed: _saveUsername,
                             tooltip: 'Save',
                           ),
@@ -802,30 +807,7 @@ class _ProfilePageState extends State<ProfilePage> {
     List<String> mediaUrls,
     ColorScheme colorScheme,
   ) {
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Symbols.image, color: colorScheme.onSurfaceVariant, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              '${mediaUrls.length} media file${mediaUrls.length == 1 ? '' : 's'}',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return _DevlogMediaViewer(mediaUrls: mediaUrls, colorScheme: colorScheme);
   }
 
   Widget _buildCompactStatItem(
@@ -1028,7 +1010,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _saveUsername() async {
     try {
       final newUsername = _usernameController.text.trim();
-      
+
       if (newUsername.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1090,5 +1072,181 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     }
+  }
+}
+
+class _DevlogMediaViewer extends StatefulWidget {
+  final List<String> mediaUrls;
+  final ColorScheme colorScheme;
+
+  const _DevlogMediaViewer({
+    required this.mediaUrls,
+    required this.colorScheme,
+  });
+
+  @override
+  State<_DevlogMediaViewer> createState() => _DevlogMediaViewerState();
+}
+
+class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
+  int currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Media container that adjusts to image size with constraints
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(
+              minHeight: 150,
+              maxHeight: 500,
+              maxWidth: double.infinity,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: widget.colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Main image with intrinsic dimensions but constrained
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: 150, maxHeight: 500),
+                  child: Image.network(
+                    widget.mediaUrls[currentIndex],
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 200,
+                      width: double.infinity,
+                      color: widget.colorScheme.errorContainer,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Symbols.broken_image,
+                              size: 48,
+                              color: widget.colorScheme.error,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Failed to load media',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: widget.colorScheme.error),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Navigation arrows (only show if multiple images)
+                if (widget.mediaUrls.length > 1) ...[
+                  // Previous arrow
+                  if (currentIndex > 0)
+                    Positioned(
+                      left: 8,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                currentIndex--;
+                              });
+                            },
+                            icon: Icon(
+                              Symbols.chevron_left,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Next arrow
+                  if (currentIndex < widget.mediaUrls.length - 1)
+                    Positioned(
+                      right: 8,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                currentIndex++;
+                              });
+                            },
+                            icon: Icon(
+                              Symbols.chevron_right,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // Media indicators and counter (only show if multiple images)
+        if (widget.mediaUrls.length > 1) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Dot indicators
+              ...List.generate(widget.mediaUrls.length, (index) {
+                return Container(
+                  width: 6,
+                  height: 6,
+                  margin: EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index == currentIndex
+                        ? widget.colorScheme.primary
+                        : widget.colorScheme.outline.withValues(alpha: 0.4),
+                  ),
+                );
+              }),
+              const SizedBox(width: 12),
+              // Counter text
+              Text(
+                '${currentIndex + 1}/${widget.mediaUrls.length}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: widget.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 }

@@ -120,9 +120,6 @@ serve(async (req) => {
     }
 
     const userInfo: HackClubUserInfo = await userInfoResponse.json();
-    
-    // Log what we received from Hack Club
-    console.log("Hack Club userInfo:", JSON.stringify(userInfo, null, 2));
 
     // Validate user info
     if (!userInfo.sub || !userInfo.email) {
@@ -163,27 +160,20 @@ serve(async (req) => {
     if (existingUsers && existingUsers.length > 0) {
       // User exists - update their Hack Club metadata
       supabaseUserId = existingUsers[0].id;
-      console.log(`Found existing user: ${supabaseUserId}`);
 
       // Update user metadata
-      const updateData = {
-        slack_user_id: userInfo.slack_id || existingUsers[0].slack_user_id,
-        hc_user_id: userInfo.sub,
-        ysws_eligible: userInfo.ysws_eligible ?? null,
-        verification_status: userInfo.verification_status === "verified",
-      };
-      console.log("Updating existing user with data:", JSON.stringify(updateData, null, 2));
-      
-      const { data: updateResult, error: updateError } = await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("users")
-        .update(updateData)
-        .eq("id", supabaseUserId)
-        .select();
+        .update({
+          slack_user_id: userInfo.slack_id || existingUsers[0].slack_user_id,
+          hc_user_id: userInfo.sub,
+          ysws_eligible: userInfo.ysws_eligible ?? null,
+          verification_status: userInfo.verification_status === "verified",
+        })
+        .eq("id", supabaseUserId);
 
       if (updateError) {
         console.error("Error updating user:", updateError);
-      } else {
-        console.log("User updated successfully:", updateResult);
       }
 
       // Update auth user metadata
@@ -228,10 +218,9 @@ serve(async (req) => {
       }
 
       supabaseUserId = authData.user.id;
-      console.log(`Created new Supabase user: ${supabaseUserId}`);
 
       // Create user record in users table
-      const insertData = {
+      const { error: insertError } = await supabaseAdmin.from("users").insert({
         id: supabaseUserId,
         email: userInfo.email,
         username:
@@ -249,13 +238,7 @@ serve(async (req) => {
         hc_user_id: userInfo.sub,
         ysws_eligible: userInfo.ysws_eligible ?? null,
         verification_status: userInfo.verification_status === "verified",
-      };
-      console.log("Inserting new user with data:", JSON.stringify(insertData, null, 2));
-      
-      const { data: insertResult, error: insertError } = await supabaseAdmin
-        .from("users")
-        .insert(insertData)
-        .select();
+      });
 
       if (insertError) {
         console.error("Error creating user record:", insertError);
@@ -269,8 +252,6 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
-      } else {
-        console.log("User inserted successfully:", insertResult);
       }
     }
 

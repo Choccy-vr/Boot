@@ -82,6 +82,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _isFetchingTime = false;
   List<int> _selectedChallengeIds = [];
   int? _preselectedChallengeId;
+  Devlog? _editingDevlog;
+  List<String> _existingMediaUrls = [];
 
   final List<String> _popularTags = [
     // Build Type
@@ -311,6 +313,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Future<void> _handleCreateDevlog({int? challengeId}) async {
     setState(() {
+      _editingDevlog = null;
+      _existingMediaUrls = [];
       _showDevlogEditor = true;
       _devlogValidationAttempted = false;
       _devlogTitleDirty = false;
@@ -356,9 +360,30 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
+  Future<void> _handleEditDevlog(Devlog devlog) async {
+    setState(() {
+      _editingDevlog = devlog;
+      _existingMediaUrls = List.from(devlog.mediaUrls);
+      _devlogTitleController.text = devlog.title;
+      _devlogDescriptionController.text = devlog.description;
+      _selectedChallengeIds = List.from(devlog.challenges);
+      _showDevlogEditor = true;
+      _devlogValidationAttempted = false;
+      _devlogTitleDirty = false;
+      _devlogDescriptionDirty = false;
+      _devlogMediaDirty = false;
+      _isFetchingTime = false;
+      _timeToAdd = 0;
+      _timeToAddReadable = '0m';
+      _preselectedChallengeId = null;
+    });
+  }
+
   void _closeDevlogEditor() {
     setState(() {
       _showDevlogEditor = false;
+      _editingDevlog = null;
+      _existingMediaUrls = [];
       _devlogTitleController.clear();
       _devlogDescriptionController.clear();
       _cachedMediaFiles.clear();
@@ -413,70 +438,123 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       return;
     }
 
-    // Validate that work was done (minimum 5 minutes)
-    if (_timeToAdd <= 0) {
-      if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'You cannot publish a devlog without working on the project. What do you need to talk about if you did nothing?',
-      );
-      return;
-    }
+    final isEditing = _editingDevlog != null;
 
-    // Validate minimum 5 minutes of work
-    final timeInMinutes = (_timeToAdd * 60).round();
-    if (timeInMinutes < 5) {
-      if (!mounted) return;
-      GlobalNotificationService.instance.showError(
-        'You must work at least 5 minutes before publishing a devlog. Current time: ${timeInMinutes}m',
-      );
-      return;
+    // Only validate time tracking for new devlogs, not when editing
+    if (!isEditing) {
+      // Validate that work was done (minimum 5 minutes)
+      if (_timeToAdd <= 0) {
+        if (!mounted) return;
+        GlobalNotificationService.instance.showError(
+          'You cannot publish a devlog without working on the project. What do you need to talk about if you did nothing?',
+        );
+        return;
+      }
+
+      // Validate minimum 5 minutes of work
+      final timeInMinutes = (_timeToAdd * 60).round();
+      if (timeInMinutes < 5) {
+        if (!mounted) return;
+        GlobalNotificationService.instance.showError(
+          'You must work at least 5 minutes before publishing a devlog. Current time: ${timeInMinutes}m',
+        );
+        return;
+      }
     }
 
     setState(() => _isSubmittingDevlog = true);
 
     try {
-      final updatedProject = await HackatimeService.getProjectTime(
-        project: _project,
-        slackUserId: UserService.currentUser?.slackUserId ?? '',
-        context: context,
-      );
+      if (isEditing) {
+        // Update existing devlog
+        await DevlogService.updateDevlog(
+          devlog: _editingDevlog!,
+          title: _devlogTitleController.text,
+          description: _devlogDescriptionController.text,
+          newMediaFiles: _cachedMediaFiles,
+          existingMediaUrls: _existingMediaUrls,
+          challengeIds: _selectedChallengeIds,
+        );
 
-      await DevlogService.addDevlog(
-        projectID: _project.id,
-        title: _devlogTitleController.text,
-        description: _devlogDescriptionController.text,
-        cachedMediaFiles: _cachedMediaFiles,
-        readableTime: updatedProject.readableTime,
-        time: updatedProject.time,
-        challengeIds: _selectedChallengeIds,
-      );
-
-      // Mark challenges as completed on the project
-      if (_selectedChallengeIds.isNotEmpty) {
-        final updatedChallengeIds = List<int>.from(_project.challengeIds);
-        for (final challengeId in _selectedChallengeIds) {
-          if (!updatedChallengeIds.contains(challengeId)) {
-            updatedChallengeIds.add(challengeId);
+        // Mark challenges as completed on the project
+        if (_selectedChallengeIds.isNotEmpty) {
+          final updatedChallengeIds = List<int>.from(_project.challengeIds);
+          for (final challengeId in _selectedChallengeIds) {
+            if (!updatedChallengeIds.contains(challengeId)) {
+              updatedChallengeIds.add(challengeId);
+            }
           }
+          _project.challengeIds = updatedChallengeIds;
+          await ProjectService.updateProject(_project);
         }
-        _project.challengeIds = updatedChallengeIds;
-        await ProjectService.updateProject(_project);
-      }
 
-      // Refresh devlogs to include new entry with media URLs
-      await _loadDevlogs();
-      await _loadProjectChallenges();
-      setState(() {
-        _project.time = updatedProject.time;
-        _project.readableTime = updatedProject.readableTime;
-        _isSubmittingDevlog = false;
-      });
-      _closeDevlogEditor();
+        // Refresh devlogs
+        await _loadDevlogs();
+        await _loadProjectChallenges();
+
+        // Reload the project to reflect any changes
+        _project = await ProjectService.getProjectById(_project.id) ?? _project;
+
+        setState(() {
+          _isSubmittingDevlog = false;
+        });
+        _closeDevlogEditor();
+
+        if (!mounted) return;
+        GlobalNotificationService.instance.showSuccess(
+          'Devlog updated successfully!',
+        );
+      } else {
+        // Create new devlog
+        final updatedProject = await HackatimeService.getProjectTime(
+          project: _project,
+          slackUserId: UserService.currentUser?.slackUserId ?? '',
+          context: context,
+        );
+
+        await DevlogService.addDevlog(
+          projectID: _project.id,
+          title: _devlogTitleController.text,
+          description: _devlogDescriptionController.text,
+          cachedMediaFiles: _cachedMediaFiles,
+          readableTime: updatedProject.readableTime,
+          time: updatedProject.time,
+          challengeIds: _selectedChallengeIds,
+        );
+
+        // Mark challenges as completed on the project
+        if (_selectedChallengeIds.isNotEmpty) {
+          final updatedChallengeIds = List<int>.from(_project.challengeIds);
+          for (final challengeId in _selectedChallengeIds) {
+            if (!updatedChallengeIds.contains(challengeId)) {
+              updatedChallengeIds.add(challengeId);
+            }
+          }
+          _project.challengeIds = updatedChallengeIds;
+          await ProjectService.updateProject(_project);
+        }
+
+        // Refresh devlogs to include new entry with media URLs
+        await _loadDevlogs();
+        await _loadProjectChallenges();
+
+        // Reload the project to reflect any changes
+        _project = await ProjectService.getProjectById(_project.id) ?? _project;
+
+        setState(() {
+          _project.time = updatedProject.time;
+          _project.readableTime = updatedProject.readableTime;
+          _isSubmittingDevlog = false;
+        });
+        _closeDevlogEditor();
+      }
     } catch (e) {
       setState(() => _isSubmittingDevlog = false);
       if (!mounted) return;
       GlobalNotificationService.instance.showError(
-        'Failed to publish devlog: $e',
+        isEditing
+            ? 'Failed to update devlog: $e'
+            : 'Failed to publish devlog: $e',
       );
     }
   }
@@ -516,8 +594,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   String? get _devlogMediaError {
-    if (_cachedMediaFiles.isEmpty) {
-      return 'Add at least one media file to your devlog';
+    // When editing, check if there are existing media OR new cached files
+    if (_editingDevlog != null) {
+      if (_existingMediaUrls.isEmpty && _cachedMediaFiles.isEmpty) {
+        return 'Devlog must have at least one media file';
+      }
+    } else {
+      // When creating, require at least one cached file
+      if (_cachedMediaFiles.isEmpty) {
+        return 'Add at least one media file to your devlog';
+      }
     }
     return null;
   }
@@ -881,6 +967,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         challengesRequested: _project.challengeIds,
       );
 
+      // Reload the project to reflect any changes
+      _project = await ProjectService.getProjectById(_project.id) ?? _project;
+
       setState(() {
         _ships.insert(0, newShip);
       });
@@ -1049,7 +1138,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ),
           SizedBox(width: 12),
           Text(
-            'Create Devlog',
+            _editingDevlog != null ? 'Edit Devlog' : 'Create Devlog',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
@@ -1111,6 +1200,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Widget _buildDevlogMediaSection() {
+    final totalMediaCount =
+        _existingMediaUrls.length + _cachedMediaFiles.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1124,9 +1216,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
             ),
             Spacer(),
-            if (_cachedMediaFiles.isNotEmpty)
+            if (totalMediaCount > 0)
               Text(
-                '${_cachedMediaFiles.length} file${_cachedMediaFiles.length == 1 ? '' : 's'}',
+                '$totalMediaCount file${totalMediaCount == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -1134,6 +1226,90 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           ],
         ),
         SizedBox(height: 8),
+
+        // Existing media (when editing)
+        if (_existingMediaUrls.isNotEmpty) ...[
+          Text(
+            'Current Media',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _existingMediaUrls.asMap().entries.map((entry) {
+              final index = entry.key;
+              final url = entry.value;
+              return Stack(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Symbols.broken_image,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Symbols.close,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        padding: EdgeInsets.all(4),
+                        constraints: BoxConstraints(),
+                        onPressed: () {
+                          setState(() {
+                            _existingMediaUrls.removeAt(index);
+                            _devlogMediaDirty = true;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+          SizedBox(height: 16),
+        ],
+
+        // New media section
+        if (_cachedMediaFiles.isNotEmpty) ...[
+          Text(
+            'New Media',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8),
+        ],
+
         Container(
           width: double.infinity,
           height: 200,
@@ -1149,7 +1325,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ? _buildMediaUploadArea()
               : _buildMediaCarousel(),
         ),
-        if (_showDevlogMediaError && _cachedMediaFiles.isEmpty)
+        if (_showDevlogMediaError && totalMediaCount == 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Row(
@@ -1195,10 +1371,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 onPressed: () {
                   setState(() {
                     _cachedMediaFiles.clear();
+                    _devlogMediaDirty = true;
                   });
                 },
                 icon: Icon(Symbols.delete, size: 16),
-                label: Text('Clear All'),
+                label: Text('Clear New'),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   side: BorderSide(color: Theme.of(context).colorScheme.error),
@@ -1585,71 +1762,74 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Time tracking display
-          if (_isFetchingTime)
-            Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text(
-                  'Calculating time...',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            )
-          else
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: _timeToAdd > 0
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                    : Theme.of(
-                        context,
-                      ).colorScheme.errorContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _timeToAdd > 0
-                      ? Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.5)
-                      : Theme.of(
-                          context,
-                        ).colorScheme.error.withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+          // Time tracking display (only show when creating new devlog)
+          if (_editingDevlog == null) ...[
+            if (_isFetchingTime)
+              Row(
                 children: [
-                  Icon(
-                    Symbols.schedule,
-                    size: 18,
-                    color: _timeToAdd > 0
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.error,
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 8),
+                  SizedBox(width: 12),
                   Text(
-                    _timeToAdd > 0
-                        ? 'Time to add: $_timeToAddReadable'
-                        : 'No work detected',
+                    'Calculating time...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: _timeToAdd > 0
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
+              )
+            else
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _timeToAdd > 0
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                      : Theme.of(
+                          context,
+                        ).colorScheme.errorContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _timeToAdd > 0
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.5)
+                        : Theme.of(
+                            context,
+                          ).colorScheme.error.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Symbols.schedule,
+                      size: 18,
+                      color: _timeToAdd > 0
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      _timeToAdd > 0
+                          ? 'Time to add: $_timeToAddReadable'
+                          : 'No work detected',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: _timeToAdd > 0
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+          ] else
+            SizedBox.shrink(),
           Row(
             children: [
               OutlinedButton(
@@ -1678,7 +1858,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       )
                     : Icon(Symbols.save, size: 20),
                 label: Text(
-                  _isSubmittingDevlog ? 'Publishing...' : 'Publish Devlog',
+                  _isSubmittingDevlog
+                      ? (_editingDevlog != null
+                            ? 'Updating...'
+                            : 'Publishing...')
+                      : (_editingDevlog != null
+                            ? 'Update Devlog'
+                            : 'Publish Devlog'),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -3204,6 +3390,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           subtitle: _formatTimelineDate(devlog.createdAt),
           icon: Symbols.edit_note,
           color: TerminalColors.blue,
+          devlog: devlog,
+          onEdit: _isOwner() ? () => _handleEditDevlog(devlog) : null,
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3413,6 +3601,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    if (entry.onEdit != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: entry.onEdit,
+                        icon: Icon(Symbols.edit, size: 18),
+                        tooltip: 'Edit devlog',
+                        style: IconButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          padding: EdgeInsets.all(8),
+                          minimumSize: Size(32, 32),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -4143,6 +4344,8 @@ class _TimelineEntry {
   final IconData icon;
   final Color? color;
   final Widget? body;
+  final Devlog? devlog;
+  final VoidCallback? onEdit;
 
   _TimelineEntry({
     required this.date,
@@ -4152,5 +4355,7 @@ class _TimelineEntry {
     required this.icon,
     this.color,
     this.body,
+    this.devlog,
+    this.onEdit,
   }) : sortDate = sortDate ?? date;
 }

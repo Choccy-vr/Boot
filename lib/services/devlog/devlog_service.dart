@@ -96,8 +96,6 @@ class DevlogService {
         value: tempDevlog.id.toString(),
       );
 
-      
-
       final updatedTimeTracked = project.timeTrackedShip + time;
 
       await SupabaseDBFunctions.callIncrementFunction(
@@ -121,6 +119,70 @@ class DevlogService {
     } catch (e, stack) {
       AppLogger.error('Error adding devlog for project $projectID', e, stack);
       throw Exception('Error adding devlog: $e');
+    }
+  }
+
+  static Future<Devlog> updateDevlog({
+    required Devlog devlog,
+    required String title,
+    required String description,
+    List<PlatformFile> newMediaFiles = const [],
+    List<String> existingMediaUrls = const [],
+    List<int> challengeIds = const [],
+  }) async {
+    final trimmedTitle = title.trim();
+    final trimmedDescription = description.trim();
+
+    if (trimmedTitle.length <= 2) {
+      throw ArgumentError('Devlog title must be at least 3 characters long');
+    }
+    if (trimmedDescription.length <= 150) {
+      throw ArgumentError(
+        'Devlog description must be more than 150 characters',
+      );
+    }
+
+    // Must have at least one media (existing or new)
+    if (existingMediaUrls.isEmpty && newMediaFiles.isEmpty) {
+      throw ArgumentError('Devlog must have at least one media file');
+    }
+
+    try {
+      final projectID = int.parse(devlog.projectId);
+
+      // Upload new media files if any
+      List<String> allMediaUrls = List.from(existingMediaUrls);
+      if (newMediaFiles.isNotEmpty) {
+        final objectPaths = await StorageService.uploadMultipleFiles(
+          files: newMediaFiles,
+          dirPath: 'projects/$projectID/devlog_${devlog.id}',
+        );
+
+        // Convert object paths to public URLs
+        for (final path in objectPaths) {
+          final publicUrl = await StorageService.getPublicUrl(path: path);
+          if (publicUrl != null) {
+            allMediaUrls.add(publicUrl);
+          }
+        }
+      }
+
+      final updatedDevlog = await SupabaseDB.updateAndReturnData(
+        table: 'devlogs',
+        data: {
+          'title': trimmedTitle,
+          'description': trimmedDescription,
+          'media_urls': allMediaUrls,
+          'challenges': challengeIds,
+        },
+        column: 'id',
+        value: devlog.id.toString(),
+      );
+
+      return Devlog.fromJson(updatedDevlog.first);
+    } catch (e, stack) {
+      AppLogger.error('Error updating devlog ${devlog.id}', e, stack);
+      throw Exception('Error updating devlog: $e');
     }
   }
 
