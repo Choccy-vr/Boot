@@ -86,6 +86,24 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
     );
   }
 
+  bool _isCurrentRoute(String routePath) {
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute == null) return false;
+
+    // Check for exact match or route prefix
+    if (currentRoute == routePath) return true;
+
+    // Handle special cases like /projects/:id matching /projects
+    if (routePath == '/projects' && currentRoute.startsWith('/projects/')) {
+      return true;
+    }
+    if (routePath == '/user' && currentRoute.startsWith('/user/')) {
+      return true;
+    }
+
+    return false;
+  }
+
   Widget _buildRailContent(ColorScheme colorScheme, TextTheme textTheme) {
     final user = UserService.currentUser;
 
@@ -292,41 +310,34 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
     required VoidCallback onTap,
     bool isDisabled = false,
   }) {
-    final iconColor = isDisabled
-        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.38)
-        : colorScheme.primary;
-    final textColor = isDisabled
-        ? colorScheme.onSurface.withValues(alpha: 0.38)
-        : colorScheme.onSurface;
+    final iconColor = colorScheme.primary;
+    final textColor = colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
-        onTap: isDisabled ? null : onTap,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        child: Opacity(
-          opacity: isDisabled ? 0.5 : 1.0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-            child: Row(
-              children: [
-                Icon(icon, color: iconColor, size: 24),
-                if (_isRailExpanded) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 24),
+              if (_isRailExpanded) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: textColor,
+                      fontWeight: FontWeight.w500,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

@@ -2616,8 +2616,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         Expanded(
           child: _buildStatCard(
             icon: Symbols.trending_up,
-            label: 'Level',
-            value: _project.level,
+            label: 'Build Type',
+            value: _project.level.toLowerCase().contains('scratch')
+                ? 'Made from scratch'
+                : 'Built off another OS',
             colorScheme: colorScheme,
             textTheme: textTheme,
           ),

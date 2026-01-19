@@ -35,7 +35,7 @@ class NavigationService {
     final navigator = Navigator.of(context);
     switch (destination) {
       case AppDestination.home:
-        navigator.pushNamedAndRemoveUntil('/dashboard', (route) => false);
+        navigator.pushNamed('/dashboard');
         break;
       case AppDestination.project:
         navigator.pushNamed('/projects');
@@ -101,9 +101,7 @@ class NavigationService {
     BuildContext context, {
     int? challengeId,
   }) {
-    return Navigator.of(
-      context,
-    ).pushNamed<T>(
+    return Navigator.of(context).pushNamed<T>(
       '/projects/${project.id}',
       arguments: {'project': project, 'challengeId': challengeId},
     );

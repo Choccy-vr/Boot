@@ -20,8 +20,11 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   late AnimationController _typewriterController;
   late Animation<int> _typewriterAnimation;
   final String _headerText = "make build-os";
-  static final RegExp _githubRepoRegex = RegExp(
-    r'^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$',
+
+  // Support multiple git hosting platforms
+  static final RegExp _gitRepoRegex = RegExp(
+    r'^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org|gitea\.io|codeberg\.org|sr\.ht|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    r'\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$',
   );
 
   final TextEditingController _projectNameController = TextEditingController();
@@ -37,6 +40,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   bool _showTagSuggestions = false;
   TextEditingController? _currentTagController;
   Set<String> _claimedHackatimeProjects = {};
+  final TextEditingController _hackatimeSearchController =
+      TextEditingController();
+  List<HackatimeProject> _filteredHackatimeProjects = [];
   bool _showNameValidation = false;
   bool _showDescriptionValidation = false;
   bool _showRepoValidation = false;
@@ -48,8 +54,8 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   };
 
   final Map<String, String> _architectures = {
-    'x86_64': '64-bit',
-    'x86': '32-bit',
+    'x86_64': 'x86-64',
+    'x86': 'x86 (32-bit)',
   };
 
   final List<String> _popularTags = [
@@ -66,10 +72,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     'Gentoo',
     // Architectures
     'x86-64',
-    'ARM',
-    'ARM64',
-    'RISC-V',
-    'PowerPC',
+    'x86',
     // Technologies
     'Linux',
     'Kernel',
@@ -91,11 +94,6 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     'LFS',
     'Yocto',
     'OpenWrt',
-    // Languages
-    'C',
-    'Rust',
-    'Shell Script',
-    'Python',
   ];
   List<HackatimeProject> _hackatimeProjects = [];
 
@@ -118,8 +116,8 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   String? get _repositoryError {
     final text = _repositoryController.text.trim();
     if (text.isEmpty) return 'Repository URL is required';
-    if (!_isValidGithubRepoUrl(text))
-      return 'Enter a valid GitHub repository URL';
+    if (!_isValidGitRepoUrl(text))
+      return 'Enter a valid Git repository URL (GitHub, GitLab, Bitbucket, etc.)';
     return null;
   }
 
@@ -145,11 +143,25 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     );
     setState(() {
       _hackatimeProjects = projects;
+      _filteredHackatimeProjects = projects;
       _selectedHackatimeProjects.removeWhere(
         (selected) => !_hackatimeProjects.any(
           (project) => project.name.toLowerCase() == selected.toLowerCase(),
         ),
       );
+    });
+  }
+
+  void _filterHackatimeProjects(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredHackatimeProjects = _hackatimeProjects;
+      } else {
+        final lowerQuery = query.toLowerCase();
+        _filteredHackatimeProjects = _hackatimeProjects.where((project) {
+          return project.name.toLowerCase().contains(lowerQuery);
+        }).toList();
+      }
     });
   }
 
@@ -336,7 +348,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 hintText: 'https://github.com/username/my-awesome-os',
                 helperText: _showRepoValidation && _repositoryError != null
                     ? null
-                    : 'Must be a valid GitHub URL',
+                    : 'Any valid Git hosting URL (GitHub, GitLab, Bitbucket, etc.)',
                 errorText: _showRepoValidation ? _repositoryError : null,
                 prefixIcon: Icon(
                   Symbols.folder_data,
@@ -358,13 +370,18 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue textEditingValue) {
                 if (textEditingValue.text.isEmpty) {
-                  return _popularTags.where((tag) => !_projectTags.contains(tag)).toList();
+                  return _popularTags
+                      .where((tag) => !_projectTags.contains(tag))
+                      .toList();
                 }
                 final input = textEditingValue.text.toLowerCase();
-                return _popularTags.where((tag) => 
-                  tag.toLowerCase().contains(input) && 
-                  !_projectTags.contains(tag)
-                ).toList();
+                return _popularTags
+                    .where(
+                      (tag) =>
+                          tag.toLowerCase().contains(input) &&
+                          !_projectTags.contains(tag),
+                    )
+                    .toList();
               },
               onSelected: (String selection) {
                 setState(() {
@@ -374,41 +391,43 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 });
                 _currentTagController?.clear();
               },
-              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                _currentTagController = controller;
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: InputDecoration(
-                    labelText: 'Search and add tags',
-                    hintText: 'Start typing (e.g., "LFS", "Ubuntu")',
-                    helperText: '${_projectTags.length} tag(s) added',
-                    prefixIcon: Icon(
-                      Symbols.label,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: colorScheme.primary,
-                        width: 2,
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
+                    _currentTagController = controller;
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      maxLength: 20,
+                      style: TextStyle(color: colorScheme.onSurface),
+                      decoration: InputDecoration(
+                        labelText: 'Search and add tags',
+                        hintText: 'Start typing (e.g., "LFS", "Ubuntu")',
+                        helperText: '${_projectTags.length} tag(s) added',
+                        prefixIcon: Icon(
+                          Symbols.label,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty && !_projectTags.contains(value)) {
-                      setState(() {
-                        _projectTags.add(value.trim());
-                        controller.clear();
-                      });
-                    }
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty && !_projectTags.contains(value)) {
+                          setState(() {
+                            _projectTags.add(value.trim());
+                            controller.clear();
+                          });
+                        }
+                      },
+                    );
                   },
-                );
-              },
               optionsViewBuilder: (context, onSelected, options) {
                 return Align(
                   alignment: Alignment.topLeft,
@@ -454,7 +473,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                       setState(() => _projectTags.remove(tag));
                     },
                     backgroundColor: colorScheme.primaryContainer,
-                    labelStyle: TextStyle(color: colorScheme.onPrimaryContainer),
+                    labelStyle: TextStyle(
+                      color: colorScheme.onPrimaryContainer,
+                    ),
                   );
                 }).toList(),
               ),
@@ -564,6 +585,39 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             else ...[
               _buildHackatimeInfoBanner(colorScheme, textTheme),
               const SizedBox(height: 16),
+              TextField(
+                controller: _hackatimeSearchController,
+                onChanged: _filterHackatimeProjects,
+                style: TextStyle(color: colorScheme.onSurface),
+                decoration: InputDecoration(
+                  labelText: 'Search Hackatime Projects',
+                  hintText: 'Filter by project name...',
+                  prefixIcon: Icon(
+                    Symbols.search,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  suffixIcon: _hackatimeSearchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Symbols.clear),
+                          onPressed: () {
+                            _hackatimeSearchController.clear();
+                            _filterHackatimeProjects('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildHackatimeProjectChips(colorScheme, textTheme),
               if (_selectedHackatimeProjects.isNotEmpty) ...[
                 const SizedBox(height: 16),
@@ -662,7 +716,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     final selectedSet = _selectedHackatimeProjects
         .map(_normalizeHackatimeName)
         .toSet();
-    final projects = _hackatimeProjects
+    final projects = _filteredHackatimeProjects
         .where((project) => project.name != 'No Projects Available')
         .toList();
     return Wrap(
@@ -794,9 +848,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   String _normalizeHackatimeName(String name) => name.trim().toLowerCase();
 
-  bool _isValidGithubRepoUrl(String url) {
+  bool _isValidGitRepoUrl(String url) {
     if (url.isEmpty) return false;
-    return _githubRepoRegex.hasMatch(url.trim());
+    return _gitRepoRegex.hasMatch(url.trim());
   }
 
   Widget _buildProjectPreview(ColorScheme colorScheme, TextTheme textTheme) {
@@ -1043,7 +1097,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               Flexible(
                 child: Text(
                   'Create Project',
-                  style: textTheme.titleLarge?.copyWith(color: colorScheme.primary),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

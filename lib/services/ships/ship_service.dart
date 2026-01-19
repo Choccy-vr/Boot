@@ -148,7 +148,7 @@ class ShipService {
         await ProjectService.updateProject(project);
       }
       final BootUser? user = await UserService.getUserById(project?.owner ?? '');
-      await SlackManager.sendMessage(destination: user?.slackUserId ?? '', message: "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nYou will now see some Boot Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.");
+      await SlackManager.sendMessage(destination: user?.slackUserId ?? '', message: "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.");
     } catch (e, stack) {
       AppLogger.error('Error approving ship $shipId', e, stack);
       throw Exception('Error approving ship: $e');
