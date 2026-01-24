@@ -74,7 +74,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _showTagSuggestions = false;
   List<Challenge> _projectChallenges = [];
   List<Challenge> _filteredProjectChallenges = [];
-  Map<String, Prize> _prizeCacheForChallenges = {};
   ChallengeType? _selectedChallengeType;
   ChallengeDifficulty? _selectedChallengeDifficulty;
   double _timeToAdd = 0.0;
@@ -224,18 +223,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         // Otherwise show all challenges
         return true;
       }).toList();
-
-      // Load prizes for challenges
-      final prizeIds = relevantChallenges
-          .map((c) => c.prize)
-          .where((id) => id.isNotEmpty)
-          .toSet()
-          .toList();
-
-      if (prizeIds.isNotEmpty) {
-        final prizes = await PrizeService.getPrizesByIds(prizeIds);
-        _prizeCacheForChallenges = {for (var prize in prizes) prize.id: prize};
-      }
 
       if (!mounted) return;
       setState(() {
@@ -492,16 +479,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         );
 
         // Mark challenges as completed on the project
-        if (_selectedChallengeIds.isNotEmpty) {
-          final updatedChallengeIds = List<int>.from(_project.challengeIds);
-          for (final challengeId in _selectedChallengeIds) {
-            if (!updatedChallengeIds.contains(challengeId)) {
-              updatedChallengeIds.add(challengeId);
-            }
-          }
-          _project.challengeIds = updatedChallengeIds;
-          await ProjectService.updateProject(_project);
-        }
+        await _addPendingChallenges(_selectedChallengeIds);
 
         // Refresh devlogs
         await _loadDevlogs();
@@ -538,16 +516,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         );
 
         // Mark challenges as completed on the project
-        if (_selectedChallengeIds.isNotEmpty) {
-          final updatedChallengeIds = List<int>.from(_project.challengeIds);
-          for (final challengeId in _selectedChallengeIds) {
-            if (!updatedChallengeIds.contains(challengeId)) {
-              updatedChallengeIds.add(challengeId);
-            }
-          }
-          _project.challengeIds = updatedChallengeIds;
-          await ProjectService.updateProject(_project);
-        }
+        await _addPendingChallenges(_selectedChallengeIds);
 
         // Refresh devlogs to include new entry with media URLs
         await _loadDevlogs();
@@ -572,6 +541,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             : 'Failed to publish devlog: $e',
       );
     }
+  }
+
+  Future<void> _addPendingChallenges(List<int> challengeIds) async {
+    if (challengeIds.isEmpty) return;
+
+    final updatedPendingChallengeIds = List<int>.from(
+      _project.pendingChallengeIds,
+    );
+    for (final challengeId in challengeIds) {
+      if (!updatedPendingChallengeIds.contains(challengeId)) {
+        updatedPendingChallengeIds.add(challengeId);
+      }
+    }
+    _project.pendingChallengeIds = updatedPendingChallengeIds;
+    await ProjectService.updateProject(_project);
   }
 
   bool _isOwner() {
@@ -979,7 +963,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       final newShip = await ShipService.addShip(
         project: _project,
         time: _project.timeTrackedShip,
-        challengesRequested: _project.challengeIds,
+        challengesRequested: _project.pendingChallengeIds,
       );
 
       // Reload the project to reflect any changes
@@ -3884,7 +3868,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     final typeIcon = _getChallengeTypeIcon(challenge.type);
     final daysRemaining = challenge.endDate.difference(DateTime.now()).inDays;
     final isExpired = daysRemaining < 0;
-    final prize = _prizeCacheForChallenges[challenge.prize];
 
     return InkWell(
       onTap: () =>
@@ -4032,26 +4015,29 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ),
                       ),
                       const Spacer(),
-                      // Prize info
-                      if (prize != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Symbols.featured_seasonal_and_gifts,
-                              size: 14,
+                      // Reward info
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            challenge.key.isNotEmpty
+                                ? Symbols.key
+                                : Symbols.toll,
+                            size: 14,
+                            color: TerminalColors.yellow,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            challenge.key.isNotEmpty
+                                ? challenge.key
+                                : '${challenge.coins}',
+                            style: textTheme.bodySmall?.copyWith(
                               color: TerminalColors.yellow,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              prize.title,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: TerminalColors.yellow,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -4145,22 +4131,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) async {
-    // Get prize from cache or load it
-    Prize? prize = _prizeCacheForChallenges[challenge.prize];
-    if (prize == null && challenge.prize.isNotEmpty) {
-      prize = await PrizeService.getPrizeById(challenge.prize);
-      if (prize != null) {
-        _prizeCacheForChallenges[challenge.prize] = prize;
-      }
-    }
-
     if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (context) => ChallengeDetailDialog(
         challenge: challenge,
-        prize: prize,
         colorScheme: colorScheme,
         textTheme: textTheme,
       ),

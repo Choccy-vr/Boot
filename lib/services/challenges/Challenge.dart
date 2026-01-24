@@ -4,12 +4,13 @@ class Challenge {
   final DateTime startDate;
   final DateTime endDate;
   final ChallengeType type;
-  final String prize;
   final ChallengeDifficulty difficulty;
   final String title;
   final String description;
   final String requirements;
   final bool isActive;
+  final int coins;
+  final String key;
 
   Challenge({
     required this.id,
@@ -17,12 +18,13 @@ class Challenge {
     required this.startDate,
     required this.endDate,
     required this.type,
-    required this.prize,
     required this.difficulty,
     required this.title,
     required this.description,
     required this.requirements,
     required this.isActive,
+    this.coins = 0,
+    this.key = '',
   });
 
   factory Challenge.fromJson(Map<String, dynamic> json) {
@@ -39,7 +41,6 @@ class Challenge {
         (e) => e.toString().split('.').last == (json['type'] ?? ''),
         orElse: () => ChallengeType.special,
       ),
-      prize: json['prize'] ?? '',
       difficulty: ChallengeDifficulty.values.firstWhere(
         (e) => e.toString().split('.').last == (json['difficulty'] ?? 'easy'),
         orElse: () => ChallengeDifficulty.easy,
@@ -48,6 +49,8 @@ class Challenge {
       description: json['description'] ?? 'No description provided',
       requirements: json['requirements'] ?? 'No requirements specified',
       isActive: json['active'] ?? false,
+      coins: (json['coins'] as num?)?.toInt() ?? 0,
+      key: json['key'] ?? '',
     );
   }
 }

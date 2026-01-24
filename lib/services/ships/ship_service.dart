@@ -128,6 +128,9 @@ class ShipService {
     required List<int> challengesCompleted,
     required String screenshotUrl,
     double? overrideHours,
+    int technicality = 0,
+    int functionality = 0,
+    int ux = 0,
   }) async {
     try {
       final updateData = {
@@ -137,6 +140,9 @@ class ShipService {
         'comment': comment,
         'challenges_completed': challengesCompleted,
         'screenshot_url': screenshotUrl,
+        'technicality': technicality,
+        'functionality': functionality,
+        'ux': ux,
       };
 
       // Add override hours if provided
@@ -161,17 +167,17 @@ class ShipService {
       final BootUser? user = await UserService.getUserById(
         project?.owner ?? '',
       );
-      if (overrideHours == 0) {
+      if (overrideHours == 0.0 || overrideHours == null) {
         await SlackManager.sendMessage(
           destination: user?.slackUserId ?? '',
           message:
-              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
+              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
         );
       } else {
         await SlackManager.sendMessage(
           destination: user?.slackUserId ?? '',
           message:
-              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\n However your time has been overridden. The time you earn coins for is now ${overrideHours} hrs\n\nYou will now see an additional ${ship.coinsEarned} Coins in your account :money_mouth_face:. \nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
+              "Congratulations! :tada:\n\nYour Boot project ${project?.title} has been approved.\n\nHowever, your time has been overridden. The time you earn coins for is now $overrideHours hrs.\n\nIn case you didn't know, Boot Coins can be used in the shop to get prizes!\n\nKeep working on your OS, you can always ship again once you have changed it a good amount.",
         );
       }
     } catch (e, stack) {

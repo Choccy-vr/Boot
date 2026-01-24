@@ -139,6 +139,8 @@ class ProjectService {
         tags: project.tags,
         timeTrackedShip: project.timeTrackedShip,
         shipped: project.shipped,
+        pendingChallenges: project.pendingChallenges,
+        pendingChallengeIds: project.pendingChallengeIds,
       ),
     );
   }

@@ -25,12 +25,22 @@ class Prize {
     this.type = PrizeType.normal,
   });
 
+  /// Factory constructor for creating an empty/fallback Prize instance
+  factory Prize.empty() {
+    return Prize(
+      id: '',
+      createdAt: DateTime.now(),
+      title: '',
+      description: '',
+      cost: 0,
+      stock: 0,
+    );
+  }
+
   factory Prize.fromJson(Map<String, dynamic> json) {
     return Prize(
       id: json['id'] ?? '',
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toString(),
-      ),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       title: json['title'] ?? 'Untitled Prize',
       description: json['description'] ?? 'No description provided',
       picture: json['picture'],

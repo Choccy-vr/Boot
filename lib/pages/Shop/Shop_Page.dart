@@ -17,6 +17,8 @@ class ShopPage extends StatefulWidget {
 }
 
 class _ShopPageState extends State<ShopPage> {
+  static const int DEFAULT_MAX_QUANTITY = 99;
+
   List<Prize> _allPrizes = [];
   List<Prize> _availablePrizes = [];
   List<Prize> _lockedPrizes = [];
@@ -74,14 +76,48 @@ class _ShopPageState extends State<ShopPage> {
           _allPrizes = listedPrizes;
           _availablePrizes = available;
           _lockedPrizes = locked;
-          _isLoading = false;
         });
         _applySorting();
+        await _cleanupCart();
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _cleanupCart() async {
+    // Remove items from cart that are deleted or out of stock
+    final validPrizeIds = _allPrizes
+        .where((p) => p.stock > 0)
+        .map((p) => p.id)
+        .toSet();
+
+    final itemsToRemove = _cartItems
+        .where((id) => !validPrizeIds.contains(id))
+        .toList();
+
+    if (itemsToRemove.isNotEmpty) {
+      // Store original state for rollback
+      final originalCartItems = Set<String>.from(_cartItems);
+      final originalQuantities = Map<String, int>.from(_quantities);
+
+      setState(() {
+        for (final id in itemsToRemove) {
+          _cartItems.remove(id);
+          _quantities.remove(id);
+        }
+      });
+
+      // Update user's cart in the backend
+      await _syncUserCart(
+        originalCartItems: originalCartItems,
+        originalQuantities: originalQuantities,
+      );
     }
   }
 
@@ -101,7 +137,43 @@ class _ShopPageState extends State<ShopPage> {
     });
   }
 
+  /// Synchronizes the local cart state with the backend.
+  /// Includes error handling with rollback on failure.
+  Future<void> _syncUserCart({
+    Set<String>? originalCartItems,
+    Map<String, int>? originalQuantities,
+  }) async {
+    final currentUser = UserService.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      currentUser.cart = _cartItems.toList();
+      await UserService.updateUser();
+    } catch (e) {
+      // Revert local cart changes on error if originals provided
+      if (originalCartItems != null || originalQuantities != null) {
+        setState(() {
+          if (originalCartItems != null) _cartItems = originalCartItems;
+          if (originalQuantities != null) _quantities = originalQuantities;
+        });
+        // Restore user cart to original state
+        if (originalCartItems != null) {
+          currentUser.cart = originalCartItems.toList();
+        }
+      }
+
+      // Show error to user
+      GlobalNotificationService.instance.showError(
+        'Failed to save cart changes. Please try again.',
+      );
+    }
+  }
+
   void _toggleCartItem(String prizeId) {
+    // Store original state for rollback
+    final originalCartItems = Set<String>.from(_cartItems);
+    final originalQuantities = Map<String, int>.from(_quantities);
+
     setState(() {
       if (_cartItems.contains(prizeId)) {
         _cartItems.remove(prizeId);
@@ -113,33 +185,45 @@ class _ShopPageState extends State<ShopPage> {
     });
 
     // Update user's cart in the backend
-    final currentUser = UserService.currentUser;
-    if (currentUser != null) {
-      currentUser.cart = _cartItems.toList();
-      UserService.updateUser();
-    }
+    _syncUserCart(
+      originalCartItems: originalCartItems,
+      originalQuantities: originalQuantities,
+    );
   }
 
   void _updateQuantity(String prizeId, int delta) {
+    // Get the prize to check stock
+    final prize = _allPrizes.firstWhere(
+      (p) => p.id == prizeId,
+      orElse: Prize.empty,
+    );
+
+    // Return early if prize not found
+    if (prize.id.isEmpty) return;
+
+    // Store original state for rollback
+    final originalCartItems = Set<String>.from(_cartItems);
+    final originalQuantities = Map<String, int>.from(_quantities);
+
     setState(() {
       final currentQty = _quantities[prizeId] ?? 1;
-      final newQty = (currentQty + delta).clamp(0, 99);
+      final maxQty = prize.stock > 0 ? prize.stock : 0;
+      final newQty = (currentQty + delta).clamp(0, maxQty);
 
       if (newQty == 0) {
         // Remove from cart when quantity reaches 0
         _cartItems.remove(prizeId);
         _quantities.remove(prizeId);
-
-        // Update user's cart in the backend
-        final currentUser = UserService.currentUser;
-        if (currentUser != null) {
-          currentUser.cart = _cartItems.toList();
-          UserService.updateUser();
-        }
       } else {
         _quantities[prizeId] = newQty;
       }
     });
+
+    // Update user's cart in the backend
+    _syncUserCart(
+      originalCartItems: originalCartItems,
+      originalQuantities: originalQuantities,
+    );
   }
 
   int _calculateCartTotal() {
@@ -147,14 +231,7 @@ class _ShopPageState extends State<ShopPage> {
     for (final prizeId in _cartItems) {
       final prize = _allPrizes.firstWhere(
         (p) => p.id == prizeId,
-        orElse: () => Prize(
-          id: '',
-          createdAt: DateTime.now(),
-          title: '',
-          description: '',
-          cost: 0,
-          stock: 0,
-        ),
+        orElse: Prize.empty,
       );
       final quantity = _quantities[prizeId] ?? 1;
       total += prize.cost * quantity;
@@ -162,13 +239,45 @@ class _ShopPageState extends State<ShopPage> {
     return total;
   }
 
-  bool _canAffordCart() {
+  String? _getCheckoutDisabledReason() {
+    if (_cartItems.isEmpty) return null;
+
     final userCoins = UserService.currentUser?.bootCoins ?? 0;
     final cartTotal = _calculateCartTotal();
-    return userCoins >= cartTotal;
+
+    // Check if all items are in stock with sufficient quantity
+    for (final prizeId in _cartItems) {
+      final prize = _allPrizes.firstWhere(
+        (p) => p.id == prizeId,
+        orElse: Prize.empty,
+      );
+      final quantity = _quantities[prizeId] ?? 1;
+
+      // If prize doesn't exist
+      if (prize.id.isEmpty) {
+        return 'Item no longer available';
+      }
+
+      // If prize is out of stock or quantity exceeds stock
+      if (prize.stock <= 0) {
+        return 'Item out of stock';
+      }
+
+      if (quantity > prize.stock) {
+        return 'Insufficient stock';
+      }
+    }
+
+    // Check if user can afford
+    if (userCoins < cartTotal) {
+      return 'Insufficient Coins';
+    }
+
+    return null; // No disabled reason, checkout is enabled
   }
 
   void _showCartDialog() {
+    final disabledReason = _getCheckoutDisabledReason();
     showDialog(
       context: context,
       builder: (context) => _CartDialog(
@@ -176,7 +285,8 @@ class _ShopPageState extends State<ShopPage> {
         allPrizes: _allPrizes,
         quantities: _quantities,
         onRemoveItem: _toggleCartItem,
-        onCheckout: _canAffordCart()
+        disabledReason: disabledReason,
+        onCheckout: disabledReason == null
             ? () {
                 // TODO: Implement checkout
                 Navigator.pop(context);
@@ -195,129 +305,151 @@ class _ShopPageState extends State<ShopPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return SharedNavigationRail(
-      appBarActions: [
-        // Sort dropdown
-        PopupMenuButton<SortOption>(
-          icon: Icon(Symbols.sort, color: colorScheme.primary),
-          onSelected: (option) {
-            setState(() => _sortOption = option);
-            _applySorting();
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: SortOption.priceAscending,
+      showAppBar: false,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: colorScheme.surfaceContainerLowest,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.storefront, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Shop',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            // Sort dropdown
+            PopupMenuButton<SortOption>(
+              icon: Icon(Symbols.sort, color: colorScheme.primary),
+              onSelected: (option) {
+                setState(() => _sortOption = option);
+                _applySorting();
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: SortOption.priceAscending,
+                  child: Row(
+                    children: [
+                      Icon(Symbols.arrow_upward, size: 18),
+                      const SizedBox(width: 8),
+                      const Text('Price: Low to High'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: SortOption.priceDescending,
+                  child: Row(
+                    children: [
+                      Icon(Symbols.arrow_downward, size: 18),
+                      const SizedBox(width: 8),
+                      const Text('Price: High to Low'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: SortOption.alphabetical,
+                  child: Row(
+                    children: [
+                      Icon(Symbols.sort_by_alpha, size: 18),
+                      const SizedBox(width: 8),
+                      const Text('Alphabetical'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 8),
+            // Coin balance
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: TerminalColors.yellow.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: TerminalColors.yellow.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Symbols.arrow_upward, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Price: Low to High'),
+                  Icon(Symbols.toll, size: 18, color: TerminalColors.yellow),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${UserService.currentUser?.bootCoins ?? 0}',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: TerminalColors.yellow,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
-            PopupMenuItem(
-              value: SortOption.priceDescending,
-              child: Row(
+            const SizedBox(width: 12),
+            // Shopping cart button
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Icon(Symbols.arrow_downward, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Price: High to Low'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: SortOption.alphabetical,
-              child: Row(
-                children: [
-                  Icon(Symbols.sort_by_alpha, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Alphabetical'),
+                  IconButton(
+                    onPressed: _showCartDialog,
+                    icon: Icon(
+                      Symbols.shopping_cart,
+                      size: 22,
+                      color: colorScheme.primary,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.surfaceContainerHigh,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: BorderSide(color: colorScheme.outline, width: 1),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                  if (_cartItems.isNotEmpty)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: TerminalColors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          '${_cartItems.length}',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(width: 8),
-        // Coin balance
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: TerminalColors.yellow.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: TerminalColors.yellow.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Symbols.toll, size: 18, color: TerminalColors.yellow),
-              const SizedBox(width: 6),
-              Text(
-                '${UserService.currentUser?.bootCoins ?? 0}',
-                style: textTheme.titleSmall?.copyWith(
-                  color: TerminalColors.yellow,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Shopping cart button
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                onPressed: _showCartDialog,
-                icon: Icon(
-                  Symbols.shopping_cart,
-                  size: 22,
-                  color: colorScheme.primary,
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.surfaceContainerHigh,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(color: colorScheme.outline, width: 1),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                ),
-              ),
-              if (_cartItems.isNotEmpty)
-                Positioned(
-                  right: -4,
-                  top: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: TerminalColors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      '${_cartItems.length}',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-      child: Container(
-        color: colorScheme.surface,
-        child: _isLoading
+        body: _isLoading
             ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -365,19 +497,7 @@ class _ShopPageState extends State<ShopPage> {
                   // Available prizes section
                   if (_availablePrizes.isNotEmpty) ...[
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                      sliver: SliverToBoxAdapter(
-                        child: Text(
-                          'Available Prizes',
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                       sliver: SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: _getGridColumns(context),
@@ -848,6 +968,7 @@ class _CartDialog extends StatelessWidget {
   final Map<String, int> quantities;
   final Function(String) onRemoveItem;
   final VoidCallback? onCheckout;
+  final String? disabledReason;
 
   const _CartDialog({
     required this.cartItems,
@@ -855,6 +976,7 @@ class _CartDialog extends StatelessWidget {
     required this.quantities,
     required this.onRemoveItem,
     this.onCheckout,
+    this.disabledReason,
   });
 
   int _calculateTotal() {
@@ -862,14 +984,7 @@ class _CartDialog extends StatelessWidget {
     for (final prizeId in cartItems) {
       final prize = allPrizes.firstWhere(
         (p) => p.id == prizeId,
-        orElse: () => Prize(
-          id: '',
-          createdAt: DateTime.now(),
-          title: '',
-          description: '',
-          cost: 0,
-          stock: 0,
-        ),
+        orElse: Prize.empty,
       );
       final quantity = quantities[prizeId] ?? 1;
       total += prize.cost * quantity;
@@ -883,7 +998,7 @@ class _CartDialog extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final userCoins = UserService.currentUser?.bootCoins ?? 0;
     final cartTotal = _calculateTotal();
-    final canAfford = userCoins >= cartTotal;
+    final isCheckoutEnabled = disabledReason == null;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -952,14 +1067,7 @@ class _CartDialog extends StatelessWidget {
                         final prizeId = cartItems.elementAt(index);
                         final prize = allPrizes.firstWhere(
                           (p) => p.id == prizeId,
-                          orElse: () => Prize(
-                            id: '',
-                            createdAt: DateTime.now(),
-                            title: 'Unknown',
-                            description: '',
-                            cost: 0,
-                            stock: 0,
-                          ),
+                          orElse: Prize.empty,
                         );
                         final quantity = quantities[prizeId] ?? 1;
                         final itemTotal = prize.cost * quantity;
@@ -999,32 +1107,39 @@ class _CartDialog extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            subtitle: Row(
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Symbols.toll,
-                                      size: 14,
-                                      color: TerminalColors.yellow,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${prize.cost} × $quantity = $itemTotal',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: TerminalColors.yellow,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
+                                Icon(
+                                  Symbols.toll,
+                                  size: 14,
+                                  color: TerminalColors.yellow,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${prize.cost}',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: TerminalColors.yellow,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Symbols.delete, size: 20),
-                              color: TerminalColors.red,
-                              onPressed: () => onRemoveItem(prizeId),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Qty: $quantity',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton(
+                                  icon: const Icon(Symbols.delete, size: 20),
+                                  color: TerminalColors.red,
+                                  onPressed: () => onRemoveItem(prizeId),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -1080,33 +1195,39 @@ class _CartDialog extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: canAfford && cartItems.isNotEmpty
+                      onPressed: isCheckoutEnabled && cartItems.isNotEmpty
                           ? onCheckout
                           : null,
                       icon: Icon(
-                        canAfford ? Symbols.shopping_bag : Symbols.block,
+                        isCheckoutEnabled
+                            ? Symbols.shopping_bag
+                            : Symbols.block,
                         size: 20,
                       ),
                       label: Text(
-                        canAfford ? 'Checkout' : 'Insufficient Coins',
+                        isCheckoutEnabled
+                            ? 'Checkout'
+                            : (disabledReason ?? 'Cart Empty'),
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: canAfford
+                        backgroundColor: isCheckoutEnabled
                             ? colorScheme.primary
                             : colorScheme.surfaceContainerHighest,
-                        foregroundColor: canAfford
+                        foregroundColor: isCheckoutEnabled
                             ? colorScheme.onPrimary
                             : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  if (!canAfford && cartItems.isNotEmpty) ...[
+                  if (!isCheckoutEnabled && cartItems.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'You need ${cartTotal - userCoins} more coins',
+                      disabledReason == 'Insufficient Coins'
+                          ? 'You need ${cartTotal - userCoins} more coins'
+                          : disabledReason ?? '',
                       style: textTheme.bodySmall?.copyWith(
                         color: TerminalColors.red,
                         fontStyle: FontStyle.italic,

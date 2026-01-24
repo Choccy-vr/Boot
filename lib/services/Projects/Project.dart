@@ -23,6 +23,8 @@ class Project {
   List<String> tags;
   double timeTrackedShip;
   bool shipped;
+  List<Challenge> pendingChallenges;
+  List<int> pendingChallengeIds;
 
   Project({
     required this.title,
@@ -45,10 +47,13 @@ class Project {
     this.tags = const [],
     this.timeTrackedShip = 0.0,
     this.shipped = false,
+    this.pendingChallenges = const [],
+    this.pendingChallengeIds = const [],
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
     final challengeIds = _parseChallengeIds(row['challenges']);
+    final pendingChallengeIds = _parseChallengeIds(row['pending_challenges']);
     return Project(
       id: row['id'] ?? 0,
       title: row['name'] ?? 'Untitled Project',
@@ -69,11 +74,11 @@ class Project {
       challenges: const [],
       challengeIds: List<int>.from(challengeIds),
       coinsEarned: row['coins_earned'] ?? 0,
-      tags: row['tags'] != null
-          ? List<String>.from(row['tags'])
-          : [],
+      tags: row['tags'] != null ? List<String>.from(row['tags']) : [],
       timeTrackedShip: (row['time_tracked_ship'] as num?)?.toDouble() ?? 0.0,
       shipped: row['shipped'] ?? false,
+      pendingChallenges: const [],
+      pendingChallengeIds: List<int>.from(pendingChallengeIds),
     );
   }
 
@@ -96,6 +101,8 @@ class Project {
     List<String>? tags,
     double? timeTrackedShip,
     bool? shipped,
+    List<Challenge>? pendingChallenges,
+    List<int>? pendingChallengeIds,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -124,6 +131,13 @@ class Project {
     if (tags != null) map['tags'] = tags;
     if (timeTrackedShip != null) map['time_tracked_ship'] = timeTrackedShip;
     if (shipped != null) map['shipped'] = shipped;
+    final serializedPendingChallengeIds =
+        (pendingChallenges != null && pendingChallenges.isNotEmpty)
+        ? pendingChallenges.map((c) => c.id).toList()
+        : (pendingChallengeIds ?? []);
+    if (serializedPendingChallengeIds.isNotEmpty) {
+      map['pending_challenges'] = serializedPendingChallengeIds;
+    }
     return map;
   }
 

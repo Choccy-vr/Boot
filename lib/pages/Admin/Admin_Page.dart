@@ -103,7 +103,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 _buildTabButton(
                   icon: Symbols.emoji_events,
-                  label: 'Challenges',
+                  label: 'Bounties',
                   index: 1,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -370,7 +370,7 @@ class _AdminPageState extends State<AdminPage> {
           child: Row(
             children: [
               Text(
-                'Manage Challenges',
+                'Manage Bounties',
                 style: textTheme.headlineSmall?.copyWith(
                   color: colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -380,7 +380,7 @@ class _AdminPageState extends State<AdminPage> {
               ElevatedButton.icon(
                 onPressed: () => _showCreateChallengeDialog(),
                 icon: const Icon(Symbols.add),
-                label: const Text('Create Challenge'),
+                label: const Text('Create Bounty'),
               ),
             ],
           ),
@@ -399,7 +399,7 @@ class _AdminPageState extends State<AdminPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No challenges yet',
+                        'No Bounties yet',
                         style: textTheme.bodyLarge?.copyWith(
                           color: colorScheme.outline,
                         ),
@@ -514,8 +514,10 @@ class _AdminPageState extends State<AdminPage> {
                 textTheme: textTheme,
               ),
               _buildChip(
-                icon: Symbols.redeem,
-                label: challenge.prize,
+                icon: challenge.key.isNotEmpty ? Symbols.key : Symbols.toll,
+                label: challenge.key.isNotEmpty
+                    ? 'Key: ${challenge.key}'
+                    : '${challenge.coins} coins',
                 color: TerminalColors.yellow,
                 textTheme: textTheme,
               ),
@@ -1311,12 +1313,14 @@ class _AdminPageState extends State<AdminPage> {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final requirementsController = TextEditingController();
-    String? selectedPrizeId = _prizes.isNotEmpty ? _prizes.first.id : null;
+    final coinsController = TextEditingController(text: '0');
+    final keyController = TextEditingController();
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 7));
     ChallengeType selectedType = ChallengeType.normal;
     ChallengeDifficulty selectedDifficulty = ChallengeDifficulty.medium;
     bool isActive = true;
+    bool useKey = false;
 
     showDialog(
       context: context,
@@ -1341,7 +1345,7 @@ class _AdminPageState extends State<AdminPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Create New Challenge',
+                    'Create New Bounty',
                     style: textTheme.titleLarge?.copyWith(
                       color: colorScheme.primary,
                     ),
@@ -1381,103 +1385,63 @@ class _AdminPageState extends State<AdminPage> {
                         textTheme: textTheme,
                       ),
                       const SizedBox(height: 16),
-                      // Prize Dropdown
-                      _prizes.isEmpty
-                          ? Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: TerminalColors.yellow.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: TerminalColors.yellow,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Symbols.warning,
-                                    color: TerminalColors.yellow,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'No prizes available. Create prizes first.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: TerminalColors.yellow,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Prize',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.outline,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerLowest,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: colorScheme.outline,
-                                    ),
-                                  ),
-                                  child: DropdownButton<String>(
-                                    value: selectedPrizeId,
-                                    isExpanded: true,
-                                    underline: const SizedBox(),
-                                    dropdownColor: colorScheme.surface,
-                                    style: textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.onSurface,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
-                                    items: _prizes.map((prize) {
-                                      return DropdownMenuItem<String>(
-                                        value: prize.id,
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Symbols.redeem,
-                                              size: 16,
-                                              color: colorScheme.primary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                prize.title,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            Text(
-                                              ' (${prize.cost} coins)',
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        TerminalColors.yellow,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setDialogState(
-                                        () => selectedPrizeId = value,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
+                      // Reward Type Selection
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.redeem,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Reward Type',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
                             ),
+                          ),
+                          const Spacer(),
+                          SegmentedButton<bool>(
+                            segments: const [
+                              ButtonSegment(
+                                value: false,
+                                label: Text('Coins'),
+                                icon: Icon(Symbols.toll, size: 16),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text('Key'),
+                                icon: Icon(Symbols.key, size: 16),
+                              ),
+                            ],
+                            selected: {useKey},
+                            onSelectionChanged: (Set<bool> newSelection) {
+                              setDialogState(() {
+                                useKey = newSelection.first;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Conditional reward input
+                      if (!useKey)
+                        _buildTextField(
+                          controller: coinsController,
+                          label: 'Coins Reward',
+                          icon: Symbols.toll,
+                          keyboardType: TextInputType.number,
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        )
+                      else
+                        _buildTextField(
+                          controller: keyController,
+                          label: 'Key Name',
+                          icon: Symbols.key,
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        ),
                       const SizedBox(height: 16),
                       // Type Dropdown
                       _buildDropdown<ChallengeType>(
@@ -1587,10 +1551,24 @@ class _AdminPageState extends State<AdminPage> {
                   onPressed: () async {
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
-                        requirementsController.text.isEmpty ||
-                        selectedPrizeId == null) {
+                        requirementsController.text.isEmpty) {
                       GlobalNotificationService.instance.showError(
                         'Please fill all required fields',
+                      );
+                      return;
+                    }
+
+                    if (!useKey &&
+                        (int.tryParse(coinsController.text) ?? 0) <= 0) {
+                      GlobalNotificationService.instance.showError(
+                        'Please enter a valid coin amount',
+                      );
+                      return;
+                    }
+
+                    if (useKey && keyController.text.trim().isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Please enter a key name',
                       );
                       return;
                     }
@@ -1602,7 +1580,10 @@ class _AdminPageState extends State<AdminPage> {
                           'title': titleController.text,
                           'description': descriptionController.text,
                           'requirements': requirementsController.text,
-                          'prize': selectedPrizeId,
+                          'coins': useKey
+                              ? 0
+                              : (int.tryParse(coinsController.text) ?? 0),
+                          'key': useKey ? keyController.text.trim() : '',
                           'type': selectedType.toString().split('.').last,
                           'difficulty': selectedDifficulty
                               .toString()
@@ -1614,14 +1595,14 @@ class _AdminPageState extends State<AdminPage> {
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
-                        'Challenge created successfully!',
+                        'Bounty created successfully!',
                       );
                       Navigator.pop(context);
                       _loadData();
                     } catch (e) {
-                      AppLogger.error('Failed to create challenge', e);
+                      AppLogger.error('Failed to create Bounty', e);
                       GlobalNotificationService.instance.showError(
-                        'Failed to create challenge',
+                        'Failed to create Bounty',
                       );
                     }
                   },

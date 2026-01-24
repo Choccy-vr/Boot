@@ -82,7 +82,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
       setState(() {
         _isLoadingMostChallenges = false;
       });
-      _showErrorSnackbar('Failed to load most challenges projects: $e');
+      _showErrorSnackbar('Failed to load most bounties projects: $e');
     }
   }
 
@@ -149,7 +149,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
             isScrollable: true,
             tabs: const [
               Tab(icon: Icon(Symbols.schedule), text: 'Most Time'),
-              Tab(icon: Icon(Symbols.emoji_events), text: 'Most Challenges'),
+              Tab(icon: Icon(Symbols.emoji_events), text: 'Most Bounties'),
             ],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
@@ -166,7 +166,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
       ),
     );
   }
-
 
   Widget _buildMostTimeTab(ColorScheme colorScheme, TextTheme textTheme) {
     return RefreshIndicator(
@@ -236,7 +235,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           ? _buildEmptyState(
               icon: Symbols.emoji_events,
               title: 'No Projects Yet',
-              subtitle: 'Complete challenges to climb the leaderboard!',
+              subtitle: 'Complete bounties to climb the leaderboard!',
               colorScheme: colorScheme,
               textTheme: textTheme,
             )

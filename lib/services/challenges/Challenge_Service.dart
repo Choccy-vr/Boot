@@ -104,13 +104,13 @@ class ChallengeService {
     required Challenge challenge,
   }) async {
     try {
-      if (!project.challenges.any((c) => c.id == challenge.id)) {
-        project.challenges = List<Challenge>.from(project.challenges)
-          ..add(challenge);
-      }
-      if (!project.challengeIds.contains(challenge.id)) {
-        project.challengeIds = List<int>.from(project.challengeIds)
-          ..add(challenge.id);
+      if (!project.pendingChallengeIds.contains(challenge.id)) {
+        project.pendingChallenges = List<Challenge>.from(
+          project.pendingChallenges,
+        )..add(challenge);
+        project.pendingChallengeIds = List<int>.from(
+          project.pendingChallengeIds,
+        )..add(challenge.id);
       }
 
       await ProjectService.updateProject(project);

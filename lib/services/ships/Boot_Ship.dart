@@ -9,12 +9,16 @@ class Ship {
   final bool approved;
   final String reviewer;
   final String comment;
+  final double multiplier;
   final List<Challenge> challengesRequested;
   final List<Challenge> challengesCompleted;
   final bool reviewed;
   final int coinsEarned;
   final String screenShotUrl;
   final double overrideTime;
+  final int technicality;
+  final int functionality;
+  final int ux;
 
   Ship({
     required this.id,
@@ -24,12 +28,16 @@ class Ship {
     this.approved = false,
     this.reviewer = '',
     this.comment = '',
+    this.multiplier = 1.0,
     this.challengesRequested = const [],
     this.challengesCompleted = const [],
     this.reviewed = false,
     this.coinsEarned = 0,
     this.screenShotUrl = '',
     this.overrideTime = 0.0,
+    this.technicality = 0,
+    this.functionality = 0,
+    this.ux = 0,
   });
 
   static Future<Ship> fromJson(Map<String, dynamic> json) async {
@@ -53,6 +61,10 @@ class Ship {
       coinsEarned: json['earned'] ?? 0,
       screenShotUrl: json['screen_shot_url'] ?? '',
       overrideTime: (json['override_hours'] as num?)?.toDouble() ?? 0.0,
+      technicality: (json['technicality'] as num?)?.toInt() ?? 0,
+      functionality: (json['functionality'] as num?)?.toInt() ?? 0,
+      ux: (json['ux'] as num?)?.toInt() ?? 0,
+      multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
     );
   }
 

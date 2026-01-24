@@ -212,7 +212,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
               ),
               _buildRailItem(
                 icon: Symbols.mountain_flag,
-                title: 'Challenges',
+                title: 'Bounties',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
                 onTap: () {

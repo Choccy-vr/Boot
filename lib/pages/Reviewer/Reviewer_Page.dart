@@ -238,7 +238,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
                     _buildInfoChip(
                       icon: Symbols.emoji_events,
                       label:
-                          '${ship.challengesRequested.length} challenge${ship.challengesRequested.length == 1 ? '' : 's'}',
+                          '${ship.challengesRequested.length} ${ship.challengesRequested.length == 1 ? 'bounty' : 'bounties'}',
                       colorScheme: colorScheme,
                       textTheme: textTheme,
                     ),
@@ -438,6 +438,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
   PlatformFile? _screenshotFile;
   String? _uploadedScreenshotUrl;
   bool _isUploadingScreenshot = false;
+  int _technicalityRating = 0;
+  int _functionalityRating = 0;
+  int _uxRating = 0;
 
   @override
   void dispose() {
@@ -475,6 +478,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
         challengesCompleted: _selectedChallenges.toList(),
         screenshotUrl: _uploadedScreenshotUrl ?? '',
         overrideHours: overrideHours,
+        technicality: _technicalityRating,
+        functionality: _functionalityRating,
+        ux: _uxRating,
       );
 
       if (!mounted) return;
@@ -538,9 +544,11 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 Expanded(
                   child: Text(
                     _step == 0
-                        ? 'Challenges Completed'
+                        ? 'Bounties Completed'
                         : _step == 1
                         ? 'Screenshot & Hours'
+                        : _step == 2
+                        ? 'Rate Quality'
                         : 'Review Comment',
                     style: textTheme.titleLarge?.copyWith(
                       color: colorScheme.primary,
@@ -558,16 +566,18 @@ class _ReviewDialogState extends State<ReviewDialog> {
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: (_step + 1) / 3,
+              value: (_step + 1) / 4,
               backgroundColor: colorScheme.surfaceContainerHigh,
               color: colorScheme.primary,
             ),
             const SizedBox(height: 24),
             Expanded(
               child: _step == 0
-                  ? _buildChallengeSelection()
+                  ? _buildBountySelection()
                   : _step == 1
                   ? _buildScreenshotAndHoursStep()
+                  : _step == 2
+                  ? _buildRatingStep()
                   : _buildCommentStep(),
             ),
             const SizedBox(height: 16),
@@ -578,7 +588,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
     );
   }
 
-  Widget _buildChallengeSelection() {
+  Widget _buildBountySelection() {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -590,14 +600,14 @@ class _ReviewDialogState extends State<ReviewDialog> {
             Icon(Symbols.info, size: 48, color: colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
-              'No challenges requested',
+              'No bounties requested',
               style: textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'This ship has no challenges to review',
+              'This ship has no bounties to review',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -612,7 +622,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select which challenges were successfully completed:',
+          'Select which bounties were successfully completed:',
           style: textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.w500,
@@ -706,6 +716,149 @@ class _ReviewDialogState extends State<ReviewDialog> {
     }
   }
 
+  Widget _buildRatingStep() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Rate the quality of this ship:',
+            style: textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Technicality Rating
+          _buildRatingCategory(
+            'Technicality',
+            'Code quality, architecture, and technical implementation',
+            _technicalityRating,
+            (rating) => setState(() => _technicalityRating = rating),
+            colorScheme,
+            textTheme,
+          ),
+          const SizedBox(height: 24),
+
+          // Functionality Rating
+          _buildRatingCategory(
+            'Functionality',
+            'How well the OS works and meets requirements',
+            _functionalityRating,
+            (rating) => setState(() => _functionalityRating = rating),
+            colorScheme,
+            textTheme,
+          ),
+          const SizedBox(height: 24),
+
+          // UX Rating
+          _buildRatingCategory(
+            'User Experience (UX)',
+            'Interface design, usability, and overall user experience',
+            _uxRating,
+            (rating) => setState(() => _uxRating = rating),
+            colorScheme,
+            textTheme,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatingCategory(
+    String title,
+    String description,
+    int currentRating,
+    Function(int) onRatingChanged,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(6, (index) {
+              final rating = index;
+              final isSelected = currentRating == rating;
+
+              return InkWell(
+                onTap: () => onRatingChanged(rating),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? colorScheme.primary.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.outline.withValues(alpha: 0.3),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        rating == 0 ? Symbols.close : Symbols.star,
+                        color: isSelected
+                            ? colorScheme.primary
+                            : (rating == 0
+                                  ? colorScheme.error
+                                  : colorScheme.onSurfaceVariant),
+                        size: 24,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        rating == 0 ? '0' : '$rating',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCommentStep() {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -729,7 +882,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
             textAlignVertical: TextAlignVertical.top,
             decoration: InputDecoration(
               hintText:
-                  'Provide feedback on the project, quality of work, challenges completed, etc...',
+                  'Provide feedback on the project, quality of work, bounties completed, etc...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -948,11 +1101,32 @@ class _ReviewDialogState extends State<ReviewDialog> {
       );
     }
 
+    if (_step == 2) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          TextButton.icon(
+            onPressed: _isSubmitting ? null : () => setState(() => _step = 1),
+            icon: const Icon(Symbols.arrow_back, size: 20),
+            label: const Text('Back'),
+          ),
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : () => setState(() => _step = 3),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+            ),
+            child: const Text('Next'),
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         TextButton.icon(
-          onPressed: _isSubmitting ? null : () => setState(() => _step = 1),
+          onPressed: _isSubmitting ? null : () => setState(() => _step = 2),
           icon: const Icon(Symbols.arrow_back, size: 20),
           label: const Text('Back'),
         ),

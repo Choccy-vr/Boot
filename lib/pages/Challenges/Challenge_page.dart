@@ -4,8 +4,6 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/challenges/Challenge.dart';
 import '/services/challenges/Challenge_Service.dart';
-import '/services/prizes/Prize.dart';
-import '/services/prizes/Prize_Service.dart';
 import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
 import '/theme/terminal_theme.dart';
@@ -29,7 +27,6 @@ class _ChallengePageState extends State<ChallengePage>
   ChallengeType? _selectedType;
   ChallengeDifficulty? _selectedDifficulty;
   int _selectedTabIndex = 0;
-  Map<String, Prize> _prizeCache = {};
 
   @override
   void initState() {
@@ -52,18 +49,6 @@ class _ChallengePageState extends State<ChallengePage>
     setState(() => _isLoading = true);
     try {
       final challenges = await ChallengeService.fetchChallenges();
-
-      // Load all unique prizes
-      final prizeIds = challenges
-          .map((c) => c.prize)
-          .where((id) => id.isNotEmpty)
-          .toSet()
-          .toList();
-
-      if (prizeIds.isNotEmpty) {
-        final prizes = await PrizeService.getPrizesByIds(prizeIds);
-        _prizeCache = {for (var prize in prizes) prize.id: prize};
-      }
 
       if (mounted) {
         setState(() {
@@ -146,7 +131,7 @@ class _ChallengePageState extends State<ChallengePage>
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  'Challenges',
+                  'Bounties',
                   style: textTheme.titleLarge?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -162,7 +147,10 @@ class _ChallengePageState extends State<ChallengePage>
                 final manager = NotificationScope.of(context);
                 if (manager == null) {
                   return IconButton(
-                    icon: Icon(Symbols.notifications, color: colorScheme.primary),
+                    icon: Icon(
+                      Symbols.notifications,
+                      color: colorScheme.primary,
+                    ),
                     onPressed: () {},
                     tooltip: 'Notifications',
                   );
@@ -418,7 +406,7 @@ class _ChallengePageState extends State<ChallengePage>
             ),
             const SizedBox(height: 16),
             Text(
-              'No Challenges Found',
+              'No Bounties Found',
               style: textTheme.titleLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -457,11 +445,11 @@ class _ChallengePageState extends State<ChallengePage>
     final typeIcon = _getTypeIcon(challenge.type);
     final daysRemaining = challenge.endDate.difference(DateTime.now()).inDays;
     final isExpired = daysRemaining < 0;
-    final prize = _prizeCache[challenge.prize];
     final requirementCount = challenge.requirements
         .split('\n')
         .where((req) => req.trim().isNotEmpty)
         .length;
+    final hasKeyReward = challenge.key.isNotEmpty;
 
     // Get type label
     String? typeLabel;
@@ -694,7 +682,7 @@ class _ChallengePageState extends State<ChallengePage>
                 ),
               ),
               const SizedBox(width: 12),
-              // Prize section with image
+              // Reward section (coins or key)
               Container(
                 width: 200,
                 padding: const EdgeInsets.symmetric(
@@ -719,67 +707,33 @@ class _ChallengePageState extends State<ChallengePage>
                 ),
                 child: Row(
                   children: [
-                    // Prize image or icon
-                    if (prize?.picture != null && prize!.picture!.isNotEmpty)
-                      ClipRRect(
+                    // Reward icon
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: TerminalColors.yellow.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: TerminalColors.yellow.withValues(
-                                alpha: 0.3,
-                              ),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Image.network(
-                            prize.picture!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: TerminalColors.yellow.withValues(
-                                  alpha: 0.2,
-                                ),
-                                child: Icon(
-                                  Symbols.emoji_events,
-                                  color: TerminalColors.yellow,
-                                  size: 24,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      )
-                    else
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: TerminalColors.yellow.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: TerminalColors.yellow.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(
-                          Symbols.emoji_events,
-                          color: TerminalColors.yellow,
-                          size: 24,
+                        border: Border.all(
+                          color: TerminalColors.yellow.withValues(alpha: 0.3),
+                          width: 1,
                         ),
                       ),
+                      child: Icon(
+                        hasKeyReward ? Symbols.key : Symbols.toll,
+                        color: TerminalColors.yellow,
+                        size: 24,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    // Prize details
+                    // Reward details
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            prize?.title ?? 'Prize',
+                            hasKeyReward ? 'Key Reward' : 'Coin Reward',
                             style: textTheme.labelLarge?.copyWith(
                               color: TerminalColors.yellow,
                               fontWeight: FontWeight.bold,
@@ -788,7 +742,31 @@ class _ChallengePageState extends State<ChallengePage>
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          if (prize != null) ...[
+                          if (hasKeyReward)
+                            Row(
+                              children: [
+                                Icon(
+                                  Symbols.key,
+                                  size: 12,
+                                  color: TerminalColors.yellow,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    challenge.key,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: TerminalColors.yellow.withValues(
+                                        alpha: 0.9,
+                                      ),
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
                             Row(
                               children: [
                                 Icon(
@@ -798,7 +776,7 @@ class _ChallengePageState extends State<ChallengePage>
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  '${prize.cost} coins',
+                                  '${challenge.coins} coins',
                                   style: textTheme.bodySmall?.copyWith(
                                     color: TerminalColors.yellow.withValues(
                                       alpha: 0.9,
@@ -808,24 +786,6 @@ class _ChallengePageState extends State<ChallengePage>
                                 ),
                               ],
                             ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Symbols.inventory_2,
-                                  size: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${prize.stock} left',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -873,22 +833,12 @@ class _ChallengePageState extends State<ChallengePage>
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) async {
-    // Get prize from cache or load it
-    Prize? prize = _prizeCache[challenge.prize];
-    if (prize == null && challenge.prize.isNotEmpty) {
-      prize = await PrizeService.getPrizeById(challenge.prize);
-      if (prize != null) {
-        _prizeCache[challenge.prize] = prize;
-      }
-    }
-
     if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (context) => ChallengeDetailDialog(
         challenge: challenge,
-        prize: prize,
         colorScheme: colorScheme,
         textTheme: textTheme,
       ),
@@ -898,14 +848,12 @@ class _ChallengePageState extends State<ChallengePage>
 
 class ChallengeDetailDialog extends StatelessWidget {
   final Challenge challenge;
-  final Prize? prize;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
 
   const ChallengeDetailDialog({
     super.key,
     required this.challenge,
-    this.prize,
     required this.colorScheme,
     required this.textTheme,
   });
@@ -1105,15 +1053,28 @@ class ChallengeDetailDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // Prize
+                // Reward
                 _buildSection(
                   title: 'Reward',
                   icon: Symbols.emoji_events,
-                  child: prize != null
-                      ? Container(
-                          padding: const EdgeInsets.all(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: TerminalColors.yellow.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: TerminalColors.yellow.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          margin: const EdgeInsets.only(right: 12),
                           decoration: BoxDecoration(
-                            color: TerminalColors.yellow.withValues(alpha: 0.1),
+                            color: TerminalColors.yellow.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: TerminalColors.yellow.withValues(
@@ -1122,128 +1083,42 @@ class ChallengeDetailDialog extends StatelessWidget {
                               width: 1,
                             ),
                           ),
+                          child: Icon(
+                            challenge.key.isNotEmpty
+                                ? Symbols.key
+                                : Symbols.toll,
+                            color: TerminalColors.yellow,
+                            size: 24,
+                          ),
+                        ),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  if (prize!.picture != null &&
-                                      prize!.picture!.isNotEmpty)
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: TerminalColors.yellow
-                                              .withValues(alpha: 0.3),
-                                          width: 1,
-                                        ),
-                                        image: DecorationImage(
-                                          image: NetworkImage(prize!.picture!),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      decoration: BoxDecoration(
-                                        color: TerminalColors.yellow.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: TerminalColors.yellow
-                                              .withValues(alpha: 0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Symbols.emoji_events,
-                                        color: TerminalColors.yellow,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          prize!.title,
-                                          style: textTheme.titleLarge?.copyWith(
-                                            color: TerminalColors.yellow,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Symbols.inventory_2,
-                                              size: 16,
-                                              color:
-                                                  colorScheme.onSurfaceVariant,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${prize!.stock} left',
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color: colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (prize!.description.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  prize!.description,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        )
-                      : Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: colorScheme.outline.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Symbols.error,
-                                color: colorScheme.onSurfaceVariant,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
                               Text(
-                                'Prize information not available',
+                                challenge.key.isNotEmpty
+                                    ? 'Key Reward'
+                                    : 'Coin Reward',
+                                style: textTheme.titleLarge?.copyWith(
+                                  color: TerminalColors.yellow,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                challenge.key.isNotEmpty
+                                    ? challenge.key
+                                    : '${challenge.coins} coins',
                                 style: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -1292,7 +1167,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                         _buildTimelineRow(
                           'Time Remaining',
                           isExpired
-                              ? 'Challenge Ended'
+                              ? 'Bounty Ended'
                               : '$daysRemaining day${daysRemaining != 1 ? 's' : ''}',
                           Symbols.timer,
                           isExpired
@@ -1459,7 +1334,7 @@ class ChallengeDetailDialog extends StatelessWidget {
     final currentUser = UserService.currentUser;
     if (currentUser == null) {
       GlobalNotificationService.instance.showError(
-        'You need to be logged in to complete challenges.',
+        'You need to be logged in to complete bounties.',
       );
       return;
     }
@@ -1489,7 +1364,7 @@ class ChallengeDetailDialog extends StatelessWidget {
         return;
       } else {
         GlobalNotificationService.instance.showInfo(
-          '${routeProject.title} already completed this challenge. Please pick another project.',
+          '${routeProject.title} already completed this bounty. Please pick another project.',
         );
       }
     }
@@ -1500,7 +1375,7 @@ class ChallengeDetailDialog extends StatelessWidget {
   Future<void> _redirectToDevlog(BuildContext context, Project project) async {
     Navigator.pop(context);
     GlobalNotificationService.instance.showInfo(
-      'Create a devlog to document completing this challenge',
+      'Create a devlog to document completing this bounty',
     );
     NavigationService.openProject(project, context, challengeId: challenge.id);
   }
