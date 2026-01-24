@@ -1655,7 +1655,10 @@ class ChallengeDetailDialog extends StatelessWidget {
     if (project.challenges.any((c) => c.id == challenge.id)) {
       return true;
     }
-    return project.challengeIds.any((id) => id == challenge.id);
+    if (project.challengeIds.any((id) => id == challenge.id)) {
+      return true;
+    }
+    return project.pendingChallengeIds.any((id) => id == challenge.id);
   }
 
   int? _extractProjectId(BuildContext context) {

@@ -30,6 +30,7 @@ class DevlogService {
     required String description,
     required String readableTime,
     required double time,
+    required double? totalProjectTime,
     List<PlatformFile> cachedMediaFiles = const [],
     List<int> challengeIds = const [],
   }) async {
@@ -108,7 +109,7 @@ class DevlogService {
       await SupabaseDB.updateAndReturnData(
         table: 'projects',
         data: {
-          'time': time,
+          'time': totalProjectTime ?? (project.time + time),
           'time_readable': readableTime,
           'time_tracked_ship': updatedTimeTracked,
         },

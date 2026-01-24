@@ -332,6 +332,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
     // Fetch current time to calculate difference
     try {
+      // Capture the project time before any potential background updates
+      final oldProjectTime = _project.time;
+
       final updatedProject = await HackatimeService.getProjectTime(
         project: _project,
         slackUserId: UserService.currentUser?.slackUserId ?? '',
@@ -340,7 +343,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
 
-      final timeDiff = updatedProject.time - _project.time;
+      final timeDiff = updatedProject.time - oldProjectTime;
 
       if (mounted) {
         setState(() {
@@ -505,13 +508,19 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           context: context,
         );
 
+        // Use the already-validated time difference
+        final readableTimeDiff = _formatReadableDuration(
+          (_timeToAdd * 3600).round(),
+        );
+
         await DevlogService.addDevlog(
           projectID: _project.id,
           title: _devlogTitleController.text,
           description: _devlogDescriptionController.text,
           cachedMediaFiles: _cachedMediaFiles,
-          readableTime: updatedProject.readableTime,
-          time: updatedProject.time,
+          readableTime: readableTimeDiff,
+          time: _timeToAdd,
+          totalProjectTime: updatedProject.time,
           challengeIds: _selectedChallengeIds,
         );
 
@@ -555,7 +564,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       }
     }
     _project.pendingChallengeIds = updatedPendingChallengeIds;
-    await ProjectService.updateProject(_project);
+    await SupabaseDB.updateData(
+      table: 'projects',
+      column: 'id',
+      value: _project.id,
+      data: {'pending_challenges': updatedPendingChallengeIds},
+    );
   }
 
   bool _isOwner() {
@@ -1681,7 +1695,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Widget _buildChallengeSelector() {
     final availableChallenges = _projectChallenges
-        .where((c) => !_project.challengeIds.contains(c.id))
+        .where(
+          (c) =>
+              !_project.challengeIds.contains(c.id) &&
+              !_project.pendingChallengeIds.contains(c.id),
+        )
         .toList();
 
     if (availableChallenges.isEmpty) {
