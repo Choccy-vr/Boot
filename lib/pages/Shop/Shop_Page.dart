@@ -492,10 +492,13 @@ class _ShopPageState extends State<ShopPage> {
                   ],
                 ),
               )
-            : CustomScrollView(
-                slivers: [
-                  // Available prizes section
-                  if (_availablePrizes.isNotEmpty) ...[
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: CustomScrollView(
+                    slivers: [
+                      // Available prizes section
+                      if (_availablePrizes.isNotEmpty) ...[
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                       sliver: SliverGrid(
@@ -564,6 +567,8 @@ class _ShopPageState extends State<ShopPage> {
                     ),
                   ],
                 ],
+                  ),
+                ),
               ),
       ),
     );
@@ -571,10 +576,10 @@ class _ShopPageState extends State<ShopPage> {
 
   int _getGridColumns(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width > 1400) return 4;
-    if (width > 1000) return 3;
-    if (width > 600) return 2;
-    return 1;
+    if (width > 1400) return 5;
+    if (width > 1000) return 4;
+    if (width > 600) return 3;
+    return 2;
   }
 
   Widget _buildPrizeCard(
@@ -935,15 +940,16 @@ class _ShopPageState extends State<ShopPage> {
                             'Add to Cart',
                             style: textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: TerminalColors.black,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
-                            foregroundColor: colorScheme.onPrimary,
+                            backgroundColor: TerminalColors.green,
+                            foregroundColor: TerminalColors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                               side: BorderSide(
-                                color: colorScheme.primary,
+                                color: TerminalColors.green,
                                 width: 2,
                               ),
                             ),
