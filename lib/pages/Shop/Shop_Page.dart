@@ -499,74 +499,82 @@ class _ShopPageState extends State<ShopPage> {
                     slivers: [
                       // Available prizes section
                       if (_availablePrizes.isNotEmpty) ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _getGridColumns(context),
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 24,
-                          mainAxisSpacing: 24,
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: _getGridColumns(context),
+                                  childAspectRatio: 0.68,
+                                  crossAxisSpacing: 24,
+                                  mainAxisSpacing: 24,
+                                ),
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              return _buildPrizeCard(
+                                _availablePrizes[index],
+                                colorScheme,
+                                textTheme,
+                                isLocked: false,
+                              );
+                            }, childCount: _availablePrizes.length),
+                          ),
                         ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          return _buildPrizeCard(
-                            _availablePrizes[index],
-                            colorScheme,
-                            textTheme,
-                            isLocked: false,
-                          );
-                        }, childCount: _availablePrizes.length),
-                      ),
-                    ),
-                  ],
+                      ],
 
-                  // Locked prizes section
-                  if (_lockedPrizes.isNotEmpty) ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Locked Prizes',
-                              style: textTheme.headlineSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      // Locked prizes section
+                      if (_lockedPrizes.isNotEmpty) ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Locked Prizes',
+                                  style: textTheme.headlineSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Unlock these prizes by obtaining the required keys',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Unlock these prizes by obtaining the required keys',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _getGridColumns(context),
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 24,
-                          mainAxisSpacing: 24,
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: _getGridColumns(context),
+                                  childAspectRatio: 0.68,
+                                  crossAxisSpacing: 24,
+                                  mainAxisSpacing: 24,
+                                ),
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              return _buildPrizeCard(
+                                _lockedPrizes[index],
+                                colorScheme,
+                                textTheme,
+                                isLocked: true,
+                              );
+                            }, childCount: _lockedPrizes.length),
+                          ),
                         ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          return _buildPrizeCard(
-                            _lockedPrizes[index],
-                            colorScheme,
-                            textTheme,
-                            isLocked: true,
-                          );
-                        }, childCount: _lockedPrizes.length),
-                      ),
-                    ),
-                  ],
-                ],
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -576,10 +584,10 @@ class _ShopPageState extends State<ShopPage> {
 
   int _getGridColumns(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width > 1400) return 5;
-    if (width > 1000) return 4;
-    if (width > 600) return 3;
-    return 2;
+    if (width > 1400) return 4;
+    if (width > 1000) return 3;
+    if (width > 600) return 2;
+    return 1;
   }
 
   Widget _buildPrizeCard(
