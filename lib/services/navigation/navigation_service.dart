@@ -100,10 +100,15 @@ class NavigationService {
     Project project,
     BuildContext context, {
     int? challengeId,
+    bool showRequirements = false,
   }) {
     return Navigator.of(context).pushNamed<T>(
       '/projects/${project.id}',
-      arguments: {'project': project, 'challengeId': challengeId},
+      arguments: {
+        'project': project,
+        'challengeId': challengeId,
+        'showRequirements': showRequirements,
+      },
     );
   }
 

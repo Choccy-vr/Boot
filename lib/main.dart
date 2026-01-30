@@ -55,7 +55,8 @@ void main() async {
   // Configure Hack Club OAuth (no async init needed)
   Authentication.configureHackClubOAuth(
     clientId: 'f95f9b01574322ba6363154b7ce1ace8',
-    redirectUri: '${Uri.base.origin}/dashboard/redirect.html',
+    /*redirectUri: '${Uri.base.origin}/dashboard/redirect.html',*/
+    redirectUri: '${Uri.base.origin}/redirect.html',
   );
 
   // Run auth checks in parallel
@@ -288,6 +289,7 @@ class ProjectLoaderPage extends StatelessWidget {
     final args = ModalRoute.of(context)?.settings.arguments;
     Project? project;
     int? challengeId;
+    bool showRequirementsDialog = false;
 
     // Handle different argument types
     try {
@@ -297,6 +299,7 @@ class ProjectLoaderPage extends StatelessWidget {
           final map = args;
           project = map['project'] as Project?;
           challengeId = map['challengeId'] as int?;
+          showRequirementsDialog = map['showRequirements'] as bool? ?? false;
         }
         // Fallback to direct Project if not a Map
         if (project == null && args is Project) {
@@ -313,7 +316,11 @@ class ProjectLoaderPage extends StatelessWidget {
     }
 
     if (project != null) {
-      return ProjectDetailPage(project: project, challengeId: challengeId);
+      return ProjectDetailPage(
+        project: project,
+        challengeId: challengeId,
+        showRequirementsDialog: showRequirementsDialog,
+      );
     }
 
     // Fetch project by ID if not in arguments
@@ -327,7 +334,10 @@ class ProjectLoaderPage extends StatelessWidget {
         if (fetchedProject == null) {
           return NotFoundPage(path: '/projects/$projectId');
         }
-        return ProjectDetailPage(project: fetchedProject);
+        return ProjectDetailPage(
+          project: fetchedProject,
+          showRequirementsDialog: showRequirementsDialog,
+        );
       },
     );
   }

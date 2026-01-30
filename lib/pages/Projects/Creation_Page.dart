@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:boot_app/services/misc/logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/services/users/User.dart';
 import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/project_service.dart';
@@ -592,12 +593,40 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Hackatime Configuration',
-              style: textTheme.headlineSmall?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Text(
+                  'Hackatime Configuration (Optional)',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Click me to learn more',
+                  child: InkWell(
+                    onTap: () async {
+                      final url = Uri.parse('https://hackatime.hackclub.com');
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Symbols.info,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             if (!hasAvailableProjects)
@@ -643,27 +672,6 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                 const SizedBox(height: 16),
                 _buildSelectedHackatimeSummary(colorScheme, textTheme),
               ],
-              if (_showHackatimeValidation &&
-                  _selectedHackatimeProjects.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Symbols.error, size: 18, color: colorScheme.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Select at least one Hackatime project to continue.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.error,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ],
         ),
@@ -718,7 +726,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project.',
+              'Optionally select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -1046,27 +1054,27 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       return;
     }
 
-    if (_selectedHackatimeProjects.isEmpty) {
-      GlobalNotificationService.instance.showError(
-        'Select at least one Hackatime project.',
-      );
-      return;
-    }
-
-    final normalizedSelections = _selectedHackatimeProjects
-        .map(_normalizeHackatimeName)
-        .toSet();
-    final conflictingSelections = normalizedSelections
-        .where(_claimedHackatimeProjects.contains)
-        .toList();
-    if (conflictingSelections.isNotEmpty) {
-      GlobalNotificationService.instance.showError(
-        'One or more selected Hackatime projects are already linked to another build.',
-      );
-      return;
+    if (_selectedHackatimeProjects.isNotEmpty) {
+      final normalizedSelections = _selectedHackatimeProjects
+          .map(_normalizeHackatimeName)
+          .toSet();
+      final conflictingSelections = normalizedSelections
+          .where(_claimedHackatimeProjects.contains)
+          .toList();
+      if (conflictingSelections.isNotEmpty) {
+        GlobalNotificationService.instance.showError(
+          'One or more selected Hackatime projects are already linked to another build.',
+        );
+        return;
+      }
     }
 
     try {
+      // Check if this is the first project
+      final userId = UserService.currentUser?.id ?? '';
+      final existingProjects = await ProjectService.getProjects(userId);
+      final isFirstProject = existingProjects.isEmpty;
+
       await ProjectService.createProject(
         title: title,
         description: description,
@@ -1082,14 +1090,27 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         tags: _projectTags,
       );
       if (!mounted) return;
+
       GlobalNotificationService.instance.showSuccess(
         'Project created! Redirecting to your build...',
       );
-      NavigationService.navigateTo(
-        context: context,
-        destination: AppDestination.project,
-        colorScheme: Theme.of(context).colorScheme,
-        textTheme: Theme.of(context).textTheme,
+
+      // Fetch the newly created project
+      final userProjects = await ProjectService.getProjects(userId);
+      if (userProjects.isEmpty) {
+        throw Exception('Failed to fetch newly created project');
+      }
+      // Get the most recently created project (should be the one we just created)
+      final newProject = userProjects.reduce(
+        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
+      );
+
+      // Navigate to the specific project page first
+      if (!mounted) return;
+      await NavigationService.openProject(
+        newProject,
+        context,
+        showRequirements: isFirstProject,
       );
     } catch (e, stack) {
       AppLogger.error('Failed to create project', e, stack);

@@ -976,7 +976,7 @@ class _ShopPageState extends State<ShopPage> {
 }
 
 // Cart Dialog Widget
-class _CartDialog extends StatelessWidget {
+class _CartDialog extends StatefulWidget {
   final Set<String> cartItems;
   final List<Prize> allPrizes;
   final Map<String, int> quantities;
@@ -993,14 +993,19 @@ class _CartDialog extends StatelessWidget {
     this.disabledReason,
   });
 
+  @override
+  State<_CartDialog> createState() => _CartDialogState();
+}
+
+class _CartDialogState extends State<_CartDialog> {
   int _calculateTotal() {
     int total = 0;
-    for (final prizeId in cartItems) {
-      final prize = allPrizes.firstWhere(
+    for (final prizeId in widget.cartItems) {
+      final prize = widget.allPrizes.firstWhere(
         (p) => p.id == prizeId,
         orElse: Prize.empty,
       );
-      final quantity = quantities[prizeId] ?? 1;
+      final quantity = widget.quantities[prizeId] ?? 1;
       total += prize.cost * quantity;
     }
     return total;
@@ -1012,7 +1017,7 @@ class _CartDialog extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final userCoins = UserService.currentUser?.bootCoins ?? 0;
     final cartTotal = _calculateTotal();
-    final isCheckoutEnabled = disabledReason == null;
+    final isCheckoutEnabled = widget.disabledReason == null;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1054,7 +1059,7 @@ class _CartDialog extends StatelessWidget {
 
             // Cart items
             Expanded(
-              child: cartItems.isEmpty
+              child: widget.cartItems.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1076,14 +1081,14 @@ class _CartDialog extends StatelessWidget {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: cartItems.length,
+                      itemCount: widget.cartItems.length,
                       itemBuilder: (context, index) {
-                        final prizeId = cartItems.elementAt(index);
-                        final prize = allPrizes.firstWhere(
+                        final prizeId = widget.cartItems.elementAt(index);
+                        final prize = widget.allPrizes.firstWhere(
                           (p) => p.id == prizeId,
                           orElse: Prize.empty,
                         );
-                        final quantity = quantities[prizeId] ?? 1;
+                        final quantity = widget.quantities[prizeId] ?? 1;
                         final itemTotal = prize.cost * quantity;
 
                         return Card(
@@ -1151,7 +1156,10 @@ class _CartDialog extends StatelessWidget {
                                 IconButton(
                                   icon: const Icon(Symbols.delete, size: 20),
                                   color: TerminalColors.red,
-                                  onPressed: () => onRemoveItem(prizeId),
+                                  onPressed: () {
+                                    widget.onRemoveItem(prizeId);
+                                    setState(() {});
+                                  },
                                 ),
                               ],
                             ),
@@ -1209,8 +1217,9 @@ class _CartDialog extends StatelessWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: isCheckoutEnabled && cartItems.isNotEmpty
-                          ? onCheckout
+                      onPressed:
+                          isCheckoutEnabled && widget.cartItems.isNotEmpty
+                          ? widget.onCheckout
                           : null,
                       icon: Icon(
                         isCheckoutEnabled
@@ -1221,7 +1230,7 @@ class _CartDialog extends StatelessWidget {
                       label: Text(
                         isCheckoutEnabled
                             ? 'Checkout'
-                            : (disabledReason ?? 'Cart Empty'),
+                            : (widget.disabledReason ?? 'Cart Empty'),
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -1236,12 +1245,12 @@ class _CartDialog extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (!isCheckoutEnabled && cartItems.isNotEmpty) ...[
+                  if (!isCheckoutEnabled && widget.cartItems.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      disabledReason == 'Insufficient Coins'
+                      widget.disabledReason == 'Insufficient Coins'
                           ? 'You need ${cartTotal - userCoins} more coins'
-                          : disabledReason ?? '',
+                          : widget.disabledReason ?? '',
                       style: textTheme.bodySmall?.copyWith(
                         color: TerminalColors.red,
                         fontStyle: FontStyle.italic,

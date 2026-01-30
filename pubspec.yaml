@@ -24,6 +24,7 @@ dependencies:
   http: ^1.5.0
   logging: ^1.2.0
   material_symbols_icons: ^4.2858.1
+  shared_preferences: ^2.3.3
   supabase_flutter: ^2.9.1
   url_launcher: ^6.3.2
   oidc: ^0.13.0

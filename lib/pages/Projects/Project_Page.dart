@@ -1,5 +1,6 @@
 //Packages
 import 'dart:io';
+import 'dart:html' as html;
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/ships/Boot_Ship.dart';
@@ -28,17 +29,25 @@ import '/services/devlog/devlog_service.dart';
 import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
 import '/services/notifications/notifications.dart';
+import '/services/tutorial/tutorial_service.dart';
 import '/services/challenges/Challenge.dart';
 import '/services/challenges/Challenge_Service.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/pages/Challenges/Challenge_page.dart';
+import '/pages/Tutorial/Tutorial_Page.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final Project project;
   final int? challengeId;
+  final bool showRequirementsDialog;
 
-  const ProjectDetailPage({super.key, required this.project, this.challengeId});
+  const ProjectDetailPage({
+    super.key,
+    required this.project,
+    this.challengeId,
+    this.showRequirementsDialog = false,
+  });
 
   @override
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
@@ -83,6 +92,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   int? _preselectedChallengeId;
   Devlog? _editingDevlog;
   List<String> _existingMediaUrls = [];
+
+  // Hackatime editing
+  List<String> _selectedHackatimeProjects = [];
+  final TextEditingController _hackatimeSearchController =
+      TextEditingController();
+  List<HackatimeProject> _hackatimeProjects = [];
+  List<HackatimeProject> _filteredHackatimeProjects = [];
+  Set<String> _claimedHackatimeProjects = {};
 
   final List<String> _popularTags = [
     // Build Type
@@ -138,9 +155,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _descriptionController.text = _project.description;
     _githubRepoController.text = _project.githubRepo;
     _tagsController.text = _project.tags.join(', ');
+    _selectedHackatimeProjects = List<String>.from(_project.hackatimeProjects);
 
     // Load all data in parallel for faster page load
     _loadPageData();
+    _loadHackatimeData();
 
     _refreshController = AnimationController(
       vsync: this,
@@ -153,6 +172,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         if (_isOwner()) {
           _handleCreateDevlog(challengeId: widget.challengeId);
         }
+      });
+    }
+
+    if (widget.showRequirementsDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const ProjectRequirementsDialog(),
+        );
+        await TutorialService.markTutorialAsCompleted();
       });
     }
   }
@@ -262,6 +293,78 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     });
   }
 
+  Future<void> _loadHackatimeData() async {
+    await Future.wait([
+      _fetchHackatimeProjects(),
+      _loadExistingHackatimeAssignments(),
+    ]);
+  }
+
+  Future<void> _fetchHackatimeProjects() async {
+    try {
+      final projects = await HackatimeService.fetchHackatimeProjects(
+        slackUserId: UserService.currentUser?.slackUserId ?? '',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _hackatimeProjects = projects;
+        _filteredHackatimeProjects = projects;
+      });
+    } catch (e) {
+      // Error loading Hackatime projects
+    }
+  }
+
+  Future<void> _loadExistingHackatimeAssignments() async {
+    final userId = UserService.currentUser?.id;
+    if (userId == null || userId.isEmpty) return;
+
+    try {
+      final projects = await ProjectService.getProjects(userId);
+      final claimed = <String>{};
+      for (final project in projects) {
+        claimed.addAll(
+          project.hackatimeProjects
+              .map((name) => name.toLowerCase())
+              .where((name) => name.isNotEmpty),
+        );
+      }
+
+      // Remove current project's claimed names so user can keep them
+      final currentNormalized = _project.hackatimeProjects
+          .map((name) => name.toLowerCase())
+          .toSet();
+      final claimedSet = claimed.toSet();
+      claimedSet.removeAll(currentNormalized);
+
+      if (!mounted) return;
+      setState(() {
+        _claimedHackatimeProjects = claimedSet;
+      });
+    } catch (e) {
+      // Error loading claimed Hackatime projects
+    }
+  }
+
+  void _filterHackatimeProjects(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredHackatimeProjects = _hackatimeProjects;
+      });
+      return;
+    }
+
+    final lowerQuery = query.toLowerCase();
+    setState(() {
+      _filteredHackatimeProjects = _hackatimeProjects
+          .where((project) => project.name.toLowerCase().contains(lowerQuery))
+          .toList();
+    });
+  }
+
+  String _normalizeHackatimeName(String name) => name.toLowerCase();
+
   @override
   void dispose() {
     _refreshController?.dispose();
@@ -271,6 +374,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _descriptionController.dispose();
     _githubRepoController.dispose();
     _tagsController.dispose();
+    _hackatimeSearchController.dispose();
     super.dispose();
   }
 
@@ -2248,6 +2352,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   onSelected: (value) {
                     if (value == 'edit') {
                       setState(() => _isEditMode = true);
+                      _loadHackatimeData();
                     } else if (value == 'delete') {
                       _showDeleteConfirmation();
                     }
@@ -2539,6 +2644,91 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
             ],
             const SizedBox(height: 16),
+            // Hackatime Configuration Section
+            Row(
+              children: [
+                Text(
+                  'Hackatime Configuration (Optional)',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Click me to learn more',
+                  child: InkWell(
+                    onTap: () async {
+                      final url = Uri.parse('https://hackatime.hackclub.com');
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Symbols.info,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_filteredHackatimeProjects.isEmpty ||
+                (_filteredHackatimeProjects.length == 1 &&
+                    _filteredHackatimeProjects.first.name ==
+                        'No Projects Available'))
+              _buildNoHackatimeProjectsMessage(colorScheme, textTheme)
+            else ...[
+              _buildHackatimeInfoBanner(colorScheme, textTheme),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _hackatimeSearchController,
+                onChanged: _filterHackatimeProjects,
+                style: TextStyle(color: colorScheme.onSurface),
+                decoration: InputDecoration(
+                  labelText: 'Search Hackatime Projects',
+                  hintText: 'Filter by project name...',
+                  prefixIcon: Icon(
+                    Symbols.search,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  suffixIcon: _hackatimeSearchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Symbols.clear),
+                          onPressed: () {
+                            _hackatimeSearchController.clear();
+                            _filterHackatimeProjects('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildHackatimeProjectChips(colorScheme, textTheme),
+              if (_selectedHackatimeProjects.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildSelectedHackatimeSummary(colorScheme, textTheme),
+              ],
+            ],
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -2550,6 +2740,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       _descriptionController.text = _project.description;
                       _githubRepoController.text = _project.githubRepo;
                       _tagsController.text = _project.tags.join(', ');
+                      _selectedHackatimeProjects = List<String>.from(
+                        _project.hackatimeProjects,
+                      );
                     });
                   },
                   child: Text('Cancel'),
@@ -3119,6 +3312,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _project.title = _titleController.text;
         _project.description = _descriptionController.text;
         _project.githubRepo = _githubRepoController.text;
+        _project.hackatimeProjects = _selectedHackatimeProjects;
         _isEditMode = false;
       });
 
@@ -3262,7 +3456,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       GlobalNotificationService.instance.showSuccess(
         'Project deleted successfully',
       );
-      Navigator.pop(context);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (kIsWeb) {
+        html.window.location.reload();
+      }
     } catch (e) {
       if (!mounted) return;
       GlobalNotificationService.instance.showError(
@@ -4159,6 +4359,200 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         textTheme: textTheme,
       ),
     );
+  }
+
+  Widget _buildNoHackatimeProjectsMessage(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Symbols.info, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No Hackatime projects detected yet. Start tracking time in Hackatime and refresh to link it here.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHackatimeInfoBanner(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Symbols.timer, color: colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Optionally select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHackatimeProjectChips(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final selectedSet = _selectedHackatimeProjects
+        .map(_normalizeHackatimeName)
+        .toSet();
+    final projects = _filteredHackatimeProjects
+        .where((project) => project.name != 'No Projects Available')
+        .toList();
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: projects.map((project) {
+        final normalizedName = _normalizeHackatimeName(project.name);
+        final isSelected = selectedSet.contains(normalizedName);
+        final isClaimedElsewhere = _claimedHackatimeProjects.contains(
+          normalizedName,
+        );
+        final isDisabled = isClaimedElsewhere && !isSelected;
+        final labelSecondary = project.text.isNotEmpty
+            ? project.text
+            : project.digital.isNotEmpty
+            ? project.digital
+            : '';
+
+        return Tooltip(
+          message: isDisabled
+              ? 'Already linked to another Boot project'
+              : isSelected
+              ? 'Tap to unlink this Hackatime project'
+              : 'Tap to link this Hackatime project',
+          child: FilterChip(
+            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+            selectedColor: colorScheme.primaryContainer,
+            checkmarkColor: colorScheme.onPrimaryContainer,
+            disabledColor: colorScheme.surfaceContainerHigh,
+            backgroundColor: colorScheme.surfaceContainerLow,
+            avatar: Icon(
+              isDisabled
+                  ? Symbols.block
+                  : isSelected
+                  ? Symbols.check
+                  : Symbols.add,
+              size: 18,
+              color: isDisabled
+                  ? colorScheme.onSurfaceVariant
+                  : isSelected
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.primary,
+            ),
+            label: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 140, maxWidth: 220),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    project.name,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: isDisabled
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onSurface,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  if (labelSecondary.isNotEmpty)
+                    Text(
+                      labelSecondary,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            selected: isSelected,
+            onSelected: isDisabled
+                ? null
+                : (selected) => _toggleHackatimeProject(project.name, selected),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSelectedHackatimeSummary(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Linked Hackatime projects',
+          style: textTheme.titleSmall?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _selectedHackatimeProjects.map((projectName) {
+            return InputChip(
+              label: Text(projectName),
+              onDeleted: () => _toggleHackatimeProject(projectName, false),
+              avatar: Icon(Symbols.bolt, size: 18),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _toggleHackatimeProject(String projectName, bool shouldSelect) {
+    final normalizedName = _normalizeHackatimeName(projectName);
+    setState(() {
+      if (shouldSelect) {
+        final alreadySelected = _selectedHackatimeProjects.any(
+          (name) => _normalizeHackatimeName(name) == normalizedName,
+        );
+        if (!alreadySelected) {
+          _selectedHackatimeProjects.add(projectName);
+        }
+      } else {
+        _selectedHackatimeProjects.removeWhere(
+          (name) => _normalizeHackatimeName(name) == normalizedName,
+        );
+      }
+    });
   }
 }
 
