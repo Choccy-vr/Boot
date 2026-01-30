@@ -1768,7 +1768,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             textAlignVertical: TextAlignVertical.top,
             decoration: InputDecoration(
               hintText:
-                  'Share your development progress, challenges, insights, and learnings...',
+                  'Share your development progress, bounties, insights, and learnings...',
               helperText:
                   _showDevlogDescriptionError && _devlogDescriptionError != null
                   ? null
@@ -1822,7 +1822,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ),
             SizedBox(width: 8),
             Text(
-              'Challenges Completed',
+              'Bounties Completed',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.w600,
@@ -1832,7 +1832,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         ),
         SizedBox(height: 12),
         Text(
-          'Select challenges you completed in this devlog',
+          'Select bounties you completed in this devlog',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -3094,7 +3094,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Available Challenges',
+                        'Available Bounties',
                         style: textTheme.titleMedium?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -3126,7 +3126,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'No challenges found',
+                              'No bounties found',
                               style: textTheme.titleMedium?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
@@ -3659,7 +3659,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Challenges completed:',
+                                'Bounties completed:',
                                 style: TextStyle(
                                   color: TerminalColors.green,
                                   fontWeight: FontWeight.w600,
@@ -3954,7 +3954,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Document your progress, challenges, insights, etc. You must make a devlog every 5 hours of work but it is better to make them more frequently!',
+                        'Document your progress, bounties, insights, etc. You must make a devlog every 5 hours of work but it is better to make them more frequently!',
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurface,
                         ),
