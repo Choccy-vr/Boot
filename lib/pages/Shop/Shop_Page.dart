@@ -719,7 +719,7 @@ class _ShopPageState extends State<ShopPage> {
                                         const SizedBox(width: 4),
                                         Flexible(
                                           child: Text(
-                                            'Requires: ${prize.key}',
+                                            'Requires key',
                                             style: textTheme.bodySmall
                                                 ?.copyWith(
                                                   color: TerminalColors.yellow,
