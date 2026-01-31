@@ -57,6 +57,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   final Map<String, String> _architectures = {
     'x86_64': 'x86-64',
     'x86': 'x86 (32-bit)',
+    'arm': 'ARM',
+    'aarch64': 'aarch64 (ARM 64-bit)',
+    'raspberry_pi': 'Raspberry Pi',
   };
 
   final List<String> _popularTags = [
@@ -74,6 +77,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     // Architectures
     'x86-64',
     'x86',
+    'Raspberry Pi',
+    'ARM',
+    'aarch64',
     // Technologies
     'Linux',
     'Kernel',
