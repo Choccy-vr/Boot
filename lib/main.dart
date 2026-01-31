@@ -55,8 +55,8 @@ void main() async {
   // Configure Hack Club OAuth (no async init needed)
   Authentication.configureHackClubOAuth(
     clientId: 'f95f9b01574322ba6363154b7ce1ace8',
-    redirectUri: '${Uri.base.origin}/dashboard/redirect.html',
-    /*redirectUri: '${Uri.base.origin}/redirect.html',*/
+    /*redirectUri: '${Uri.base.origin}/dashboard/redirect.html',*/
+    redirectUri: '${Uri.base.origin}/redirect.html',
   );
 
   // Run auth checks in parallel

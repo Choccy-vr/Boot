@@ -4,6 +4,8 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/challenges/Challenge.dart';
 import '/services/challenges/Challenge_Service.dart';
+import '/services/prizes/Prize.dart';
+import '/services/prizes/Prize_Service.dart';
 import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
 import '/theme/terminal_theme.dart';
@@ -23,6 +25,7 @@ class _ChallengePageState extends State<ChallengePage>
   late TabController _tabController;
   List<Challenge> _allChallenges = [];
   List<Challenge> _filteredChallenges = [];
+  Map<String, Prize> _rewardPrizesByKey = {};
   bool _isLoading = true;
   ChallengeType? _selectedType;
   ChallengeDifficulty? _selectedDifficulty;
@@ -34,6 +37,23 @@ class _ChallengePageState extends State<ChallengePage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadChallenges();
+    _loadRewardPrizes();
+  }
+
+  Future<void> _loadRewardPrizes() async {
+    try {
+      final prizes = await PrizeService.fetchPrizes();
+      if (!mounted) return;
+      setState(() {
+        _rewardPrizesByKey = {
+          for (final prize in prizes)
+            if (prize.type == PrizeType.reward && prize.key.isNotEmpty)
+              prize.key: prize,
+        };
+      });
+    } catch (e) {
+      debugPrint('Error loading reward prizes: $e');
+    }
   }
 
   void _onTabChanged() {
@@ -449,7 +469,8 @@ class _ChallengePageState extends State<ChallengePage>
         .split('\n')
         .where((req) => req.trim().isNotEmpty)
         .length;
-    final hasKeyReward = challenge.key.isNotEmpty;
+    final rewardPrize = _rewardPrizesByKey[challenge.key];
+    final hasRewardPrize = rewardPrize != null;
 
     // Get type label
     String? typeLabel;
@@ -682,7 +703,7 @@ class _ChallengePageState extends State<ChallengePage>
                 ),
               ),
               const SizedBox(width: 12),
-              // Reward section (coins or key)
+              // Reward section (coins or reward prize)
               Container(
                 width: 200,
                 padding: const EdgeInsets.symmetric(
@@ -720,7 +741,7 @@ class _ChallengePageState extends State<ChallengePage>
                         ),
                       ),
                       child: Icon(
-                        hasKeyReward ? Symbols.key : Symbols.toll,
+                        hasRewardPrize ? Symbols.redeem : Symbols.toll,
                         color: TerminalColors.yellow,
                         size: 24,
                       ),
@@ -733,7 +754,7 @@ class _ChallengePageState extends State<ChallengePage>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            hasKeyReward ? 'Key Reward' : 'Coin Reward',
+                            hasRewardPrize ? 'Reward Prize' : 'Coin Reward',
                             style: textTheme.labelLarge?.copyWith(
                               color: TerminalColors.yellow,
                               fontWeight: FontWeight.bold,
@@ -742,29 +763,17 @@ class _ChallengePageState extends State<ChallengePage>
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          if (hasKeyReward)
-                            Row(
-                              children: [
-                                Icon(
-                                  Symbols.key,
-                                  size: 12,
-                                  color: TerminalColors.yellow,
+                          if (hasRewardPrize)
+                            Text(
+                              rewardPrize!.title,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: TerminalColors.yellow.withValues(
+                                  alpha: 0.9,
                                 ),
-                                const SizedBox(width: 3),
-                                Expanded(
-                                  child: Text(
-                                    challenge.key,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: TerminalColors.yellow.withValues(
-                                        alpha: 0.9,
-                                      ),
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                                fontSize: 11,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             )
                           else
                             Row(
@@ -834,11 +843,13 @@ class _ChallengePageState extends State<ChallengePage>
     TextTheme textTheme,
   ) async {
     if (!mounted) return;
+    final rewardPrize = _rewardPrizesByKey[challenge.key];
 
     showDialog(
       context: context,
       builder: (context) => ChallengeDetailDialog(
         challenge: challenge,
+        rewardPrize: rewardPrize,
         colorScheme: colorScheme,
         textTheme: textTheme,
       ),
@@ -848,12 +859,14 @@ class _ChallengePageState extends State<ChallengePage>
 
 class ChallengeDetailDialog extends StatelessWidget {
   final Challenge challenge;
+  final Prize? rewardPrize;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
 
   const ChallengeDetailDialog({
     super.key,
     required this.challenge,
+    this.rewardPrize,
     required this.colorScheme,
     required this.textTheme,
   });
@@ -1057,24 +1070,12 @@ class ChallengeDetailDialog extends StatelessWidget {
                 _buildSection(
                   title: 'Reward',
                   icon: Symbols.emoji_events,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: TerminalColors.yellow.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: TerminalColors.yellow.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          margin: const EdgeInsets.only(right: 12),
+                  child: rewardPrize != null
+                      ? _buildRewardPrizeCard(rewardPrize!)
+                      : Container(
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: TerminalColors.yellow.withValues(alpha: 0.2),
+                            color: TerminalColors.yellow.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: TerminalColors.yellow.withValues(
@@ -1083,42 +1084,54 @@ class ChallengeDetailDialog extends StatelessWidget {
                               width: 1,
                             ),
                           ),
-                          child: Icon(
-                            challenge.key.isNotEmpty
-                                ? Symbols.key
-                                : Symbols.toll,
-                            color: TerminalColors.yellow,
-                            size: 24,
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                challenge.key.isNotEmpty
-                                    ? 'Key Reward'
-                                    : 'Coin Reward',
-                                style: textTheme.titleLarge?.copyWith(
+                              Container(
+                                width: 48,
+                                height: 48,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: TerminalColors.yellow.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: TerminalColors.yellow.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Symbols.toll,
                                   color: TerminalColors.yellow,
-                                  fontWeight: FontWeight.bold,
+                                  size: 24,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                challenge.key.isNotEmpty
-                                    ? challenge.key
-                                    : '${challenge.coins} coins',
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurface,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Coin Reward',
+                                      style: textTheme.titleLarge?.copyWith(
+                                        color: TerminalColors.yellow,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${challenge.coins} coins',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -1235,6 +1248,126 @@ class ChallengeDetailDialog extends StatelessWidget {
         const SizedBox(height: 12),
         child,
       ],
+    );
+  }
+
+  Widget _buildRewardPrizeCard(Prize prize) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(11),
+                topRight: Radius.circular(11),
+              ),
+            ),
+            child: prize.picture != null && prize.picture!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(11),
+                      topRight: Radius.circular(11),
+                    ),
+                    child: Image.network(
+                      prize.picture!,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Icon(
+                          Symbols.redeem,
+                          size: 48,
+                          color: colorScheme.outline,
+                        ),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Icon(
+                      Symbols.redeem,
+                      size: 48,
+                      color: colorScheme.outline,
+                    ),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prize.title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  prize.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (prize.coins > 0 || prize.multiplier > 0) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (prize.coins > 0)
+                        _buildRewardChip(
+                          icon: Symbols.toll,
+                          label: '${prize.coins} coins',
+                        ),
+                      if (prize.multiplier > 0)
+                        _buildRewardChip(
+                          icon: Symbols.percent,
+                          label: '${prize.multiplier}x',
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRewardChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: TerminalColors.yellow.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: TerminalColors.yellow.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: TerminalColors.yellow),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(
+              color: TerminalColors.yellow,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

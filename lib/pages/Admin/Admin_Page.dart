@@ -434,6 +434,17 @@ class _AdminPageState extends State<AdminPage> {
         : challenge.difficulty == ChallengeDifficulty.medium
         ? TerminalColors.yellow
         : TerminalColors.red;
+    Prize? rewardPrize;
+    for (final prize in _prizes) {
+      if (prize.type == PrizeType.reward && prize.key == challenge.key) {
+        rewardPrize = prize;
+        break;
+      }
+    }
+    final rewardLabel = rewardPrize != null
+        ? 'Reward: ${rewardPrize.title}'
+        : '${challenge.coins} coins';
+    final rewardIcon = rewardPrize != null ? Symbols.redeem : Symbols.toll;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -514,12 +525,43 @@ class _AdminPageState extends State<AdminPage> {
                 textTheme: textTheme,
               ),
               _buildChip(
-                icon: challenge.key.isNotEmpty ? Symbols.key : Symbols.toll,
-                label: challenge.key.isNotEmpty
-                    ? 'Key: ${challenge.key}'
-                    : '${challenge.coins} coins',
+                icon: rewardIcon,
+                label: rewardLabel,
                 color: TerminalColors.yellow,
                 textTheme: textTheme,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () => _showEditChallengeDialog(challenge),
+                icon: Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    side: BorderSide(
+                      color: colorScheme.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _showDeleteChallengeDialog(challenge),
+                icon: Icon(Symbols.delete, color: TerminalColors.red, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    side: BorderSide(
+                      color: TerminalColors.red.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -644,17 +686,6 @@ class _AdminPageState extends State<AdminPage> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    controller: costController,
-                                    label: 'Cost (coins)',
-                                    icon: Symbols.paid,
-                                    keyboardType: TextInputType.number,
-                                    colorScheme: colorScheme,
-                                    textTheme: textTheme,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildTextField(
                                     controller: stockController,
                                     label: 'Stock',
                                     icon: Symbols.inventory_2,
@@ -672,13 +703,29 @@ class _AdminPageState extends State<AdminPage> {
                               items: PrizeType.values,
                               onChanged: (value) {
                                 if (value != null) {
-                                  setDialogState(() => selectedType = value);
+                                  setDialogState(() {
+                                    selectedType = value;
+                                    if (selectedType == PrizeType.reward) {
+                                      costController.text = '0';
+                                    }
+                                  });
                                 }
                               },
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
                             const SizedBox(height: 16),
+                            if (selectedType != PrizeType.reward) ...[
+                              _buildTextField(
+                                controller: costController,
+                                label: 'Cost (coins)',
+                                icon: Symbols.paid,
+                                keyboardType: TextInputType.number,
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             // Conditional fields based on type
                             if (selectedType == PrizeType.keyed ||
                                 selectedType == PrizeType.reward) ...[
@@ -773,12 +820,15 @@ class _AdminPageState extends State<AdminPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            Container(
-                              height: 400,
-                              child: _buildShopPrizeCard(
-                                previewPrize,
-                                colorScheme,
-                                textTheme,
+                            SizedBox(
+                              height: 520,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _buildShopPrizeCard(
+                                  previewPrize,
+                                  colorScheme,
+                                  textTheme,
+                                ),
                               ),
                             ),
                           ],
@@ -798,11 +848,18 @@ class _AdminPageState extends State<AdminPage> {
                     // Validation
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
-                        costController.text.isEmpty ||
                         stockController.text.isEmpty ||
                         imageUrl == null) {
                       GlobalNotificationService.instance.showError(
                         'Please fill all required fields and upload an image',
+                      );
+                      return;
+                    }
+
+                    if (selectedType != PrizeType.reward &&
+                        costController.text.isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Please enter a cost for this prize',
                       );
                       return;
                     }
@@ -822,7 +879,9 @@ class _AdminPageState extends State<AdminPage> {
                         data: {
                           'title': titleController.text,
                           'description': descriptionController.text,
-                          'cost': int.parse(costController.text),
+                          'cost': selectedType == PrizeType.reward
+                              ? 0
+                              : int.parse(costController.text),
                           'stock': int.parse(stockController.text),
                           'picture': imageUrl,
                           'type': selectedType.toString().split('.').last,
@@ -960,17 +1019,6 @@ class _AdminPageState extends State<AdminPage> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    controller: costController,
-                                    label: 'Cost (coins)',
-                                    icon: Symbols.paid,
-                                    keyboardType: TextInputType.number,
-                                    colorScheme: colorScheme,
-                                    textTheme: textTheme,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildTextField(
                                     controller: stockController,
                                     label: 'Stock',
                                     icon: Symbols.inventory_2,
@@ -988,13 +1036,29 @@ class _AdminPageState extends State<AdminPage> {
                               items: PrizeType.values,
                               onChanged: (value) {
                                 if (value != null) {
-                                  setDialogState(() => selectedType = value);
+                                  setDialogState(() {
+                                    selectedType = value;
+                                    if (selectedType == PrizeType.reward) {
+                                      costController.text = '0';
+                                    }
+                                  });
                                 }
                               },
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
                             const SizedBox(height: 16),
+                            if (selectedType != PrizeType.reward) ...[
+                              _buildTextField(
+                                controller: costController,
+                                label: 'Cost (coins)',
+                                icon: Symbols.paid,
+                                keyboardType: TextInputType.number,
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             // Conditional fields based on type
                             if (selectedType == PrizeType.keyed ||
                                 selectedType == PrizeType.reward) ...[
@@ -1089,12 +1153,15 @@ class _AdminPageState extends State<AdminPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            Container(
-                              height: 400,
-                              child: _buildShopPrizeCard(
-                                previewPrize,
-                                colorScheme,
-                                textTheme,
+                            SizedBox(
+                              height: 520,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _buildShopPrizeCard(
+                                  previewPrize,
+                                  colorScheme,
+                                  textTheme,
+                                ),
                               ),
                             ),
                           ],
@@ -1114,11 +1181,18 @@ class _AdminPageState extends State<AdminPage> {
                     // Validation
                     if (titleController.text.isEmpty ||
                         descriptionController.text.isEmpty ||
-                        costController.text.isEmpty ||
                         stockController.text.isEmpty ||
                         imageUrl == null) {
                       GlobalNotificationService.instance.showError(
                         'Please fill all required fields and upload an image',
+                      );
+                      return;
+                    }
+
+                    if (selectedType != PrizeType.reward &&
+                        costController.text.isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Please enter a cost for this prize',
                       );
                       return;
                     }
@@ -1140,7 +1214,9 @@ class _AdminPageState extends State<AdminPage> {
                         data: {
                           'title': titleController.text,
                           'description': descriptionController.text,
-                          'cost': int.parse(costController.text),
+                          'cost': selectedType == PrizeType.reward
+                              ? 0
+                              : int.parse(costController.text),
                           'stock': int.parse(stockController.text),
                           'picture': imageUrl,
                           'type': selectedType.toString().split('.').last,
@@ -1314,13 +1390,13 @@ class _AdminPageState extends State<AdminPage> {
     final descriptionController = TextEditingController();
     final requirementsController = TextEditingController();
     final coinsController = TextEditingController(text: '0');
-    final keyController = TextEditingController();
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 7));
     ChallengeType selectedType = ChallengeType.normal;
     ChallengeDifficulty selectedDifficulty = ChallengeDifficulty.medium;
     bool isActive = true;
-    bool useKey = false;
+    bool useRewardPrize = false;
+    Prize? selectedRewardPrize;
 
     showDialog(
       context: context,
@@ -1410,14 +1486,17 @@ class _AdminPageState extends State<AdminPage> {
                               ),
                               ButtonSegment(
                                 value: true,
-                                label: Text('Key'),
-                                icon: Icon(Symbols.key, size: 16),
+                                label: Text('Reward Prize'),
+                                icon: Icon(Symbols.redeem, size: 16),
                               ),
                             ],
-                            selected: {useKey},
+                            selected: {useRewardPrize},
                             onSelectionChanged: (Set<bool> newSelection) {
                               setDialogState(() {
-                                useKey = newSelection.first;
+                                useRewardPrize = newSelection.first;
+                                if (useRewardPrize) {
+                                  coinsController.text = '0';
+                                }
                               });
                             },
                           ),
@@ -1425,7 +1504,7 @@ class _AdminPageState extends State<AdminPage> {
                       ),
                       const SizedBox(height: 16),
                       // Conditional reward input
-                      if (!useKey)
+                      if (!useRewardPrize)
                         _buildTextField(
                           controller: coinsController,
                           label: 'Coins Reward',
@@ -1435,12 +1514,72 @@ class _AdminPageState extends State<AdminPage> {
                           textTheme: textTheme,
                         )
                       else
-                        _buildTextField(
-                          controller: keyController,
-                          label: 'Key Name',
-                          icon: Symbols.key,
-                          colorScheme: colorScheme,
-                          textTheme: textTheme,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reward Prize',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (selectedRewardPrize != null)
+                              Container(
+                                height: 220,
+                                child: _buildShopPrizeCard(
+                                  selectedRewardPrize!,
+                                  colorScheme,
+                                  textTheme,
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerLowest,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: colorScheme.outline.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Symbols.redeem,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Select a reward prize to attach to this bounty',
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked =
+                                    await _showSelectRewardPrizeDialog(
+                                      selectedRewardPrize,
+                                    );
+                                if (picked != null) {
+                                  setDialogState(
+                                    () => selectedRewardPrize = picked,
+                                  );
+                                }
+                              },
+                              icon: const Icon(Symbols.search),
+                              label: const Text('Select Reward Prize'),
+                            ),
+                          ],
                         ),
                       const SizedBox(height: 16),
                       // Type Dropdown
@@ -1473,10 +1612,14 @@ class _AdminPageState extends State<AdminPage> {
                               label: 'Start Date',
                               date: startDate,
                               onTap: () async {
+                                final firstDate =
+                                    startDate.isBefore(DateTime.now())
+                                    ? startDate
+                                    : DateTime.now();
                                 final picked = await showDatePicker(
                                   context: context,
                                   initialDate: startDate,
-                                  firstDate: DateTime.now(),
+                                  firstDate: firstDate,
                                   lastDate: DateTime.now().add(
                                     const Duration(days: 365),
                                   ),
@@ -1558,7 +1701,7 @@ class _AdminPageState extends State<AdminPage> {
                       return;
                     }
 
-                    if (!useKey &&
+                    if (!useRewardPrize &&
                         (int.tryParse(coinsController.text) ?? 0) <= 0) {
                       GlobalNotificationService.instance.showError(
                         'Please enter a valid coin amount',
@@ -1566,9 +1709,9 @@ class _AdminPageState extends State<AdminPage> {
                       return;
                     }
 
-                    if (useKey && keyController.text.trim().isEmpty) {
+                    if (useRewardPrize && selectedRewardPrize == null) {
                       GlobalNotificationService.instance.showError(
-                        'Please enter a key name',
+                        'Please select a reward prize',
                       );
                       return;
                     }
@@ -1580,10 +1723,12 @@ class _AdminPageState extends State<AdminPage> {
                           'title': titleController.text,
                           'description': descriptionController.text,
                           'requirements': requirementsController.text,
-                          'coins': useKey
+                          'coins': useRewardPrize
                               ? 0
                               : (int.tryParse(coinsController.text) ?? 0),
-                          'key': useKey ? keyController.text.trim() : '',
+                          'key': useRewardPrize
+                              ? (selectedRewardPrize?.key ?? '')
+                              : '',
                           'type': selectedType.toString().split('.').last,
                           'difficulty': selectedDifficulty
                               .toString()
@@ -1611,6 +1756,541 @@ class _AdminPageState extends State<AdminPage> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  Future<Prize?> _showSelectRewardPrizeDialog(Prize? selectedPrize) {
+    final rewardPrizes = _prizes
+        .where((prize) => prize.type == PrizeType.reward)
+        .toList();
+
+    return showDialog<Prize>(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: colorScheme.outline),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.redeem, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Select Reward Prize',
+                style: textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 900,
+            height: 520,
+            child: rewardPrizes.isEmpty
+                ? Center(
+                    child: Text(
+                      'No reward prizes available. Create a prize with type "reward" first.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : GridView.builder(
+                    itemCount: rewardPrizes.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.65,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                    itemBuilder: (context, index) {
+                      final prize = rewardPrizes[index];
+                      final isSelected =
+                          selectedPrize != null && selectedPrize.id == prize.id;
+                      return InkWell(
+                        onTap: () => Navigator.pop(context, prize),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : colorScheme.outline.withValues(alpha: 0.4),
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: _buildShopPrizeCard(
+                            prize,
+                            colorScheme,
+                            textTheme,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditChallengeDialog(Challenge challenge) {
+    final titleController = TextEditingController(text: challenge.title);
+    final descriptionController = TextEditingController(
+      text: challenge.description,
+    );
+    final requirementsController = TextEditingController(
+      text: challenge.requirements,
+    );
+    final coinsController = TextEditingController(
+      text: challenge.coins.toString(),
+    );
+    DateTime startDate = challenge.startDate;
+    DateTime endDate = challenge.endDate;
+    ChallengeType selectedType = challenge.type;
+    ChallengeDifficulty selectedDifficulty = challenge.difficulty;
+    bool isActive = challenge.isActive;
+    Prize? selectedRewardPrize;
+    bool useRewardPrize = false;
+
+    for (final prize in _prizes) {
+      if (prize.type == PrizeType.reward && prize.key == challenge.key) {
+        selectedRewardPrize = prize;
+        useRewardPrize = true;
+        break;
+      }
+    }
+    if (challenge.key.isNotEmpty && selectedRewardPrize == null) {
+      useRewardPrize = true;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colorScheme.outline),
+              ),
+              title: Row(
+                children: [
+                  Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Edit Bounty',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 500,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField(
+                        controller: titleController,
+                        label: 'Title',
+                        icon: Symbols.title,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: descriptionController,
+                        label: 'Description',
+                        icon: Symbols.description,
+                        maxLines: 3,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: requirementsController,
+                        label: 'Requirements',
+                        icon: Symbols.checklist,
+                        maxLines: 2,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.redeem,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Reward Type',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          SegmentedButton<bool>(
+                            segments: const [
+                              ButtonSegment(
+                                value: false,
+                                label: Text('Coins'),
+                                icon: Icon(Symbols.toll, size: 16),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text('Reward Prize'),
+                                icon: Icon(Symbols.redeem, size: 16),
+                              ),
+                            ],
+                            selected: {useRewardPrize},
+                            onSelectionChanged: (Set<bool> newSelection) {
+                              setDialogState(() {
+                                useRewardPrize = newSelection.first;
+                                if (useRewardPrize) {
+                                  coinsController.text = '0';
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (!useRewardPrize)
+                        _buildTextField(
+                          controller: coinsController,
+                          label: 'Coins Reward',
+                          icon: Symbols.toll,
+                          keyboardType: TextInputType.number,
+                          colorScheme: colorScheme,
+                          textTheme: textTheme,
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reward Prize',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (selectedRewardPrize != null)
+                              Container(
+                                height: 220,
+                                child: _buildShopPrizeCard(
+                                  selectedRewardPrize!,
+                                  colorScheme,
+                                  textTheme,
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerLowest,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: colorScheme.outline.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Symbols.redeem,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Select a reward prize to attach to this bounty',
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked =
+                                    await _showSelectRewardPrizeDialog(
+                                      selectedRewardPrize,
+                                    );
+                                if (picked != null) {
+                                  setDialogState(
+                                    () => selectedRewardPrize = picked,
+                                  );
+                                }
+                              },
+                              icon: const Icon(Symbols.search),
+                              label: const Text('Select Reward Prize'),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
+                      _buildDropdown<ChallengeType>(
+                        label: 'Type',
+                        value: selectedType,
+                        items: ChallengeType.values,
+                        onChanged: (value) =>
+                            setDialogState(() => selectedType = value!),
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDropdown<ChallengeDifficulty>(
+                        label: 'Difficulty',
+                        value: selectedDifficulty,
+                        items: ChallengeDifficulty.values,
+                        onChanged: (value) =>
+                            setDialogState(() => selectedDifficulty = value!),
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDatePicker(
+                              label: 'Start Date',
+                              date: startDate,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: startDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setDialogState(() => startDate = picked);
+                                }
+                              },
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDatePicker(
+                              label: 'End Date',
+                              date: endDate,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: endDate,
+                                  firstDate: startDate,
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setDialogState(() => endDate = picked);
+                                }
+                              },
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.power_settings_new,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Active',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          Switch(
+                            value: isActive,
+                            onChanged: (value) =>
+                                setDialogState(() => isActive = value),
+                            activeColor: TerminalColors.green,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.isEmpty ||
+                        descriptionController.text.isEmpty ||
+                        requirementsController.text.isEmpty) {
+                      GlobalNotificationService.instance.showError(
+                        'Please fill all required fields',
+                      );
+                      return;
+                    }
+
+                    if (!useRewardPrize &&
+                        (int.tryParse(coinsController.text) ?? 0) <= 0) {
+                      GlobalNotificationService.instance.showError(
+                        'Please enter a valid coin amount',
+                      );
+                      return;
+                    }
+
+                    if (useRewardPrize && selectedRewardPrize == null) {
+                      GlobalNotificationService.instance.showError(
+                        'Please select a reward prize',
+                      );
+                      return;
+                    }
+
+                    try {
+                      await SupabaseDB.updateData(
+                        table: 'challenges',
+                        column: 'id',
+                        value: challenge.id,
+                        data: {
+                          'title': titleController.text,
+                          'description': descriptionController.text,
+                          'requirements': requirementsController.text,
+                          'coins': useRewardPrize
+                              ? 0
+                              : (int.tryParse(coinsController.text) ?? 0),
+                          'key': useRewardPrize
+                              ? (selectedRewardPrize?.key ?? '')
+                              : '',
+                          'type': selectedType.toString().split('.').last,
+                          'difficulty': selectedDifficulty
+                              .toString()
+                              .split('.')
+                              .last,
+                          'start_date': startDate.toIso8601String(),
+                          'end_date': endDate.toIso8601String(),
+                          'active': isActive,
+                        },
+                      );
+                      GlobalNotificationService.instance.showSuccess(
+                        'Bounty updated successfully!',
+                      );
+                      Navigator.pop(context);
+                      _loadData();
+                    } catch (e) {
+                      AppLogger.error('Failed to update Bounty', e);
+                      GlobalNotificationService.instance.showError(
+                        'Failed to update Bounty',
+                      );
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showDeleteChallengeDialog(Challenge challenge) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: TerminalColors.red.withValues(alpha: 0.5)),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.warning, color: TerminalColors.red, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Delete Bounty',
+                style: textTheme.titleLarge?.copyWith(
+                  color: TerminalColors.red,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete "${challenge.title}"? This cannot be undone.',
+            style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await SupabaseDB.deleteData(
+                    table: 'challenges',
+                    column: 'id',
+                    value: challenge.id,
+                  );
+                  GlobalNotificationService.instance.showSuccess(
+                    'Bounty deleted successfully!',
+                  );
+                  Navigator.pop(context);
+                  _loadData();
+                } catch (e) {
+                  AppLogger.error('Failed to delete Bounty', e);
+                  GlobalNotificationService.instance.showError(
+                    'Failed to delete Bounty',
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TerminalColors.red,
+                foregroundColor: TerminalColors.black,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
         );
       },
     );
