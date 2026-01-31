@@ -224,28 +224,20 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   );
                 },
               ),
-              (user?.role == UserRole.admin || user?.role == UserRole.owner)
-                  ? _buildRailItem(
-                      icon: Symbols.storefront,
-                      title: 'Shop',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      onTap: () {
-                        NavigationService.navigateTo(
-                          context: context,
-                          destination: AppDestination.shop,
-                          colorScheme: colorScheme,
-                          textTheme: textTheme,
-                        );
-                      },
-                    )
-                  : _buildRailItem(
-                      icon: Symbols.storefront,
-                      title: '???',
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      onTap: () {},
-                    ),
+              _buildRailItem(
+                icon: Symbols.storefront,
+                title: 'Shop',
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                onTap: () {
+                  NavigationService.navigateTo(
+                    context: context,
+                    destination: AppDestination.shop,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                  );
+                },
+              ),
               if (user?.role == UserRole.reviewer ||
                   user?.role == UserRole.admin ||
                   user?.role == UserRole.owner)
