@@ -1,7 +1,6 @@
 class BootUser {
   //identifiers
   final String id;
-  final String email;
   String username;
   //profile
   String bio;
@@ -31,7 +30,6 @@ class BootUser {
   //constructor
   BootUser({
     required this.id,
-    required this.email,
     required this.username,
     required this.bio,
     required this.profilePicture,
@@ -53,7 +51,6 @@ class BootUser {
   factory BootUser.fromJson(Map<String, dynamic> json) {
     return BootUser(
       id: json['id'] ?? '',
-      email: json['email'] ?? '',
       username: json['username'] ?? '',
       bio: json['bio'] ?? '',
       // Align with toJson key, but keep fallback for legacy key
@@ -85,7 +82,6 @@ class BootUser {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'email': email,
       'username': username,
       'bio': bio,
       'profile_picture_url': profilePicture,

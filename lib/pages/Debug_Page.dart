@@ -224,7 +224,6 @@ class _DebugPageState extends State<DebugPage> {
                     if (user != null) {
                       _setStatus(
                         'User: ${user.username} (ID: ${user.id})\n'
-                        'Email: ${user.email}\n'
                         'Coins: ${user.bootCoins}\n'
                         'Slack ID: ${user.slackUserId}',
                       );
@@ -302,9 +301,7 @@ class _DebugPageState extends State<DebugPage> {
                         );
                         _setStatus(
                           'Found ${projects.length} projects:\n' +
-                              projects
-                                  .map((p) => '- ${p.title}')
-                                  .join('\n'),
+                              projects.map((p) => '- ${p.title}').join('\n'),
                         );
                       } catch (e) {
                         _setStatus('Error fetching projects: $e');
@@ -640,7 +637,6 @@ class _DebugPageState extends State<DebugPage> {
                       if (user != null) {
                         _setStatus(
                           'User: ${user.username}\n'
-                          'Email: ${user.email}\n'
                           'ID: ${user.id}\n'
                           'Coins: ${user.bootCoins}\n'
                           'Slack ID: ${user.slackUserId}\n'
@@ -664,7 +660,8 @@ class _DebugPageState extends State<DebugPage> {
                     final user = await UserService.getUserById(
                       _selectedUserId!,
                     );
-                    if (user?.slackUserId != null && user!.slackUserId.isNotEmpty) {
+                    if (user?.slackUserId != null &&
+                        user!.slackUserId.isNotEmpty) {
                       _setStatus(
                         'Check Hackatime ban status for user ${user.slackUserId}\n'
                         '(Note: You cannot actually ban users from here - this is read-only)',
@@ -687,9 +684,7 @@ class _DebugPageState extends State<DebugPage> {
                       );
                       _setStatus(
                         'User has ${projects.length} projects:\n' +
-                            projects
-                                .map((p) => '- ${p.title}')
-                                .join('\n'),
+                            projects.map((p) => '- ${p.title}').join('\n'),
                       );
                     } catch (e) {
                       _setStatus('Error: $e');
