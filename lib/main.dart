@@ -23,6 +23,7 @@ import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
 import 'pages/Admin/Admin_Page.dart';
 import 'pages/Shop/Shop_Page.dart';
+import 'pages/Shop/Prize_Details_Page.dart';
 import 'services/Projects/Project.dart';
 import 'services/Projects/project_service.dart';
 import 'services/auth/Auth.dart';
@@ -32,10 +33,13 @@ import 'services/misc/logger.dart';
 import 'services/notifications/notifications.dart';
 import 'services/users/Boot_User.dart';
 import 'services/users/User.dart';
+import 'services/prizes/Prize.dart';
+import 'services/prizes/Prize_Service.dart';
 import 'theme/terminal_theme.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -52,10 +56,16 @@ void main() async {
   AuthListener.startListening();
 
   // Configure Hack Club OAuth (no async init needed)
+  final isLocalhost =
+      Uri.base.host == 'localhost' ||
+      Uri.base.host == '127.0.0.1' ||
+      Uri.base.host == '::1';
+
   Authentication.configureHackClubOAuth(
-    clientId: 'f95f9b01574322ba6363154b7ce1ace8',
-    redirectUri: '${Uri.base.origin}/dashboard/redirect.html',
-    /*redirectUri: '${Uri.base.origin}/redirect.html',*/
+    clientId: hackclubClientId,
+    redirectUri: isLocalhost
+        ? '${Uri.base.origin}/redirect.html'
+        : '${Uri.base.origin}/dashboard/redirect.html',
   );
 
   // Run auth checks in parallel
@@ -217,6 +227,16 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       page = const ShopPage();
       routeName = '/shop';
       break;
+    case 'prizes':
+      if (segments.length >= 2) {
+        final prizeId = segments[1];
+        if (prizeId.isNotEmpty) {
+          // Prize details page will load the prize
+          page = PrizeLoaderPage(prizeId: prizeId);
+          routeName = '/prizes/$prizeId';
+        }
+      }
+      break;
     case 'user':
       if (segments.length >= 2) {
         final userId = segments[1];
@@ -365,6 +385,51 @@ class UserLoaderPage extends StatelessWidget {
           return NotFoundPage(path: '/user/$userId');
         }
         return ProfilePage(user: user);
+      },
+    );
+  }
+}
+
+class PrizeLoaderPage extends StatelessWidget {
+  const PrizeLoaderPage({super.key, required this.prizeId});
+
+  final String prizeId;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Prize>>(
+      future: PrizeService.fetchPrizes(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _LoadingScaffold();
+        }
+        final prizes = snapshot.data ?? [];
+        final prize = prizes.where((p) => p.id == prizeId).firstOrNull;
+
+        if (prize == null) {
+          return NotFoundPage(path: '/prizes/$prizeId');
+        }
+
+        // Get cart state from current user
+        final cartItems = Set<String>.from(UserService.currentUser?.cart ?? []);
+        final isInCart = cartItems.contains(prizeId);
+
+        // For now, quantity is 1, but this could be tracked in user's cart data
+        return PrizeDetailsPage(
+          prize: prize,
+          isInCart: isInCart,
+          currentQuantity: 1,
+          onAddToCart: (prizeId, qty) async {
+            // Update cart
+            final user = UserService.currentUser;
+            if (user != null) {
+              if (!user.cart.contains(prizeId)) {
+                user.cart.add(prizeId);
+                await UserService.updateUser();
+              }
+            }
+          },
+        );
       },
     );
   }

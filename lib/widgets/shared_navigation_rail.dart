@@ -270,21 +270,6 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                     );
                   },
                 ),
-              if (user?.role == UserRole.owner)
-                _buildRailItem(
-                  icon: Symbols.bug_report,
-                  title: 'Debug Console',
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  onTap: () {
-                    NavigationService.navigateTo(
-                      context: context,
-                      destination: AppDestination.debug,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                    );
-                  },
-                ),
             ],
           ),
         ),

@@ -594,8 +594,11 @@ class _AdminPageState extends State<AdminPage> {
     final multiplierController = TextEditingController(text: '0');
     final coinsController = TextEditingController(text: '0');
     final keyController = TextEditingController();
+    final specsController = TextEditingController();
     String? imageUrl;
     PrizeType selectedType = PrizeType.normal;
+    Set<PrizeCountries> selectedCountries = {PrizeCountries.all};
+    bool customGrant = true;
 
     showDialog(
       context: context,
@@ -615,6 +618,7 @@ class _AdminPageState extends State<AdminPage> {
             multiplierController.addListener(updatePreview);
             coinsController.addListener(updatePreview);
             keyController.addListener(updatePreview);
+            specsController.addListener(updatePreview);
 
             // Create preview prize
             final previewPrize = Prize(
@@ -633,6 +637,9 @@ class _AdminPageState extends State<AdminPage> {
               key: keyController.text,
               coins: int.tryParse(coinsController.text) ?? 0,
               type: selectedType,
+              countries: selectedCountries.toList(),
+              specs: specsController.text,
+              customGrant: customGrant,
             );
 
             return AlertDialog(
@@ -771,6 +778,49 @@ class _AdminPageState extends State<AdminPage> {
                               ),
                               const SizedBox(height: 16),
                             ],
+                            // Specs field (optional, tall text box)
+                            _buildTextField(
+                              controller: specsController,
+                              label: 'Specs (optional)',
+                              icon: Symbols.notes,
+                              maxLines: 5,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            // Custom Grant checkbox (only for grant type)
+                            if (selectedType == PrizeType.grant) ...[
+                              CheckboxListTile(
+                                value: customGrant,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    customGrant = value ?? true;
+                                  });
+                                },
+                                title: Text(
+                                  'Custom Grant',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            // Countries selector
+                            _buildCountriesSelector(
+                              selectedCountries: selectedCountries,
+                              onChanged: (countries) {
+                                setDialogState(() {
+                                  selectedCountries = countries;
+                                });
+                              },
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
                             OutlinedButton.icon(
                               onPressed: () async {
                                 try {
@@ -891,6 +941,11 @@ class _AdminPageState extends State<AdminPage> {
                           'coins': int.tryParse(coinsController.text) ?? 0,
                           'multiplier':
                               double.tryParse(multiplierController.text) ?? 0,
+                          'countries': selectedCountries
+                              .map((c) => c.toString().split('.').last)
+                              .toList(),
+                          'specs': specsController.text,
+                          'custom_grant': customGrant,
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
@@ -927,8 +982,11 @@ class _AdminPageState extends State<AdminPage> {
     );
     final coinsController = TextEditingController(text: prize.coins.toString());
     final keyController = TextEditingController(text: prize.key);
+    final specsController = TextEditingController(text: prize.specs);
     String? imageUrl = prize.picture;
     PrizeType selectedType = prize.type;
+    Set<PrizeCountries> selectedCountries = prize.countries.toSet();
+    bool customGrant = prize.customGrant;
 
     showDialog(
       context: context,
@@ -948,6 +1006,7 @@ class _AdminPageState extends State<AdminPage> {
             multiplierController.addListener(updatePreview);
             coinsController.addListener(updatePreview);
             keyController.addListener(updatePreview);
+            specsController.addListener(updatePreview);
 
             // Create preview prize
             final previewPrize = Prize(
@@ -966,6 +1025,9 @@ class _AdminPageState extends State<AdminPage> {
               key: keyController.text,
               coins: int.tryParse(coinsController.text) ?? 0,
               type: selectedType,
+              countries: selectedCountries.toList(),
+              specs: specsController.text,
+              customGrant: customGrant,
             );
 
             return AlertDialog(
@@ -1104,6 +1166,49 @@ class _AdminPageState extends State<AdminPage> {
                               ),
                               const SizedBox(height: 16),
                             ],
+                            // Specs field (optional, tall text box)
+                            _buildTextField(
+                              controller: specsController,
+                              label: 'Specs (optional)',
+                              icon: Symbols.notes,
+                              maxLines: 5,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
+                            // Custom Grant checkbox (only for grant type)
+                            if (selectedType == PrizeType.grant) ...[
+                              CheckboxListTile(
+                                value: customGrant,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    customGrant = value ?? true;
+                                  });
+                                },
+                                title: Text(
+                                  'Custom Grant',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            // Countries selector
+                            _buildCountriesSelector(
+                              selectedCountries: selectedCountries,
+                              onChanged: (countries) {
+                                setDialogState(() {
+                                  selectedCountries = countries;
+                                });
+                              },
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            ),
+                            const SizedBox(height: 16),
                             OutlinedButton.icon(
                               onPressed: () async {
                                 try {
@@ -1226,6 +1331,11 @@ class _AdminPageState extends State<AdminPage> {
                           'coins': int.tryParse(coinsController.text) ?? 0,
                           'multiplier':
                               double.tryParse(multiplierController.text) ?? 0,
+                          'countries': selectedCountries
+                              .map((c) => c.toString().split('.').last)
+                              .toList(),
+                          'specs': specsController.text,
+                          'custom_grant': customGrant,
                         },
                       );
                       GlobalNotificationService.instance.showSuccess(
@@ -2628,6 +2738,321 @@ class _AdminPageState extends State<AdminPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCountriesSelector({
+    required Set<PrizeCountries> selectedCountries,
+    required Function(Set<PrizeCountries>) onChanged,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    final searchController = TextEditingController();
+    String searchQuery = '';
+
+    // Define regions with their countries
+    final Map<String, List<PrizeCountries>> regions = {
+      'All Countries': [PrizeCountries.all],
+      'North America': [
+        PrizeCountries.us,
+        PrizeCountries.ca,
+        PrizeCountries.mx,
+      ],
+      'South America': [
+        PrizeCountries.ar,
+        PrizeCountries.br,
+        PrizeCountries.cl,
+        PrizeCountries.co,
+        PrizeCountries.pe,
+        PrizeCountries.ve,
+        PrizeCountries.ec,
+        PrizeCountries.bo,
+        PrizeCountries.py,
+        PrizeCountries.uy,
+      ],
+      'Europe': [
+        PrizeCountries.gb,
+        PrizeCountries.de,
+        PrizeCountries.fr,
+        PrizeCountries.it,
+        PrizeCountries.es,
+        PrizeCountries.nl,
+        PrizeCountries.be,
+        PrizeCountries.ch,
+        PrizeCountries.at,
+        PrizeCountries.se,
+        PrizeCountries.no,
+        PrizeCountries.dk,
+        PrizeCountries.fi,
+        PrizeCountries.ie,
+        PrizeCountries.pt,
+        PrizeCountries.pl,
+        PrizeCountries.cz,
+        PrizeCountries.gr,
+        PrizeCountries.ro,
+        PrizeCountries.hu,
+      ],
+      'Asia': [
+        PrizeCountries.cn,
+        PrizeCountries.jp,
+        PrizeCountries.kr,
+        PrizeCountries.ind,
+        PrizeCountries.sg,
+        PrizeCountries.my,
+        PrizeCountries.th,
+        PrizeCountries.vn,
+        PrizeCountries.ph,
+        PrizeCountries.id,
+        PrizeCountries.tw,
+        PrizeCountries.hk,
+      ],
+      'Oceania': [PrizeCountries.au, PrizeCountries.nz],
+      'Middle East': [
+        PrizeCountries.ae,
+        PrizeCountries.sa,
+        PrizeCountries.il,
+        PrizeCountries.tr,
+      ],
+      'Africa': [
+        PrizeCountries.za,
+        PrizeCountries.ng,
+        PrizeCountries.eg,
+        PrizeCountries.ke,
+        PrizeCountries.ma,
+      ],
+    };
+
+    // Country name mapping
+    final Map<PrizeCountries, String> countryNames = {
+      PrizeCountries.all: 'All Countries',
+      PrizeCountries.us: 'United States',
+      PrizeCountries.ca: 'Canada',
+      PrizeCountries.mx: 'Mexico',
+      PrizeCountries.ar: 'Argentina',
+      PrizeCountries.br: 'Brazil',
+      PrizeCountries.cl: 'Chile',
+      PrizeCountries.co: 'Colombia',
+      PrizeCountries.pe: 'Peru',
+      PrizeCountries.ve: 'Venezuela',
+      PrizeCountries.ec: 'Ecuador',
+      PrizeCountries.bo: 'Bolivia',
+      PrizeCountries.py: 'Paraguay',
+      PrizeCountries.uy: 'Uruguay',
+      PrizeCountries.gb: 'United Kingdom',
+      PrizeCountries.de: 'Germany',
+      PrizeCountries.fr: 'France',
+      PrizeCountries.it: 'Italy',
+      PrizeCountries.es: 'Spain',
+      PrizeCountries.nl: 'Netherlands',
+      PrizeCountries.be: 'Belgium',
+      PrizeCountries.ch: 'Switzerland',
+      PrizeCountries.at: 'Austria',
+      PrizeCountries.se: 'Sweden',
+      PrizeCountries.no: 'Norway',
+      PrizeCountries.dk: 'Denmark',
+      PrizeCountries.fi: 'Finland',
+      PrizeCountries.ie: 'Ireland',
+      PrizeCountries.pt: 'Portugal',
+      PrizeCountries.pl: 'Poland',
+      PrizeCountries.cz: 'Czech Republic',
+      PrizeCountries.gr: 'Greece',
+      PrizeCountries.ro: 'Romania',
+      PrizeCountries.hu: 'Hungary',
+      PrizeCountries.cn: 'China',
+      PrizeCountries.jp: 'Japan',
+      PrizeCountries.kr: 'South Korea',
+      PrizeCountries.ind: 'India',
+      PrizeCountries.sg: 'Singapore',
+      PrizeCountries.my: 'Malaysia',
+      PrizeCountries.th: 'Thailand',
+      PrizeCountries.vn: 'Vietnam',
+      PrizeCountries.ph: 'Philippines',
+      PrizeCountries.id: 'Indonesia',
+      PrizeCountries.tw: 'Taiwan',
+      PrizeCountries.hk: 'Hong Kong',
+      PrizeCountries.au: 'Australia',
+      PrizeCountries.nz: 'New Zealand',
+      PrizeCountries.ae: 'UAE',
+      PrizeCountries.sa: 'Saudi Arabia',
+      PrizeCountries.il: 'Israel',
+      PrizeCountries.tr: 'Turkey',
+      PrizeCountries.za: 'South Africa',
+      PrizeCountries.ng: 'Nigeria',
+      PrizeCountries.eg: 'Egypt',
+      PrizeCountries.ke: 'Kenya',
+      PrizeCountries.ma: 'Morocco',
+    };
+
+    return StatefulBuilder(
+      builder: (context, setRegionState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Countries (Required)',
+              style: textTheme.bodySmall?.copyWith(color: colorScheme.outline),
+            ),
+            const SizedBox(height: 8),
+            // Search bar
+            TextField(
+              controller: searchController,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search countries...',
+                prefixIcon: Icon(
+                  Symbols.search,
+                  color: colorScheme.primary,
+                  size: 20,
+                ),
+                hintStyle: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.outline,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colorScheme.outline),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerLowest,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: (value) {
+                setRegionState(() {
+                  searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            // Countries list with regions
+            Container(
+              constraints: const BoxConstraints(maxHeight: 300),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: colorScheme.outline),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: regions.length,
+                itemBuilder: (context, index) {
+                  final regionName = regions.keys.elementAt(index);
+                  final countriesInRegion = regions[regionName]!;
+
+                  // Filter countries based on search
+                  final filteredCountries = searchQuery.isEmpty
+                      ? countriesInRegion
+                      : countriesInRegion.where((country) {
+                          final name =
+                              countryNames[country]?.toLowerCase() ?? '';
+                          return name.contains(searchQuery);
+                        }).toList();
+
+                  if (filteredCountries.isEmpty) return const SizedBox.shrink();
+
+                  final allRegionSelected = filteredCountries.every(
+                    (country) => selectedCountries.contains(country),
+                  );
+                  final someRegionSelected = filteredCountries.any(
+                    (country) => selectedCountries.contains(country),
+                  );
+
+                  return ExpansionTile(
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                    childrenPadding: const EdgeInsets.only(left: 24, bottom: 8),
+                    leading: Checkbox(
+                      value: allRegionSelected,
+                      tristate: true,
+                      onChanged: (value) {
+                        setRegionState(() {
+                          if (value == true) {
+                            // Select all countries in this region
+                            selectedCountries.addAll(countriesInRegion);
+                          } else {
+                            // Deselect all countries in this region
+                            selectedCountries.removeAll(countriesInRegion);
+                          }
+                          // If "All Countries" is selected, clear others
+                          if (selectedCountries.contains(PrizeCountries.all) &&
+                              regionName != 'All Countries') {
+                            selectedCountries.remove(PrizeCountries.all);
+                          }
+                          // If selecting "All Countries", clear all others
+                          if (regionName == 'All Countries' && value == true) {
+                            selectedCountries.clear();
+                            selectedCountries.add(PrizeCountries.all);
+                          }
+                          onChanged(selectedCountries);
+                        });
+                      },
+                    ),
+                    title: Text(
+                      regionName,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    children: filteredCountries.map((country) {
+                      return CheckboxListTile(
+                        value: selectedCountries.contains(country),
+                        onChanged: (value) {
+                          setRegionState(() {
+                            if (value == true) {
+                              selectedCountries.add(country);
+                              // If selecting a specific country, remove "All"
+                              if (country != PrizeCountries.all) {
+                                selectedCountries.remove(PrizeCountries.all);
+                              } else {
+                                // If selecting "All", clear all others
+                                selectedCountries.clear();
+                                selectedCountries.add(PrizeCountries.all);
+                              }
+                            } else {
+                              selectedCountries.remove(country);
+                            }
+                            // Ensure at least one is selected (default to All)
+                            if (selectedCountries.isEmpty) {
+                              selectedCountries.add(PrizeCountries.all);
+                            }
+                            onChanged(selectedCountries);
+                          });
+                        },
+                        title: Text(
+                          countryNames[country] ?? country.toString(),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Selected countries count
+            Text(
+              selectedCountries.contains(PrizeCountries.all)
+                  ? 'Selected: All Countries'
+                  : 'Selected: ${selectedCountries.length} ${selectedCountries.length == 1 ? 'country' : 'countries'}',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

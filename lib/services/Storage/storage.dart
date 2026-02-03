@@ -3,17 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:boot_app/services/misc/logger.dart';
-import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StorageService {
-  static const _region = 'us-east-1';
-  static const _bucket = 'boot';
-  static const _serviceName = 's3';
-  static const _signatureAlgorithm = 'AWS4-HMAC-SHA256';
-  static const _requestType = 'aws4_request';
   static const _publicBaseUrl =
       'https://pub-cf54be118c1744359d9745f16deaa5fb.r2.dev';
 
@@ -33,22 +28,8 @@ class StorageService {
     'gif': 'image/gif',
   };
 
-  static _R2Credentials? _credentials;
-
   static Future<void> initialize() async {
-    if (_credentials != null) return;
-    try {
-      _credentials = const _R2Credentials(
-        accountId: 'aa65a7097ad082df3dd34a27a0f5324c',
-        accessKeyId: '9f9e0b8124183524d1619284853e365d',
-        secretAccessKey:
-            'dc9cdccc03e05ca076e6fb4bd96ade5385cc8c3e2ba5027f90e2f1893d27ce37',
-      );
-      AppLogger.info('StorageService initialized');
-    } catch (e, stack) {
-      AppLogger.error('Failed to initialize StorageService', e, stack);
-      rethrow;
-    }
+    AppLogger.info('StorageService initialized');
   }
 
   static Future<String> uploadFileWithPicker({required String path}) async {
@@ -108,69 +89,54 @@ class StorageService {
   ) async {
     final bytes = await _loadFileBytes(file);
     final mimeType = _detectMimeType(file.name);
-    await _putObject(key: objectPath, bytes: bytes, contentType: mimeType);
+    await _uploadViaPresignedUrl(
+      key: objectPath,
+      bytes: bytes,
+      contentType: mimeType,
+    );
   }
 
-  static Future<void> _putObject({
+  static Future<void> _uploadViaPresignedUrl({
     required String key,
     required Uint8List bytes,
     required String contentType,
   }) async {
-    final creds = _ensureCredentials();
-    final sanitizedKey = _sanitizeKey(key);
-    final uri = Uri.https(
-      '${creds.accountId}.r2.cloudflarestorage.com',
-      '/$_bucket/$sanitizedKey',
-    );
+    try {
+      final supabase = Supabase.instance.client;
+      final session = supabase.auth.currentSession;
 
-    final timestamp = DateTime.now().toUtc();
-    final amzDate = _formatAmzDate(timestamp);
-    final dateStamp = _formatDateStamp(timestamp);
-    final payloadHash = _hashHex(bytes);
+      if (session == null) {
+        throw Exception('User must be authenticated to upload files');
+      }
 
-    const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
-    final canonicalHeaders = StringBuffer()
-      ..writeln('content-type:$contentType')
-      ..writeln('host:${uri.host}')
-      ..writeln('x-amz-content-sha256:$payloadHash')
-      ..writeln('x-amz-date:$amzDate');
-
-    final canonicalRequest = [
-      'PUT',
-      uri.path,
-      '',
-      canonicalHeaders.toString(),
-      signedHeaders,
-      payloadHash,
-    ].join('\n');
-
-    final credentialScope = '$dateStamp/$_region/$_serviceName/$_requestType';
-    final stringToSign = [
-      _signatureAlgorithm,
-      amzDate,
-      credentialScope,
-      _hashHex(utf8.encode(canonicalRequest)),
-    ].join('\n');
-
-    final signingKey = _deriveSigningKey(creds.secretAccessKey, dateStamp);
-    final signature = _bytesToHex(
-      Hmac(sha256, signingKey).convert(utf8.encode(stringToSign)).bytes,
-    );
-
-    final headers = {
-      'Content-Type': contentType,
-      'x-amz-content-sha256': payloadHash,
-      'x-amz-date': amzDate,
-      'Authorization':
-          '$_signatureAlgorithm Credential=${creds.accessKeyId}/$credentialScope, '
-          'SignedHeaders=$signedHeaders, Signature=$signature',
-    };
-
-    final response = await http.put(uri, headers: headers, body: bytes);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Upload failed (${response.statusCode}): ${response.body}',
+      final response = await supabase.functions.invoke(
+        'generate-upload-url',
+        body: {'path': key, 'contentType': contentType},
       );
+
+      if (response.data == null) {
+        throw Exception('Failed to get upload URL: ${response.data}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final uploadUrl = data['uploadUrl'] as String;
+
+      final uploadResponse = await http.put(
+        Uri.parse(uploadUrl),
+        headers: {'Content-Type': contentType},
+        body: bytes,
+      );
+
+      if (uploadResponse.statusCode < 200 || uploadResponse.statusCode >= 300) {
+        throw Exception(
+          'Upload failed (${uploadResponse.statusCode}): ${uploadResponse.body}',
+        );
+      }
+
+      AppLogger.info('Successfully uploaded $key');
+    } catch (e, stack) {
+      AppLogger.error('Failed to upload via presigned URL', e, stack);
+      rethrow;
     }
   }
 
@@ -201,66 +167,4 @@ class StorageService {
     }
     return File(path).readAsBytes();
   }
-
-  static _R2Credentials _ensureCredentials() {
-    final creds = _credentials;
-    if (creds == null) {
-      throw StateError('StorageService.initialize must be called first.');
-    }
-    return creds;
-  }
-
-  static String _sanitizeKey(String key) {
-    return key.split('/').where((segment) => segment.isNotEmpty).join('/');
-  }
-
-  static String _formatAmzDate(DateTime timestamp) {
-    final y = timestamp.year.toString().padLeft(4, '0');
-    final m = timestamp.month.toString().padLeft(2, '0');
-    final d = timestamp.day.toString().padLeft(2, '0');
-    final hh = timestamp.hour.toString().padLeft(2, '0');
-    final mm = timestamp.minute.toString().padLeft(2, '0');
-    final ss = timestamp.second.toString().padLeft(2, '0');
-    return '$y$m${d}T$hh$mm${ss}Z';
-  }
-
-  static String _formatDateStamp(DateTime timestamp) {
-    final y = timestamp.year.toString().padLeft(4, '0');
-    final m = timestamp.month.toString().padLeft(2, '0');
-    final d = timestamp.day.toString().padLeft(2, '0');
-    return '$y$m$d';
-  }
-
-  static String _hashHex(List<int> data) => sha256.convert(data).toString();
-
-  static List<int> _deriveSigningKey(String secretAccessKey, String dateStamp) {
-    final kDate = _hmacSha256(utf8.encode('AWS4$secretAccessKey'), dateStamp);
-    final kRegion = _hmacSha256(kDate, _region);
-    final kService = _hmacSha256(kRegion, _serviceName);
-    return _hmacSha256(kService, _requestType);
-  }
-
-  static List<int> _hmacSha256(List<int> key, String message) {
-    return Hmac(sha256, key).convert(utf8.encode(message)).bytes;
-  }
-
-  static String _bytesToHex(List<int> bytes) {
-    final buffer = StringBuffer();
-    for (final part in bytes) {
-      buffer.write(part.toRadixString(16).padLeft(2, '0'));
-    }
-    return buffer.toString();
-  }
-}
-
-class _R2Credentials {
-  const _R2Credentials({
-    required this.accountId,
-    required this.accessKeyId,
-    required this.secretAccessKey,
-  });
-
-  final String accountId;
-  final String accessKeyId;
-  final String secretAccessKey;
 }

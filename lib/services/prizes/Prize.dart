@@ -10,6 +10,9 @@ class Prize {
   final String key;
   final int coins;
   final PrizeType type;
+  final List<PrizeCountries> countries;
+  final String specs;
+  final bool customGrant;
 
   Prize({
     required this.id,
@@ -23,6 +26,9 @@ class Prize {
     this.key = '',
     this.coins = 0,
     this.type = PrizeType.normal,
+    this.countries = const [PrizeCountries.all],
+    this.specs = '',
+    this.customGrant = true,
   });
 
   /// Factory constructor for creating an empty/fallback Prize instance
@@ -34,6 +40,9 @@ class Prize {
       description: '',
       cost: 0,
       stock: 0,
+      countries: const [PrizeCountries.all],
+      specs: '',
+      customGrant: true,
     );
   }
 
@@ -55,6 +64,18 @@ class Prize {
         (e) => e.toString() == 'PrizeType.${json['type']}',
         orElse: () => PrizeType.normal,
       ),
+      countries: json['countries'] != null
+          ? (json['countries'] as List)
+                .map(
+                  (country) => PrizeCountries.values.firstWhere(
+                    (e) => e.toString() == 'PrizeCountries.$country',
+                    orElse: () => PrizeCountries.all,
+                  ),
+                )
+                .toList()
+          : [PrizeCountries.all],
+      specs: json['specs'] ?? '',
+      customGrant: json['custom_grant'] ?? true,
     );
   }
 
@@ -71,8 +92,80 @@ class Prize {
       'key': key,
       'coins': coins,
       'type': type.toString().split('.').last,
+      'countries': countries
+          .map((country) => country.toString().split('.').last)
+          .toList(),
+      'specs': specs,
+      'custom_grant': customGrant,
     };
   }
 }
 
-enum PrizeType { normal, reward, keyed }
+enum PrizeType { normal, grant, reward, keyed }
+
+enum PrizeCountries {
+  all,
+  // North America
+  us,
+  ca,
+  mx,
+  // South America
+  ar,
+  br,
+  cl,
+  co,
+  pe,
+  ve,
+  ec,
+  bo,
+  py,
+  uy,
+  // Europe
+  gb,
+  de,
+  fr,
+  it,
+  es,
+  nl,
+  be,
+  ch,
+  at,
+  se,
+  no,
+  dk,
+  fi,
+  ie,
+  pt,
+  pl,
+  cz,
+  gr,
+  ro,
+  hu,
+  // Asia
+  cn,
+  jp,
+  kr,
+  ind,
+  sg,
+  my,
+  th,
+  vn,
+  ph,
+  id,
+  tw,
+  hk,
+  // Oceania
+  au,
+  nz,
+  // Middle East
+  ae,
+  sa,
+  il,
+  tr,
+  // Africa
+  za,
+  ng,
+  eg,
+  ke,
+  ma,
+}
