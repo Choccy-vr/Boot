@@ -626,6 +626,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           time: _timeToAdd,
           totalProjectTime: updatedProject.time,
           challengeIds: _selectedChallengeIds,
+          author: UserService.currentUser?.id ?? '',
         );
 
         // Mark challenges as completed on the project

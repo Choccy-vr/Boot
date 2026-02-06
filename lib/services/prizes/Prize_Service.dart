@@ -40,4 +40,23 @@ class PrizeService {
       return [];
     }
   }
+
+  static Future<List<Prize>> purchasePrizes(List<Prize> selectedPrizes) async {
+    try {
+      return selectedPrizes;
+    } catch (e, stack) {
+      AppLogger.error('Error purchasing prizes. Try again later.', e, stack);
+      return [];
+    }
+  }
+
+  static Future<bool> purchaseGrant(Prize prize, int amount) async {
+    try {
+      AppLogger.info('Purchasing: ${prize.title}');
+      return true;
+    } catch (e, stack) {
+      AppLogger.error('Error purchasing grant ${prize.id}', e, stack);
+      return false;
+    }
+  }
 }

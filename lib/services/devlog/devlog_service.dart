@@ -31,6 +31,7 @@ class DevlogService {
     required String readableTime,
     required double time,
     required double? totalProjectTime,
+    required String author,
     List<PlatformFile> cachedMediaFiles = const [],
     List<int> challengeIds = const [],
   }) async {
@@ -73,6 +74,7 @@ class DevlogService {
           'time_tracked': time,
           'time_tracked_readable': readableTime,
           'challenges': challengeIds,
+          'author': author,
         },
       );
       final tempDevlog = Devlog.fromJson(response.first);
@@ -102,7 +104,7 @@ class DevlogService {
       await SupabaseDBFunctions.callIncrementFunction(
         table: 'users',
         column: 'total_devlogs',
-        rowID: UserService.currentUser?.id ?? '',
+        rowID: author,
         incrementBy: 1,
       );
 

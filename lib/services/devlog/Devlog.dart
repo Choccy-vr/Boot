@@ -8,6 +8,7 @@ class Devlog {
   final double time;
   final String timeReadable;
   List<int> challenges;
+  final String author;
 
   Devlog({
     required this.id,
@@ -19,6 +20,7 @@ class Devlog {
     required this.time,
     required this.timeReadable,
     this.challenges = const [],
+    required this.author,
   });
 
   factory Devlog.fromJson(Map<String, dynamic> json) {
@@ -37,13 +39,12 @@ class Devlog {
           [],
       time: (json['time_tracked'] as num?)?.toDouble() ?? 0.0,
       timeReadable: (json['time_tracked_readable'])?.toString() ?? '',
-      challenges: (json['challenges'] as List<dynamic>?)
+      challenges:
+          (json['challenges'] as List<dynamic>?)
               ?.map((id) => int.tryParse(id.toString()) ?? 0)
               .toList() ??
           [],
+      author: json['author'] ?? '',
     );
   }
 }
-
-
-

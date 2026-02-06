@@ -3,7 +3,6 @@ import 'package:logging/logging.dart';
 
 import '../notifications/global_notification_service.dart';
 
-
 class AppLogger {
   static final Logger _logger = Logger('BootApp');
 
@@ -11,7 +10,7 @@ class AppLogger {
   static bool enableNotifications = true;
 
   static void init() {
-    Logger.root.level = Level.ALL;
+    Logger.root.level = Level.SEVERE; // Set default log level to SEVERE
     Logger.root.onRecord.listen((record) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     });
@@ -38,10 +37,7 @@ class AppLogger {
 
   static void _notifyError(String message) {
     if (!enableNotifications) return;
-    GlobalNotificationService.instance.showError(
-      message,
-      persistent: true,
-    );
+    GlobalNotificationService.instance.showError(message, persistent: true);
   }
 
   static String _composeErrorMessage(String message, Object? error) {
