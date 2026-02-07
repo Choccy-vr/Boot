@@ -80,7 +80,7 @@ class DevlogService {
       final tempDevlog = Devlog.fromJson(response.first);
       final objectPaths = await StorageService.uploadMultipleFiles(
         files: cachedMediaFiles,
-        dirPath: 'projects/$projectID/devlog_${tempDevlog.id}',
+        dirPath: 'project/$projectID/devlog_${tempDevlog.id}',
       );
 
       // Convert object paths to public URLs before saving
@@ -158,7 +158,7 @@ class DevlogService {
       if (newMediaFiles.isNotEmpty) {
         final objectPaths = await StorageService.uploadMultipleFiles(
           files: newMediaFiles,
-          dirPath: 'projects/$projectID/devlog_${devlog.id}',
+          dirPath: 'project/$projectID/devlog_${devlog.id}',
         );
 
         // Convert object paths to public URLs

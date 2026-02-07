@@ -1021,7 +1021,8 @@ class _ReviewDialogState extends State<ReviewDialog> {
     setState(() => _isUploadingScreenshot = true);
 
     try {
-      final supabasePath = 'ships/${widget.ship.id}/screenshot';
+      final supabasePath =
+          'project/${widget.ship.project}/ship_${widget.ship.id}/screenshot';
       final supabasePrivateUrl = await StorageService.uploadFileWithPicker(
         path: supabasePath,
       );

@@ -827,7 +827,7 @@ class _AdminPageState extends State<AdminPage> {
                                   final url =
                                       await StorageService.uploadFileWithPicker(
                                         path:
-                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                            'prize/${DateTime.now().millisecondsSinceEpoch}',
                                       );
                                   if (url != 'User cancelled') {
                                     final publicUrl =
@@ -1215,7 +1215,7 @@ class _AdminPageState extends State<AdminPage> {
                                   final url =
                                       await StorageService.uploadFileWithPicker(
                                         path:
-                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                            'prize/${DateTime.now().millisecondsSinceEpoch}',
                                       );
                                   if (url != 'User cancelled') {
                                     final publicUrl =

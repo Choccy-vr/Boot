@@ -635,7 +635,7 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
       });
 
       String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
-        path: 'profiles/${UserService.currentUser?.id}/profile_pic',
+        path: 'profile/${UserService.currentUser?.id}/profile_pic',
       );
 
       if (supabasePrivateUrl == 'User cancelled') {
