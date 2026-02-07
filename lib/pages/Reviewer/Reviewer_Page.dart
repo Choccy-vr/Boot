@@ -9,9 +9,10 @@ import 'package:boot_app/services/challenges/Challenge.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:boot_app/services/notifications/notifications.dart';
 import 'package:boot_app/services/Storage/storage.dart';
-import 'package:boot_app/pages/Projects/Project_Page.dart';
+import 'package:boot_app/pages/Projects/Project_Page.dart' deferred as project_page;
 import 'package:boot_app/theme/responsive.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
+import 'package:boot_app/widgets/deferred_page.dart';
 
 class ReviewerPage extends StatefulWidget {
   const ReviewerPage({super.key});
@@ -350,7 +351,12 @@ class _ProjectReviewWrapperState extends State<ProjectReviewWrapper> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      body: ProjectDetailPage(project: widget.project),
+      body: DeferredPage(
+        loadLibrary: project_page.loadLibrary,
+        buildPage: (_) => project_page.ProjectDetailPage(
+          project: widget.project,
+        ),
+      ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

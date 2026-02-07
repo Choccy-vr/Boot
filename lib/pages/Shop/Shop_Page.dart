@@ -6,7 +6,6 @@ import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/services/users/User.dart';
 import '/services/notifications/notifications.dart';
-import 'Prize_Details_Page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 

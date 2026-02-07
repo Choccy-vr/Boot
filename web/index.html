@@ -20,8 +20,6 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Boot Dashboard">
 
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -33,81 +31,9 @@
 
   <title>Boot-Dashboard</title>
   <link rel="manifest" href="manifest.json">
-  <style>
-    :root {
-      --boot-bg: #0e0f12;
-      --boot-fg: #f2f5f7;
-      --boot-accent: #4db6ff;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: var(--boot-bg);
-      color: var(--boot-fg);
-      font-family: "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
-    }
-    .boot-loader {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: radial-gradient(circle at top, #1b1f2a 0%, #0e0f12 45%, #0b0c0f 100%);
-      z-index: 9999;
-    }
-    .boot-loader__card {
-      display: grid;
-      gap: 16px;
-      padding: 28px 32px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      background: rgba(16, 18, 24, 0.85);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-      text-align: center;
-    }
-    .boot-loader__title {
-      font-size: 20px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-    }
-    .boot-loader__bar {
-      position: relative;
-      height: 6px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.1);
-    }
-    .boot-loader__bar::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      transform: translateX(-60%);
-      background: linear-gradient(90deg, transparent, var(--boot-accent), transparent);
-      animation: boot-loading 1.2s ease-in-out infinite;
-    }
-    .boot-loader__status {
-      font-size: 13px;
-      opacity: 0.75;
-    }
-    @keyframes boot-loading {
-      0% { transform: translateX(-60%); }
-      100% { transform: translateX(60%); }
-    }
-    .boot-loader--hidden {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 240ms ease-out;
-    }
-  </style>
 </head>
 <body>
-  <div id="boot-loader" class="boot-loader" aria-live="polite">
-    <div class="boot-loader__card">
-      <div class="boot-loader__title">Boot Dashboard</div>
-      <div class="boot-loader__bar"></div>
-      <div class="boot-loader__status">Starting up…</div>
-    </div>
-  </div>
-  <script src="flutter_bootstrap.js" async></script>
-  <script src="boot_loader.js" defer></script>
+  <script src="flutter_bootstrap.js" defer></script>
+  <script src="flutter_init.js" defer></script>
 </body>
 </html>

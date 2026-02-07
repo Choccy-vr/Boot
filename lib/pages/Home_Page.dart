@@ -10,6 +10,7 @@ import '/services/hackatime/hackatime_service.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/notifications/notifications.dart';
+import '/services/misc/deferred_pages.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -40,6 +41,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // Load all data in parallel for faster page load
     _loadPageData();
     _checkProfileSetup();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeferredPageLoader.prefetchDashboardAdjacents();
+    });
   }
 
   Future<void> _loadPageData() async {

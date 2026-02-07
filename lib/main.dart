@@ -1,4 +1,3 @@
-import 'package:boot_app/pages/Leaderboard/Leaderboard_Page.dart';
 import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,24 +5,25 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:html' as html show window;
 
-import 'pages/Home_Page.dart';
+import 'pages/Home_Page.dart' deferred as home_page;
 import 'pages/Login/Login_Page.dart';
 import 'pages/Login/SignUp/Signup_Pass_page.dart';
 import 'pages/Login/SignUp/sign_up_page.dart';
 import 'pages/Login/SignUp/sign_up_profile_page.dart';
 import 'pages/Login/SignUp/sign_up_slack_page.dart';
-import 'pages/Projects/Creation_Page.dart';
-import 'pages/Projects/My_Projects_Page.dart';
-import 'pages/Projects/Project_Page.dart';
-import 'pages/Profile/Profile_Page.dart';
-import 'pages/Explore/Explore_Page.dart';
-import 'pages/Challenges/Challenge_page.dart';
-import 'pages/Reviewer/Reviewer_Page.dart';
+import 'pages/Projects/Creation_Page.dart' deferred as creation_page;
+import 'pages/Projects/My_Projects_Page.dart' deferred as projects_page;
+import 'pages/Projects/Project_Page.dart' deferred as project_page;
+import 'pages/Profile/Profile_Page.dart' deferred as profile_page;
+import 'pages/Explore/Explore_Page.dart' deferred as explore_page;
+import 'pages/Challenges/Challenge_page.dart' deferred as challenge_page;
+import 'pages/Reviewer/Reviewer_Page.dart' deferred as reviewer_page;
 import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
-import 'pages/Admin/Admin_Page.dart';
-import 'pages/Shop/Shop_Page.dart';
-import 'pages/Shop/Prize_Details_Page.dart';
+import 'pages/Admin/Admin_Page.dart' deferred as admin_page;
+import 'pages/Shop/Shop_Page.dart' deferred as shop_page;
+import 'pages/Shop/Prize_Details_Page.dart' deferred as prize_details_page;
+import 'pages/Leaderboard/Leaderboard_Page.dart' deferred as leaderboard_page;
 import 'services/Projects/Project.dart';
 import 'services/Projects/project_service.dart';
 import 'services/auth/Auth.dart';
@@ -36,6 +36,7 @@ import 'services/users/User.dart';
 import 'services/prizes/Prize.dart';
 import 'services/prizes/Prize_Service.dart';
 import 'theme/terminal_theme.dart';
+import 'widgets/deferred_page.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -129,7 +130,13 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
 
   if (segments.isEmpty) {
     final target = isLoggedIn ? '/dashboard' : '/login';
-    final page = isLoggedIn ? const HomePage() : const LoginPage();
+    final page = isLoggedIn
+        ? DeferredPage(
+            loadLibrary: home_page.loadLibrary,
+            buildPage: (_) => home_page.HomePage(),
+            placeholder: const _LoadingScaffold(),
+          )
+        : const LoginPage();
     return _buildRoute(child: page, name: target);
   }
 
@@ -167,17 +174,29 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       }
       break;
     case 'dashboard':
-      page = const HomePage();
+      page = DeferredPage(
+        loadLibrary: home_page.loadLibrary,
+        buildPage: (_) => home_page.HomePage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/dashboard';
       break;
     case 'projects':
       if (segments.length == 1) {
-        page = const ProjectsPage();
+        page = DeferredPage(
+          loadLibrary: projects_page.loadLibrary,
+          buildPage: (_) => projects_page.ProjectsPage(),
+          placeholder: const _LoadingScaffold(),
+        );
         routeName = '/projects';
       } else {
         final second = segments[1];
         if (second == 'create') {
-          page = const CreateProjectPage();
+          page = DeferredPage(
+            loadLibrary: creation_page.loadLibrary,
+            buildPage: (_) => creation_page.CreateProjectPage(),
+            placeholder: const _LoadingScaffold(),
+          );
           routeName = '/projects/create';
         } else {
           final projectId = int.tryParse(second);
@@ -200,19 +219,35 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       }
       break;
     case 'explore':
-      page = const ExplorePage();
+      page = DeferredPage(
+        loadLibrary: explore_page.loadLibrary,
+        buildPage: (_) => explore_page.ExplorePage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/explore';
       break;
     case 'challenges':
-      page = const ChallengePage();
+      page = DeferredPage(
+        loadLibrary: challenge_page.loadLibrary,
+        buildPage: (_) => challenge_page.ChallengePage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/challenges';
       break;
     case 'leaderboard':
-      page = const LeaderboardPage();
+      page = DeferredPage(
+        loadLibrary: leaderboard_page.loadLibrary,
+        buildPage: (_) => leaderboard_page.LeaderboardPage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/leaderboard';
       break;
     case 'reviewer':
-      page = const ReviewerPage();
+      page = DeferredPage(
+        loadLibrary: reviewer_page.loadLibrary,
+        buildPage: (_) => reviewer_page.ReviewerPage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/reviewer';
       break;
     case 'debug':
@@ -220,11 +255,19 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       routeName = '/debug';
       break;
     case 'admin':
-      page = const AdminPage();
+      page = DeferredPage(
+        loadLibrary: admin_page.loadLibrary,
+        buildPage: (_) => admin_page.AdminPage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/admin';
       break;
     case 'shop':
-      page = const ShopPage();
+      page = DeferredPage(
+        loadLibrary: shop_page.loadLibrary,
+        buildPage: (_) => shop_page.ShopPage(),
+        placeholder: const _LoadingScaffold(),
+      );
       routeName = '/shop';
       break;
     case 'prizes':
@@ -263,7 +306,14 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   // Allow logged-in users to access signup flow pages (profile, hackatime setup)
   // but redirect them from login page to dashboard
   if (isLoggedIn && !requiresAuth && segments.first == 'login') {
-    return _buildRoute(child: const HomePage(), name: '/dashboard');
+    return _buildRoute(
+      child: DeferredPage(
+        loadLibrary: home_page.loadLibrary,
+        buildPage: (_) => home_page.HomePage(),
+        placeholder: const _LoadingScaffold(),
+      ),
+      name: '/dashboard',
+    );
   }
 
   return _buildRoute(
@@ -335,10 +385,14 @@ class ProjectLoaderPage extends StatelessWidget {
     }
 
     if (project != null) {
-      return ProjectDetailPage(
-        project: project,
-        challengeId: challengeId,
-        showRequirementsDialog: showRequirementsDialog,
+      return DeferredPage(
+        loadLibrary: project_page.loadLibrary,
+        buildPage: (_) => project_page.ProjectDetailPage(
+          project: project!,
+          challengeId: challengeId,
+          showRequirementsDialog: showRequirementsDialog,
+        ),
+        placeholder: const _LoadingScaffold(),
       );
     }
 
@@ -353,9 +407,13 @@ class ProjectLoaderPage extends StatelessWidget {
         if (fetchedProject == null) {
           return NotFoundPage(path: '/projects/$projectId');
         }
-        return ProjectDetailPage(
-          project: fetchedProject,
-          showRequirementsDialog: showRequirementsDialog,
+        return DeferredPage(
+          loadLibrary: project_page.loadLibrary,
+          buildPage: (_) => project_page.ProjectDetailPage(
+            project: fetchedProject,
+            showRequirementsDialog: showRequirementsDialog,
+          ),
+          placeholder: const _LoadingScaffold(),
         );
       },
     );
@@ -371,7 +429,11 @@ class UserLoaderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (prefetchedUser != null) {
-      return ProfilePage(user: prefetchedUser!);
+      return DeferredPage(
+        loadLibrary: profile_page.loadLibrary,
+        buildPage: (_) => profile_page.ProfilePage(user: prefetchedUser!),
+        placeholder: const _LoadingScaffold(),
+      );
     }
 
     return FutureBuilder<BootUser?>(
@@ -384,7 +446,11 @@ class UserLoaderPage extends StatelessWidget {
         if (user == null) {
           return NotFoundPage(path: '/user/$userId');
         }
-        return ProfilePage(user: user);
+        return DeferredPage(
+          loadLibrary: profile_page.loadLibrary,
+          buildPage: (_) => profile_page.ProfilePage(user: user),
+          placeholder: const _LoadingScaffold(),
+        );
       },
     );
   }
@@ -415,20 +481,24 @@ class PrizeLoaderPage extends StatelessWidget {
         final isInCart = cartItems.contains(prizeId);
 
         // For now, quantity is 1, but this could be tracked in user's cart data
-        return PrizeDetailsPage(
-          prize: prize,
-          isInCart: isInCart,
-          currentQuantity: 1,
-          onAddToCart: (prizeId, qty) async {
-            // Update cart
-            final user = UserService.currentUser;
-            if (user != null) {
-              if (!user.cart.contains(prizeId)) {
-                user.cart.add(prizeId);
-                await UserService.updateUser();
+        return DeferredPage(
+          loadLibrary: prize_details_page.loadLibrary,
+          buildPage: (_) => prize_details_page.PrizeDetailsPage(
+            prize: prize,
+            isInCart: isInCart,
+            currentQuantity: 1,
+            onAddToCart: (prizeId, qty) async {
+              // Update cart
+              final user = UserService.currentUser;
+              if (user != null) {
+                if (!user.cart.contains(prizeId)) {
+                  user.cart.add(prizeId);
+                  await UserService.updateUser();
+                }
               }
-            }
-          },
+            },
+          ),
+          placeholder: const _LoadingScaffold(),
         );
       },
     );
