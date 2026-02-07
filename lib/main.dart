@@ -127,6 +127,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   final uri = Uri.parse(settings.name ?? '/');
   final segments = uri.pathSegments;
   final bool isLoggedIn = Authentication.isLoggedIn();
+  final UserRole? currentRole = UserService.currentUser?.role;
 
   if (segments.isEmpty) {
     final target = isLoggedIn ? '/dashboard' : '/login';
@@ -143,6 +144,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   Widget? page;
   String routeName = uri.path.isEmpty ? '/' : uri.path;
   bool requiresAuth = true;
+  Set<UserRole>? requiredRoles;
 
   switch (segments.first) {
     case 'login':
@@ -243,6 +245,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       routeName = '/leaderboard';
       break;
     case 'reviewer':
+      requiredRoles = {UserRole.reviewer, UserRole.admin, UserRole.owner};
       page = DeferredPage(
         loadLibrary: reviewer_page.loadLibrary,
         buildPage: (_) => reviewer_page.ReviewerPage(),
@@ -255,6 +258,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       routeName = '/debug';
       break;
     case 'admin':
+      requiredRoles = {UserRole.admin, UserRole.owner};
       page = DeferredPage(
         loadLibrary: admin_page.loadLibrary,
         buildPage: (_) => admin_page.AdminPage(),
@@ -301,6 +305,17 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
 
   if (!isLoggedIn && requiresAuth) {
     return _buildRoute(child: const LoginPage(), name: '/login');
+  }
+
+  if (requiredRoles != null && !requiredRoles.contains(currentRole)) {
+    return _buildRoute(
+      child: DeferredPage(
+        loadLibrary: home_page.loadLibrary,
+        buildPage: (_) => home_page.HomePage(),
+        placeholder: const _LoadingScaffold(),
+      ),
+      name: '/dashboard',
+    );
   }
 
   // Allow logged-in users to access signup flow pages (profile, hackatime setup)

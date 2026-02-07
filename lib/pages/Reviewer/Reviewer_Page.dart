@@ -9,7 +9,8 @@ import 'package:boot_app/services/challenges/Challenge.dart';
 import 'package:boot_app/services/users/User.dart';
 import 'package:boot_app/services/notifications/notifications.dart';
 import 'package:boot_app/services/Storage/storage.dart';
-import 'package:boot_app/pages/Projects/Project_Page.dart' deferred as project_page;
+import 'package:boot_app/pages/Projects/Project_Page.dart'
+    deferred as project_page;
 import 'package:boot_app/theme/responsive.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:boot_app/widgets/deferred_page.dart';
@@ -353,9 +354,8 @@ class _ProjectReviewWrapperState extends State<ProjectReviewWrapper> {
     return Scaffold(
       body: DeferredPage(
         loadLibrary: project_page.loadLibrary,
-        buildPage: (_) => project_page.ProjectDetailPage(
-          project: widget.project,
-        ),
+        buildPage: (_) =>
+            project_page.ProjectDetailPage(project: widget.project),
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
