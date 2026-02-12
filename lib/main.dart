@@ -20,6 +20,7 @@ import 'pages/Challenges/Challenge_page.dart' deferred as challenge_page;
 import 'pages/Reviewer/Reviewer_Page.dart' deferred as reviewer_page;
 import 'pages/not_found_page.dart';
 import 'pages/Debug_Page.dart';
+import 'pages/Maintenance_Page.dart';
 import 'pages/Admin/Admin_Page.dart' deferred as admin_page;
 import 'pages/Shop/Shop_Page.dart' deferred as shop_page;
 import 'pages/Shop/Prize_Details_Page.dart' deferred as prize_details_page;
@@ -41,6 +42,9 @@ import 'widgets/deferred_page.dart';
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
+
+// Maintenance Mode - Set to true to enable, false to disable
+const bool isMaintenanceModeEnabled = true;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -128,6 +132,22 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   final segments = uri.pathSegments;
   final bool isLoggedIn = Authentication.isLoggedIn();
   final UserRole? currentRole = UserService.currentUser?.role;
+
+  // Maintenance mode check - allow owners through, show maintenance page to everyone else
+  if (isMaintenanceModeEnabled) {
+    final isOwner = currentRole == UserRole.owner;
+    final isLoginOrSignupPage = segments.isEmpty || 
+                                 segments.first == 'login' || 
+                                 segments.first == 'signup';
+    
+    // If not an owner and not trying to access login/signup, show maintenance page
+    if (!isOwner && !isLoginOrSignupPage) {
+      return _buildRoute(
+        child: const MaintenancePage(),
+        name: '/maintenance',
+      );
+    }
+  }
 
   if (segments.isEmpty) {
     final target = isLoggedIn ? '/dashboard' : '/login';
