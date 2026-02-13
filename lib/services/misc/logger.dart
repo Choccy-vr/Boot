@@ -10,7 +10,7 @@ class AppLogger {
   static bool enableNotifications = true;
 
   static void init() {
-    Logger.root.level = Level.SEVERE; // Set default log level to SEVERE
+    Logger.root.level = Level.FINEST; // Set default log level to SEVERE
     Logger.root.onRecord.listen((record) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     });

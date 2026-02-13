@@ -751,15 +751,28 @@ class _ReviewDialogState extends State<ReviewDialog> {
           const SizedBox(height: 24),
 
           // Functionality Rating
+          if (widget.project.level == "scratch")...[
+            _buildRatingCategory(
+              'Functionality',
+              'How well the OS works and meets requirements',
+              _functionalityRating,
+              (rating) => setState(() => _functionalityRating = rating),
+              colorScheme,
+              textTheme,
+            ),
+            const SizedBox(height: 24),
+          ]
+          else...[
           _buildRatingCategory(
-            'Functionality',
-            'How well the OS works and meets requirements',
+            'Orignality',
+            'Is the OS meaningfully different from existing OSes and does it show creativity?',
             _functionalityRating,
             (rating) => setState(() => _functionalityRating = rating),
             colorScheme,
             textTheme,
           ),
           const SizedBox(height: 24),
+          ],
 
           // UX Rating
           _buildRatingCategory(
