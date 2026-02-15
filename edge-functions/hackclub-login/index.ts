@@ -1,4 +1,4 @@
-// Edge function to handle complete Hack Club OAuth flow
+// Edge function to handle complete Hack Club OIDC flow
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
@@ -9,8 +9,45 @@ const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
 
 const redirectAllowlist = (Deno.env.get("HACKCLUB_REDIRECT_ALLOWLIST") ?? "")
   .split(",")
-  .map((u) => u.trim())
+  .map((u) => u.trim().replace(/^['\"]|['\"]$/g, ""))
   .filter(Boolean);
+
+const normalizeRedirectUri = (value: string): string | null => {
+  const raw = value.trim().replace(/^['\"]|['\"]$/g, "");
+  const variants = [raw];
+
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded !== raw) {
+      variants.push(decoded);
+    }
+  } catch {
+    // Keep raw variant only when decoding fails
+  }
+
+  for (const variant of variants) {
+    try {
+      const parsed = new URL(variant);
+      const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+      const hasDefaultHttpPort = parsed.protocol === "http:" && parsed.port === "80";
+      const hasDefaultHttpsPort = parsed.protocol === "https:" && parsed.port === "443";
+      const port =
+        parsed.port && !hasDefaultHttpPort && !hasDefaultHttpsPort
+          ? `:${parsed.port}`
+          : "";
+
+      return `${parsed.protocol}//${parsed.hostname.toLowerCase()}${port}${pathname}${parsed.search}`;
+    } catch {
+      // Try next variant
+    }
+  }
+
+  return null;
+};
+
+const normalizedRedirectAllowlist = redirectAllowlist
+  .map((u) => normalizeRedirectUri(u))
+  .filter((u): u is string => Boolean(u));
 
 const buildCorsHeaders = (origin: string | null) => {
   const isAllowed = origin && allowedOrigins.includes(origin);
@@ -60,6 +97,7 @@ serve(async (req) => {
 
   try {
     const { code, redirect_uri } = await req.json();
+    const normalizedRedirectUri = normalizeRedirectUri(redirect_uri ?? "");
 
     if (!code || !redirect_uri) {
       return new Response(
@@ -71,12 +109,26 @@ serve(async (req) => {
       );
     }
 
+    if (!normalizedRedirectUri) {
+      return new Response(
+        JSON.stringify({ error: "Invalid redirect_uri format" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     if (
-      redirectAllowlist.length > 0 &&
-      !redirectAllowlist.includes(redirect_uri)
+      normalizedRedirectAllowlist.length > 0 &&
+      !normalizedRedirectAllowlist.includes(normalizedRedirectUri)
     ) {
       return new Response(
-        JSON.stringify({ error: "Invalid redirect_uri" }),
+        JSON.stringify({
+          error: "Invalid redirect_uri",
+          redirect_uri,
+          normalized_redirect_uri: normalizedRedirectUri,
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

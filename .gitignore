@@ -27,6 +27,7 @@
 /packages/flutter/coverage/
 version
 analysis_benchmark.json
+/supabase/
 
 # packages file containing multi-root paths
 .packages.generated
@@ -112,6 +113,8 @@ app.*.symbols
 #secrets
 lib/secrets/*.dart
 lib/secrets/*.json
+.env.functions.local
+supabase/.env.local
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3
