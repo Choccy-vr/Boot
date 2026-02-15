@@ -10,10 +10,28 @@ class AppLogger {
   static bool enableNotifications = true;
 
   static void init() {
-    Logger.root.level = Level.FINEST; // Set default log level to SEVERE
+    // Set log level based on environment
+    final isLocalhost = _isRunningOnLocalhost();
+    Logger.root.level = isLocalhost ? Level.FINEST : Level.SEVERE;
+    
     Logger.root.onRecord.listen((record) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     });
+  }
+
+  static bool _isRunningOnLocalhost() {
+    if (!kIsWeb) return kDebugMode;
+    
+    // For web, check the hostname
+    try {
+      final hostname = Uri.base.host;
+      return hostname == 'localhost' || 
+             hostname == '127.0.0.1' || 
+             hostname.startsWith('localhost:') ||
+             hostname.startsWith('127.0.0.1:');
+    } catch (e) {
+      return false;
+    }
   }
 
   static Logger get logger => _logger;
