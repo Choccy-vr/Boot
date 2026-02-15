@@ -44,7 +44,21 @@ const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
 
 // Maintenance Mode - Set to true to enable, false to disable
-const bool isMaintenanceModeEnabled = true;
+bool isMaintenanceModeEnabled = !isRunningOnLocalhost();
+
+bool isRunningOnLocalhost() {
+  if (!kIsWeb) return kDebugMode;
+  
+  try {
+    final hostname = Uri.base.host;
+    return hostname == 'localhost' || 
+           hostname == '127.0.0.1' || 
+            hostname.startsWith('localhost:') ||
+            hostname.startsWith('127.0.0.1:');
+} catch (e) {
+    return false;
+  }
+}
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -61,14 +75,9 @@ void main() async {
   AuthListener.startListening();
 
   // Configure Hack Club OAuth (no async init needed)
-  final isLocalhost =
-      Uri.base.host == 'localhost' ||
-      Uri.base.host == '127.0.0.1' ||
-      Uri.base.host == '::1';
-
   Authentication.configureHackClubOAuth(
     clientId: hackclubClientId,
-    redirectUri: isLocalhost
+    redirectUri: isRunningOnLocalhost()
         ? '${Uri.base.origin}/redirect.html'
         : '${Uri.base.origin}/dashboard/redirect.html',
   );

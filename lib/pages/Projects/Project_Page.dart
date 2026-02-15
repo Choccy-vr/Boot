@@ -2319,11 +2319,31 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
               ),
               if (_isOwner() && !_isEditMode)
-                PopupMenuButton<String>(
-                  icon: Icon(Symbols.more_vert, color: colorScheme.onSurface),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
+                MenuAnchor(
+                  alignmentOffset: Offset(0, 0),
+                  style: MenuStyle(
+                    alignment: Alignment.bottomRight,
+                  ),
+                  builder:
+                      (BuildContext context, MenuController controller, Widget? child) {
+                    return IconButton(
+                      onPressed: () {
+                        if (controller.isOpen) {
+                          controller.close();
+                        } else {
+                          controller.open();
+                        }
+                      },
+                      icon: Icon(Symbols.more_vert, color: colorScheme.onSurface),
+                      tooltip: 'Show menu',
+                    );
+                  },
+                  menuChildren: [
+                    MenuItemButton(
+                      onPressed: () {
+                        setState(() => _isEditMode = true);
+                        _loadHackatimeData();
+                      },
                       child: Row(
                         children: [
                           Icon(Symbols.edit, size: 20),
@@ -2332,8 +2352,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ],
                       ),
                     ),
-                    PopupMenuItem(
-                      value: 'delete',
+                    MenuItemButton(
+                      onPressed: () {
+                        _showDeleteConfirmation();
+                      },
                       child: Row(
                         children: [
                           Icon(
@@ -2350,14 +2372,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
                     ),
                   ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      setState(() => _isEditMode = true);
-                      _loadHackatimeData();
-                    } else if (value == 'delete') {
-                      _showDeleteConfirmation();
-                    }
-                  },
                 ),
             ],
           ),
