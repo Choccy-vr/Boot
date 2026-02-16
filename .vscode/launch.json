@@ -6,23 +6,8 @@
         "type": "dart",
         "request": "launch",
         "program": "lib/main.dart"
+        
     },
-    {
-  "name": "Boot Flutter",
-  "request": "launch",
-  "type": "dart",
-  "program": "lib/main.dart",
-  "args": [
-    "--web-port",
-    "59054",
-    "--web-hostname",
-    "localhost",
-    "--web-browser-flag",
-    "--disable-web-security",
-    "--web-browser-flag",
-    "--user-data-dir=${workspaceFolder}/.dart_tool/chrome-secrets",
-    "--dart-define-from-file=lib/secrets/config.json"
-  ]
-}
+
   ]
 }
