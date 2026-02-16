@@ -171,7 +171,7 @@ class UserService {
 
   static Future<String> uploadProfilePic(BuildContext context) async {
     String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
-      path: 'profile/${UserService.currentUser?.id}/profile_pic',
+      path: 'profiles/${UserService.currentUser?.id}/profile_pic',
     );
 
     if (supabasePrivateUrl == 'User cancelled') {

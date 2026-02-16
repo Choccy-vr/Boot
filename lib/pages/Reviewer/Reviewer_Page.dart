@@ -440,6 +440,8 @@ class _ReviewDialogState extends State<ReviewDialog> {
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _overrideHoursController =
       TextEditingController();
+    final TextEditingController _overrideJustificationController =
+      TextEditingController();
   bool _isSubmitting = false;
   PlatformFile? _screenshotFile;
   String? _uploadedScreenshotUrl;
@@ -452,6 +454,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
   void dispose() {
     _commentController.dispose();
     _overrideHoursController.dispose();
+    _overrideJustificationController.dispose();
     super.dispose();
   }
 
@@ -475,6 +478,14 @@ class _ReviewDialogState extends State<ReviewDialog> {
           setState(() => _isSubmitting = false);
           return;
         }
+
+        if (_overrideJustificationController.text.trim().isEmpty) {
+          GlobalNotificationService.instance.showError(
+            'Please provide an override justification',
+          );
+          setState(() => _isSubmitting = false);
+          return;
+        }
       }
 
       await ShipService.approveShip(
@@ -484,6 +495,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
         challengesCompleted: _selectedChallenges.toList(),
         screenshotUrl: _uploadedScreenshotUrl ?? '',
         overrideHours: overrideHours,
+        overrideReason: _overrideJustificationController.text.trim().isEmpty
+            ? null
+            : _overrideJustificationController.text.trim(),
         technicality: _technicalityRating,
         functionality: _functionalityRating,
         ux: _uxRating,
@@ -1025,6 +1039,28 @@ class _ReviewDialogState extends State<ReviewDialog> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _overrideJustificationController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Required if you override hours',
+              labelText: 'Override justification',
+              helperText:
+                  'Explain why the tracked time is being overridden',
+              prefixIcon: Icon(
+                Symbols.feedback,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: colorScheme.primary, width: 2),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1034,8 +1070,8 @@ class _ReviewDialogState extends State<ReviewDialog> {
     setState(() => _isUploadingScreenshot = true);
 
     try {
-      final supabasePath =
-          'project/${widget.ship.project}/ship_${widget.ship.id}/screenshot';
+        final supabasePath =
+          'projects/${widget.ship.project}/ship_${widget.ship.id}/screenshot';
       final supabasePrivateUrl = await StorageService.uploadFileWithPicker(
         path: supabasePath,
       );

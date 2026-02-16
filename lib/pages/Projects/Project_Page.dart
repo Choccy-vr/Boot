@@ -2205,7 +2205,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       setState(() {
         _isLoading = true;
       });
-      final supabasePath = 'project/${_project.id}/picture';
+      final supabasePath = 'projects/${_project.id}/picture';
       String supabasePrivateUrl = await StorageService.uploadFileWithPicker(
         path: supabasePath,
       );

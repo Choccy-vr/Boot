@@ -70,9 +70,60 @@ serve(async (req) => {
       throw new Error("Invalid content type");
     }
 
-    const requiredPrefix = `profiles/${user.id}/`;
-    if (!path.startsWith(requiredPrefix)) {
+    const allowedPrefixes = [
+      `profiles/${user.id}/`,
+      "projects/",
+      "prizes/",
+    ];
+    const isAllowedPath = allowedPrefixes.some((prefix) =>
+      path.startsWith(prefix)
+    );
+    if (!isAllowedPath) {
       throw new Error("Invalid upload path");
+    }
+
+    if (path.startsWith("projects/")) {
+      const match = path.match(/^projects\/(\d+)\//);
+      if (!match) {
+        throw new Error("Invalid upload path");
+      }
+
+      const projectId = Number(match[1]);
+      const { data: project, error: projectError } = await supabaseClient
+        .from("projects")
+        .select("owner")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError || !project) {
+        throw new Error("Invalid project");
+      }
+
+      if (project.owner !== user.id) {
+        throw new Error("Unauthorized");
+      }
+    }
+
+    if (path.startsWith("prizes/")) {
+      const match = path.match(/^prizes\/(\d+)\//);
+      if (!match) {
+        throw new Error("Invalid upload path");
+      }
+
+      const { data: userRow, error: userError } = await supabaseClient
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (userError || !userRow) {
+        throw new Error("Unauthorized");
+      }
+
+      const role = String(userRow.role ?? "").toLowerCase();
+      if (role !== "admin" && role !== "owner") {
+        throw new Error("Unauthorized");
+      }
     }
 
     const accountId = Deno.env.get("R2_ACCOUNT_ID");
