@@ -90,6 +90,9 @@ class ShipService {
     required Project project,
     required double time,
     required List<int> challengesRequested,
+    required String whereFeedback,
+    required String goodFeedback,
+    required String improveFeedback,
   }) async {
     try {
       final response = await SupabaseDB.insertAndReturnData(
@@ -100,6 +103,9 @@ class ShipService {
           'challenges_requested': challengesRequested,
           'approved': false,
           'reviewed': false,
+          'where_feedback': whereFeedback,
+          'good_feedback': goodFeedback,
+          'improve_feedback': improveFeedback,
         },
       );
       project.timeTrackedShip = 0;
@@ -128,6 +134,7 @@ class ShipService {
     required List<int> challengesCompleted,
     required String screenshotUrl,
     double? overrideHours,
+    String? overrideReason,
     int technicality = 0,
     int functionality = 0,
     int ux = 0,
@@ -148,6 +155,10 @@ class ShipService {
       // Add override hours if provided
       if (overrideHours != null) {
         updateData['override_hours'] = overrideHours;
+      }
+
+      if (overrideReason != null) {
+        updateData['override_hours_justification'] = overrideReason;
       }
 
       final response = await SupabaseDB.updateAndReturnData(

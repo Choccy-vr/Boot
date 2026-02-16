@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'dart:html' as html;
 import 'package:boot_app/services/hackatime/hackatime_service.dart';
+import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/ships/Boot_Ship.dart';
 import 'package:boot_app/services/supabase/DB/supabase_db.dart';
@@ -79,8 +80,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   final TextEditingController _githubRepoController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
   TextEditingController? _currentTagController;
-  List<String> _filteredTagSuggestions = [];
-  bool _showTagSuggestions = false;
   List<Challenge> _projectChallenges = [];
   List<Challenge> _filteredProjectChallenges = [];
   ChallengeType? _selectedChallengeType;
@@ -89,7 +88,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   String _timeToAddReadable = '0m';
   bool _isFetchingTime = false;
   List<int> _selectedChallengeIds = [];
-  int? _preselectedChallengeId;
   Devlog? _editingDevlog;
   List<String> _existingMediaUrls = [];
 
@@ -206,7 +204,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         owner = user;
       });
     } catch (e) {
-      // Silently fail - owner will be null
+      AppLogger.error('Error loading project owner for project ${_project.id}', e);
     }
   }
 
@@ -220,7 +218,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _devlogs = devlogs.reversed.toList();
       });
     } catch (e) {
-      // Error loading devlogs: $e
+      AppLogger.error('Error loading devlogs for project ${_project.id}', e);
     }
   }
 
@@ -233,7 +231,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _ships = ships;
       });
     } catch (e) {
-      // Error loading ships: $e
+      AppLogger.error('Error loading ships for project ${_project.id}', e);
     }
   }
 
@@ -261,7 +259,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _applyProjectChallengeFilters();
       });
     } catch (e) {
-      // Error loading challenges
+      AppLogger.error('Error loading challenges for project ${_project.id}', e);
     }
   }
 
@@ -312,7 +310,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _filteredHackatimeProjects = projects;
       });
     } catch (e) {
-      // Error loading Hackatime projects
+      AppLogger.error('Error loading Hackatime projects', e);
     }
   }
 
@@ -343,7 +341,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         _claimedHackatimeProjects = claimedSet;
       });
     } catch (e) {
-      // Error loading claimed Hackatime projects
+      AppLogger.error('Error loading claimed Hackatime projects', e);
     }
   }
 
@@ -405,17 +403,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleOpenGitHubRepo() async {
     final url = Uri.parse(_project.githubRepo);
     if (!await launchUrl(url)) {
-      throw Exception('Could not launch $url');
+      AppLogger.error('Could not launch GitHub repo for project ${_project.id}', Exception('Failed to launch URL'));
     }
   }
-
-  /*Future<void> _handleTestOS() async {
-    try {
-      await TestingManager.openBootHelper(_project, context);
-    } catch (e) {
-      // Error is already handled in TestingManager
-    }
-  }*/
 
   Future<void> _handleCreateDevlog({int? challengeId}) async {
     setState(() {
@@ -428,7 +418,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _devlogMediaDirty = false;
       _isFetchingTime = true;
       _selectedChallengeIds = [];
-      _preselectedChallengeId = challengeId;
       if (challengeId != null && !_project.challengeIds.contains(challengeId)) {
         _selectedChallengeIds.add(challengeId);
       }
@@ -484,7 +473,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _isFetchingTime = false;
       _timeToAdd = 0;
       _timeToAddReadable = '0m';
-      _preselectedChallengeId = null;
     });
   }
 
@@ -503,7 +491,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       _timeToAdd = 0.0;
       _timeToAddReadable = '0m';
       _selectedChallengeIds = [];
-      _preselectedChallengeId = null;
     });
   }
 
@@ -1023,7 +1010,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           return;
                         }
                         Navigator.of(context).pop();
-                        _handleShipProject();
+                        _showFeedbackDialog();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
@@ -1066,7 +1053,177 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
-  Future<void> _handleShipProject() async {
+  Future<void> _showFeedbackDialog() async {
+    final whereFeedbackController = TextEditingController();
+    final goodFeedbackController = TextEditingController();
+    final improveFeedbackController = TextEditingController();
+    
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Symbols.feedback, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Ship Feedback'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 500,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Please provide feedback about your project before shipping:',
+                    style: textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Where did you hear about this?
+                  Text(
+                    'Where did you hear about this?',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: whereFeedbackController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'Tell us how you discovered this program...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // What are we doing well?
+                  Text(
+                    'What are we doing well?',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: goodFeedbackController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'What did you like?',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // What can we improve?
+                  Text(
+                    'What can we improve?',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: improveFeedbackController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'What did you not like as much, how can we fix it?',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final whereFeedback = whereFeedbackController.text.trim();
+                final goodFeedback = goodFeedbackController.text.trim();
+                final improveFeedback = improveFeedbackController.text.trim();
+                
+                if (whereFeedback.isEmpty || goodFeedback.isEmpty || improveFeedback.isEmpty) {
+                  GlobalNotificationService.instance.showError(
+                    'Please fill in all feedback fields.',
+                  );
+                  return;
+                }
+                
+                if (whereFeedback.length < 2 || goodFeedback.length < 2 || improveFeedback.length < 2) {
+                  GlobalNotificationService.instance.showError(
+                    'Each feedback field must be at least 2 characters.',
+                  );
+                  return;
+                }
+                
+                Navigator.of(context).pop();
+                _handleShipProject(whereFeedback, goodFeedback, improveFeedback);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+              ),
+              child: Text('Submit & Ship'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleShipProject(
+    String whereFeedback,
+    String goodFeedback,
+    String improveFeedback,
+  ) async {
     try {
       _project = await ProjectService.getProjectById(_project.id) ?? _project;
 
@@ -1083,6 +1240,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         project: _project,
         time: _project.timeTrackedShip,
         challengesRequested: _project.pendingChallengeIds,
+        whereFeedback: whereFeedback,
+        goodFeedback: goodFeedback,
+        improveFeedback: improveFeedback,
       );
 
       // Reload the project to reflect any changes

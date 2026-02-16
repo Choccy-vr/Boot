@@ -387,7 +387,7 @@ Route<dynamic> _buildRoute({
   );
 }
 
-class ProjectLoaderPage extends StatelessWidget {
+class ProjectLoaderPage extends StatefulWidget {
   const ProjectLoaderPage({
     super.key,
     required this.projectId,
@@ -398,8 +398,43 @@ class ProjectLoaderPage extends StatelessWidget {
   final Project? prefetchedProject;
 
   @override
-  Widget build(BuildContext context) {
+  State<ProjectLoaderPage> createState() => _ProjectLoaderPageState();
+}
+
+class _ProjectLoaderPageState extends State<ProjectLoaderPage> {
+  bool _resolvedArgs = false;
+  Object? _argsSnapshot;
+  Project? _project;
+  int? _challengeId;
+  bool _showRequirementsDialog = false;
+  Future<Project?>? _projectFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_resolvedArgs) return;
+
     final args = ModalRoute.of(context)?.settings.arguments;
+    _argsSnapshot = args;
+    _resolveArgs(args);
+    _resolvedArgs = true;
+  }
+
+  @override
+  void didUpdateWidget(covariant ProjectLoaderPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId ||
+        oldWidget.prefetchedProject != widget.prefetchedProject) {
+      _resolvedArgs = false;
+      _argsSnapshot = null;
+      _project = null;
+      _challengeId = null;
+      _showRequirementsDialog = false;
+      _projectFuture = null;
+    }
+  }
+
+  void _resolveArgs(Object? args) {
     Project? project;
     int? challengeId;
     bool showRequirementsDialog = false;
@@ -424,17 +459,28 @@ class ProjectLoaderPage extends StatelessWidget {
     }
 
     // Fallback to prefetched project if available
-    if (project == null && prefetchedProject != null) {
-      project = prefetchedProject;
+    if (project == null && widget.prefetchedProject != null) {
+      project = widget.prefetchedProject;
     }
 
-    if (project != null) {
+    _project = project;
+    _challengeId = challengeId;
+    _showRequirementsDialog = showRequirementsDialog;
+
+    if (_project == null) {
+      _projectFuture ??= ProjectService.getProjectById(widget.projectId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_project != null) {
       return DeferredPage(
         loadLibrary: project_page.loadLibrary,
         buildPage: (_) => project_page.ProjectDetailPage(
-          project: project!,
-          challengeId: challengeId,
-          showRequirementsDialog: showRequirementsDialog,
+          project: _project!,
+          challengeId: _challengeId,
+          showRequirementsDialog: _showRequirementsDialog,
         ),
         placeholder: const _LoadingScaffold(),
       );
@@ -442,20 +488,21 @@ class ProjectLoaderPage extends StatelessWidget {
 
     // Fetch project by ID if not in arguments
     return FutureBuilder<Project?>(
-      future: ProjectService.getProjectById(projectId),
+      future: _projectFuture ??
+          (_projectFuture = ProjectService.getProjectById(widget.projectId)),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const _LoadingScaffold();
         }
         final fetchedProject = snapshot.data;
         if (fetchedProject == null) {
-          return NotFoundPage(path: '/projects/$projectId');
+          return NotFoundPage(path: '/projects/${widget.projectId}');
         }
         return DeferredPage(
           loadLibrary: project_page.loadLibrary,
           buildPage: (_) => project_page.ProjectDetailPage(
             project: fetchedProject,
-            showRequirementsDialog: showRequirementsDialog,
+            showRequirementsDialog: _showRequirementsDialog,
           ),
           placeholder: const _LoadingScaffold(),
         );

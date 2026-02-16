@@ -16,9 +16,13 @@ class Ship {
   final int coinsEarned;
   final String screenShotUrl;
   final double overrideTime;
+  final String overrideHoursJustification;
   final int technicality;
   final int functionality;
   final int ux;
+  final String whereFeedback;
+  final String goodFeedback;
+  final String improveFeedback;
 
   Ship({
     required this.id,
@@ -35,9 +39,13 @@ class Ship {
     this.coinsEarned = 0,
     this.screenShotUrl = '',
     this.overrideTime = 0.0,
+    this.overrideHoursJustification = '',
     this.technicality = 0,
     this.functionality = 0,
     this.ux = 0,
+    required this.whereFeedback,
+    required this.goodFeedback,
+    required this.improveFeedback
   });
 
   static Future<Ship> fromJson(Map<String, dynamic> json) async {
@@ -61,9 +69,13 @@ class Ship {
       coinsEarned: json['earned'] ?? 0,
       screenShotUrl: json['screen_shot_url'] ?? '',
       overrideTime: (json['override_hours'] as num?)?.toDouble() ?? 0.0,
+      overrideHoursJustification: json['override_hours_justification'] ?? '',
       technicality: (json['technicality'] as num?)?.toInt() ?? 0,
       functionality: (json['functionality'] as num?)?.toInt() ?? 0,
       ux: (json['ux'] as num?)?.toInt() ?? 0,
+      whereFeedback: json['where_feedback'] ?? '',
+      goodFeedback: json['good_feedback'] ?? '',
+      improveFeedback: json['improve_feedback'] ?? '',
       multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
     );
   }

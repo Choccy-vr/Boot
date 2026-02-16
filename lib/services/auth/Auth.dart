@@ -157,7 +157,9 @@ class Authentication {
 
   /// Exchange authorization code for Supabase session
   static Future<void> _exchangeCodeForSession(String code) async {
-    AppLogger.info('Exchanging code for session with redirect_uri: $_hackClubRedirectUri');
+    AppLogger.info(
+      'Exchanging code for session with redirect_uri: $_hackClubRedirectUri',
+    );
     final response = await http.post(
       Uri.parse('$supabaseUrl/functions/v1/hackclub-login'),
       headers: {
@@ -301,14 +303,19 @@ class Authentication {
 
       return response.session != null;
     } catch (e, stack) {
-      final isStaleRefreshToken =
-          e is AuthApiException && e.code == 'refresh_token_not_found';
+      final staleRefreshTokenCode = e is AuthApiException
+          ? (e.code == 'refresh_token_not_found' ||
+                    e.code == 'refresh_token_already_used'
+                ? e.code
+                : null)
+          : null;
+      final isStaleRefreshToken = staleRefreshTokenCode != null;
 
       if (isStaleRefreshToken) {
         await _storage.delete(key: 'supabase_session');
         await _storage.delete(key: 'supabase_user');
         AppLogger.warning(
-          'Stored session was stale and has been cleared (refresh_token_not_found)',
+          'Stored session was stale and has been cleared ($staleRefreshTokenCode)',
         );
         return false;
       }
