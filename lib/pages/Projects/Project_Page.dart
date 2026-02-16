@@ -4048,7 +4048,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   OutlinedButton.icon(
                     onPressed: _handleCreateDevlog,
                     icon: Icon(Symbols.add, size: 18),
-                    label: Text('New Entry'),
+                    label: Text('New Devlog'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(
                         horizontal: 16,

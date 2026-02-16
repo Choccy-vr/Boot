@@ -8,7 +8,7 @@ import 'Devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
+import 'package:boot_app/services/misc/Utlity.dart';
 class DevlogService {
   static Future<List<Devlog>> getDevlogsByProjectId(String projectId) async {
     try {
@@ -108,11 +108,13 @@ class DevlogService {
         incrementBy: 1,
       );
 
+      final totalReadableTime = Utlity.formatReadableDuration(((project.time + time)* 3600).round());
+
       await SupabaseDB.updateAndReturnData(
         table: 'projects',
         data: {
           'time': totalProjectTime ?? (project.time + time),
-          'time_readable': readableTime,
+          'time_readable': totalReadableTime,
           'time_tracked_ship': updatedTimeTracked,
         },
         column: 'id',
