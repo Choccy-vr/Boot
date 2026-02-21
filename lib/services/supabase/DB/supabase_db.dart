@@ -170,6 +170,32 @@ class SupabaseDB {
     }
   }
 
+  static Future<void> updateBulkData({
+    required String table,
+    required List<Map<String, dynamic>> bulkData,
+    String onConflict = 'id',
+    bool? defaultToNull,
+  }) async {
+    if (bulkData.isEmpty) return;
+
+    try {
+      final upsertArgs = <String, dynamic>{
+        'onConflict': onConflict,
+        'ignoreDuplicates': false,
+      };
+      if (defaultToNull != null) upsertArgs['defaultToNull'] = defaultToNull;
+
+      await Function.apply(
+        supabase.from(table).upsert,
+        [bulkData],
+        upsertArgs.map((k, v) => MapEntry(Symbol(k), v)),
+      );
+    } catch (e, stack) {
+      AppLogger.error('Error bulk updating data in $table', e, stack);
+      throw Exception('Unexpected error: ${e.toString()}');
+    }
+  }
+
   //Upsert
   static Future<List<Map<String, dynamic>>> upsertData({
     required String table,

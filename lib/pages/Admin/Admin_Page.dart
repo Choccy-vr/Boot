@@ -193,7 +193,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
               const Spacer(),
               ElevatedButton.icon(
-                onPressed: () => _showCreatePrizeDialog(),
+                onPressed: () => _showPrizeDialog(),
                 icon: const Icon(Symbols.add),
                 label: const Text('Create Prize'),
               ),
@@ -325,7 +325,7 @@ class _AdminPageState extends State<AdminPage> {
           const SizedBox(width: 12),
           // Edit button
           IconButton(
-            onPressed: () => _showEditPrizeDialog(prize),
+            onPressed: () => _showPrizeDialog(prize: prize),
             icon: Icon(Symbols.edit, color: colorScheme.primary, size: 20),
             style: IconButton.styleFrom(
               backgroundColor: colorScheme.surfaceContainerHighest,
@@ -586,19 +586,54 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  void _showCreatePrizeDialog() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final costController = TextEditingController();
-    final stockController = TextEditingController();
-    final multiplierController = TextEditingController(text: '0');
-    final coinsController = TextEditingController(text: '0');
-    final keyController = TextEditingController();
-    final specsController = TextEditingController();
+  void _showPrizeDialog({Prize? prize}) {
+    final TextEditingController titleController;
+    final TextEditingController descriptionController;
+    final TextEditingController costController;
+    final TextEditingController stockController;
+    final TextEditingController multiplierController;
+    final TextEditingController coinsController;
+    final TextEditingController keyController;
+    final TextEditingController specsController;
     String? imageUrl;
-    PrizeType selectedType = PrizeType.normal;
-    Set<PrizeCountries> selectedCountries = {PrizeCountries.all};
-    bool customGrant = true;
+    PrizeType selectedType;
+    Set<PrizeCountries> selectedCountries;
+    bool customGrant;
+    bool isEditing;
+    List<Map<String, dynamic>> prizeOptions = [];
+    List<Map<String, dynamic>> prizeOptionValues = [];
+
+    if (prize == null) {
+      titleController = TextEditingController();
+      descriptionController = TextEditingController();
+      costController = TextEditingController();
+      stockController = TextEditingController();
+      multiplierController = TextEditingController(text: '0');
+      coinsController = TextEditingController(text: '0');
+      keyController = TextEditingController();
+      specsController = TextEditingController();
+      imageUrl = null;
+      selectedType = PrizeType.normal;
+      selectedCountries = {PrizeCountries.all};
+      customGrant = true;
+      isEditing = false;
+    } else {
+      titleController = TextEditingController(text: prize.title);
+      descriptionController = TextEditingController(text: prize.description);
+      costController = TextEditingController(text: prize.cost.toString());
+      stockController = TextEditingController(text: prize.stock.toString());
+      multiplierController = TextEditingController(
+        text: prize.multiplier.toString(),
+      );
+      coinsController = TextEditingController(text: prize.coins.toString());
+      keyController = TextEditingController(text: prize.key);
+      specsController = TextEditingController(text: prize.specs);
+      imageUrl = prize.picture;
+      selectedType = prize.type;
+      selectedCountries = prize.countries.toSet();
+      customGrant = prize.customGrant;
+      isEditing = true;
+    }
 
     showDialog(
       context: context,
@@ -652,12 +687,21 @@ class _AdminPageState extends State<AdminPage> {
                 children: [
                   Icon(Symbols.redeem, color: colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    'Create New Prize',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.primary,
+                  if (isEditing) ...[
+                    Text(
+                      'Edit Prize',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: colorScheme.primary,
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    Text(
+                      'Create New Prize',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               content: SingleChildScrollView(
@@ -723,15 +767,27 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                             const SizedBox(height: 16),
                             if (selectedType != PrizeType.reward) ...[
-                              _buildTextField(
-                                controller: costController,
-                                label: 'Cost (coins)',
-                                icon: Symbols.paid,
-                                keyboardType: TextInputType.number,
-                                colorScheme: colorScheme,
-                                textTheme: textTheme,
-                              ),
-                              const SizedBox(height: 16),
+                              if (customGrant) ...[
+                                _buildTextField(
+                                  controller: costController,
+                                  label: 'Cost Per Dollar',
+                                  icon: Symbols.paid,
+                                  keyboardType: TextInputType.number,
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                ),
+                                const SizedBox(height: 16),
+                              ] else ...[
+                                _buildTextField(
+                                  controller: costController,
+                                  label: 'Cost (coins)',
+                                  icon: Symbols.paid,
+                                  keyboardType: TextInputType.number,
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                ),
+                                const SizedBox(height: 16),
+                              ],
                             ],
                             // Conditional fields based on type
                             if (selectedType == PrizeType.keyed ||
@@ -788,6 +844,19 @@ class _AdminPageState extends State<AdminPage> {
                               textTheme: textTheme,
                             ),
                             const SizedBox(height: 16),
+                            // Prize Options & Values (only for normal and keyed types)
+                            if (selectedType == PrizeType.normal ||
+                                selectedType == PrizeType.keyed) ...[
+                              _buildPrizeOptionsSection(
+                                prizeOptions: prizeOptions,
+                                prizeOptionValues: prizeOptionValues,
+                                prizeId: prize?.id ?? '',
+                                onChanged: () => setDialogState(() {}),
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             // Custom Grant checkbox (only for grant type)
                             if (selectedType == PrizeType.grant) ...[
                               CheckboxListTile(
@@ -827,7 +896,7 @@ class _AdminPageState extends State<AdminPage> {
                                   final url =
                                       await StorageService.uploadFileWithPicker(
                                         path:
-                                          'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
                                       );
                                   if (url != 'User cancelled') {
                                     final publicUrl =
@@ -924,43 +993,53 @@ class _AdminPageState extends State<AdminPage> {
                     }
 
                     try {
-                      await SupabaseDB.upsertData(
-                        table: 'prizes',
-                        data: {
-                          'title': titleController.text,
-                          'description': descriptionController.text,
-                          'cost': selectedType == PrizeType.reward
-                              ? 0
-                              : int.parse(costController.text),
-                          'stock': int.parse(stockController.text),
-                          'picture': imageUrl,
-                          'type': selectedType.toString().split('.').last,
-                          'key': keyController.text.isEmpty
-                              ? null
-                              : keyController.text,
-                          'coins': int.tryParse(coinsController.text) ?? 0,
-                          'multiplier':
-                              double.tryParse(multiplierController.text) ?? 0,
-                          'countries': selectedCountries
-                              .map((c) => c.toString().split('.').last)
-                              .toList(),
-                          'specs': specsController.text,
-                          'custom_grant': customGrant,
-                        },
-                      );
-                      GlobalNotificationService.instance.showSuccess(
-                        'Prize created successfully!',
+                      await _handlePrizeAction(
+                        title: titleController.text,
+                        description: descriptionController.text,
+                        cost: int.tryParse(costController.text) ?? 0,
+                        stock: int.tryParse(stockController.text) ?? 0,
+                        imageUrl: imageUrl!,
+                        type: selectedType,
+                        isEditing: isEditing,
+                        prizeId: prize?.id ?? '',
+                        key: keyController.text,
+                        coins: int.tryParse(coinsController.text) ?? 0,
+                        multiplier:
+                            double.tryParse(multiplierController.text) ?? 0,
+                        countries: selectedCountries.toList(),
+                        specs: specsController.text,
+                        customGrant: customGrant,
+                        options: prizeOptions
+                            .map((o) => PrizeOption(
+                                  id: o['id'] ?? '',
+                                  createdAt: o['createdAt'] ?? DateTime.now(),
+                                  prizeId: prize?.id ?? '',
+                                  name: o['name'] ?? '',
+                                ))
+                            .toList(),
+                        optionValues: prizeOptionValues
+                            .map((v) => PrizeOptionValues(
+                                  id: v['id'] ?? '',
+                                  createdAt: v['createdAt'] ?? DateTime.now(),
+                                  optionId: v['optionId'] ?? '',
+                                  label: v['label'] ?? '',
+                                  priceModifier: v['priceModifier'] ?? 0,
+                                  stock: v['stock'] ?? 0,
+                                ))
+                            .toList(),
                       );
                       Navigator.pop(context);
                       _loadData();
                     } catch (e) {
-                      AppLogger.error('Failed to create prize', e);
+                      AppLogger.error('Failed to create/edit prize', e);
                       GlobalNotificationService.instance.showError(
-                        'Failed to create prize',
+                        'Failed to create/edit prize',
                       );
                     }
                   },
-                  child: const Text('Create'),
+                  child: isEditing
+                      ? const Text('Update')
+                      : const Text('Create'),
                 ),
               ],
             );
@@ -970,394 +1049,105 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  void _showEditPrizeDialog(Prize prize) {
-    final titleController = TextEditingController(text: prize.title);
-    final descriptionController = TextEditingController(
-      text: prize.description,
-    );
-    final costController = TextEditingController(text: prize.cost.toString());
-    final stockController = TextEditingController(text: prize.stock.toString());
-    final multiplierController = TextEditingController(
-      text: prize.multiplier.toString(),
-    );
-    final coinsController = TextEditingController(text: prize.coins.toString());
-    final keyController = TextEditingController(text: prize.key);
-    final specsController = TextEditingController(text: prize.specs);
-    String? imageUrl = prize.picture;
-    PrizeType selectedType = prize.type;
-    Set<PrizeCountries> selectedCountries = prize.countries.toSet();
-    bool customGrant = prize.customGrant;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final colorScheme = Theme.of(context).colorScheme;
-        final textTheme = Theme.of(context).textTheme;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            // Add listeners to update preview
-            void updatePreview() => setDialogState(() {});
-
-            titleController.addListener(updatePreview);
-            descriptionController.addListener(updatePreview);
-            costController.addListener(updatePreview);
-            stockController.addListener(updatePreview);
-            multiplierController.addListener(updatePreview);
-            coinsController.addListener(updatePreview);
-            keyController.addListener(updatePreview);
-            specsController.addListener(updatePreview);
-
-            // Create preview prize
-            final previewPrize = Prize(
-              id: 'preview',
-              createdAt: DateTime.now(),
-              title: titleController.text.isEmpty
-                  ? 'Prize Title'
-                  : titleController.text,
-              description: descriptionController.text.isEmpty
-                  ? 'Prize description will appear here...'
-                  : descriptionController.text,
-              picture: imageUrl,
-              cost: int.tryParse(costController.text) ?? 0,
-              stock: int.tryParse(stockController.text) ?? 0,
-              multiplier: double.tryParse(multiplierController.text) ?? 0,
-              key: keyController.text,
-              coins: int.tryParse(coinsController.text) ?? 0,
-              type: selectedType,
-              countries: selectedCountries.toList(),
-              specs: specsController.text,
-              customGrant: customGrant,
-            );
-
-            return AlertDialog(
-              backgroundColor: colorScheme.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colorScheme.outline),
-              ),
-              title: Row(
-                children: [
-                  Icon(Symbols.edit, color: colorScheme.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Edit Prize',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 900,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Form Section
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTextField(
-                              controller: titleController,
-                              label: 'Title',
-                              icon: Symbols.title,
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: descriptionController,
-                              label: 'Description',
-                              icon: Symbols.description,
-                              maxLines: 3,
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: stockController,
-                                    label: 'Stock',
-                                    icon: Symbols.inventory_2,
-                                    keyboardType: TextInputType.number,
-                                    colorScheme: colorScheme,
-                                    textTheme: textTheme,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDropdown<PrizeType>(
-                              label: 'Prize Type',
-                              value: selectedType,
-                              items: PrizeType.values,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setDialogState(() {
-                                    selectedType = value;
-                                    if (selectedType == PrizeType.reward) {
-                                      costController.text = '0';
-                                    }
-                                  });
-                                }
-                              },
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            if (selectedType != PrizeType.reward) ...[
-                              _buildTextField(
-                                controller: costController,
-                                label: 'Cost (coins)',
-                                icon: Symbols.paid,
-                                keyboardType: TextInputType.number,
-                                colorScheme: colorScheme,
-                                textTheme: textTheme,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Conditional fields based on type
-                            if (selectedType == PrizeType.keyed ||
-                                selectedType == PrizeType.reward) ...[
-                              _buildTextField(
-                                controller: keyController,
-                                label: selectedType == PrizeType.keyed
-                                    ? 'Required Key (required)'
-                                    : 'Key (optional)',
-                                icon: Symbols.key,
-                                colorScheme: colorScheme,
-                                textTheme: textTheme,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            if (selectedType == PrizeType.reward) ...[
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: coinsController,
-                                      label: 'Coin Reward',
-                                      icon: Symbols.toll,
-                                      keyboardType: TextInputType.number,
-                                      colorScheme: colorScheme,
-                                      textTheme: textTheme,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: multiplierController,
-                                      label: 'Multiplier',
-                                      icon: Symbols.percent,
-                                      keyboardType:
-                                          TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      colorScheme: colorScheme,
-                                      textTheme: textTheme,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Specs field (optional, tall text box)
-                            _buildTextField(
-                              controller: specsController,
-                              label: 'Specs (optional)',
-                              icon: Symbols.notes,
-                              maxLines: 5,
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            // Custom Grant checkbox (only for grant type)
-                            if (selectedType == PrizeType.grant) ...[
-                              CheckboxListTile(
-                                value: customGrant,
-                                onChanged: (value) {
-                                  setDialogState(() {
-                                    customGrant = value ?? true;
-                                  });
-                                },
-                                title: Text(
-                                  'Custom Grant',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Countries selector
-                            _buildCountriesSelector(
-                              selectedCountries: selectedCountries,
-                              onChanged: (countries) {
-                                setDialogState(() {
-                                  selectedCountries = countries;
-                                });
-                              },
-                              colorScheme: colorScheme,
-                              textTheme: textTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: () async {
-                                try {
-                                  final url =
-                                      await StorageService.uploadFileWithPicker(
-                                        path:
-                                          'prizes/${DateTime.now().millisecondsSinceEpoch}',
-                                      );
-                                  if (url != 'User cancelled') {
-                                    final publicUrl =
-                                        await StorageService.getPublicUrl(
-                                          path: url,
-                                        );
-                                    setDialogState(() => imageUrl = publicUrl);
-                                  }
-                                } catch (e) {
-                                  AppLogger.error('Failed to upload image', e);
-                                }
-                              },
-                              icon: Icon(Symbols.upload),
-                              label: Text(
-                                imageUrl == null
-                                    ? 'Upload Image'
-                                    : 'Change Image',
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: imageUrl == null
-                                    ? colorScheme.primary
-                                    : TerminalColors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      // Preview Section
-                      SizedBox(
-                        width: 280,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Preview',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 520,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: _buildShopPrizeCard(
-                                  previewPrize,
-                                  colorScheme,
-                                  textTheme,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Validation
-                    if (titleController.text.isEmpty ||
-                        descriptionController.text.isEmpty ||
-                        stockController.text.isEmpty ||
-                        imageUrl == null) {
-                      GlobalNotificationService.instance.showError(
-                        'Please fill all required fields and upload an image',
-                      );
-                      return;
-                    }
-
-                    if (selectedType != PrizeType.reward &&
-                        costController.text.isEmpty) {
-                      GlobalNotificationService.instance.showError(
-                        'Please enter a cost for this prize',
-                      );
-                      return;
-                    }
-
-                    // Check if keyed type requires a key
-                    if (selectedType == PrizeType.keyed &&
-                        keyController.text.isEmpty) {
-                      GlobalNotificationService.instance.showError(
-                        'Keyed prizes must have a key specified',
-                      );
-                      return;
-                    }
-
-                    try {
-                      await SupabaseDB.updateData(
-                        table: 'prizes',
-                        column: 'id',
-                        value: prize.id,
-                        data: {
-                          'title': titleController.text,
-                          'description': descriptionController.text,
-                          'cost': selectedType == PrizeType.reward
-                              ? 0
-                              : int.parse(costController.text),
-                          'stock': int.parse(stockController.text),
-                          'picture': imageUrl,
-                          'type': selectedType.toString().split('.').last,
-                          'key': keyController.text.isEmpty
-                              ? null
-                              : keyController.text,
-                          'coins': int.tryParse(coinsController.text) ?? 0,
-                          'multiplier':
-                              double.tryParse(multiplierController.text) ?? 0,
-                          'countries': selectedCountries
-                              .map((c) => c.toString().split('.').last)
-                              .toList(),
-                          'specs': specsController.text,
-                          'custom_grant': customGrant,
-                        },
-                      );
-                      GlobalNotificationService.instance.showSuccess(
-                        'Prize updated successfully!',
-                      );
-                      Navigator.pop(context);
-                      _loadData();
-                    } catch (e) {
-                      AppLogger.error('Failed to update prize', e);
-                      GlobalNotificationService.instance.showError(
-                        'Failed to update prize',
-                      );
-                    }
-                  },
-                  child: const Text('Update'),
-                ),
-              ],
-            );
-          },
+  Future<void> _handlePrizeAction({
+    required String title,
+    required String description,
+    required int cost,
+    required int stock,
+    required String imageUrl,
+    required PrizeType type,
+    required bool isEditing,
+    String prizeId = '',
+    String key = '',
+    int coins = 0,
+    double multiplier = 0,
+    List<PrizeCountries> countries = const [PrizeCountries.all],
+    String specs = '',
+    bool customGrant = false,
+    List<PrizeOption> options = const [],
+    List<PrizeOptionValues> optionValues = const [],
+  }) async {
+    if (!isEditing) {
+      await SupabaseDB.upsertData(
+        table: 'prizes',
+        data: {
+          'title': title,
+          'description': description,
+          'cost': cost,
+          'stock': stock,
+          'picture': imageUrl,
+          'type': imageUrl.toString().split('.').last,
+          'key': key == '' ? null : key,
+          'coins': coins,
+          'multiplier': multiplier,
+          'countries': countries
+              .map((c) => c.toString().split('.').last)
+              .toList(),
+          'specs': specs,
+          'custom_grant': customGrant,
+        },
+      );
+      if(options.isNotEmpty){
+      await SupabaseDB.upsertData(
+        table: 'prize_options',
+        bulkData: options
+            .map((option) => option.toJson())
+            .toList(),
+      );
+      }
+      if(optionValues.isNotEmpty){
+        await SupabaseDB.upsertData(
+          table: 'prize_option_values',
+          bulkData: optionValues
+              .map((optionValue) => optionValue.toJson())
+              .toList(),
         );
-      },
-    );
+      }
+    } else {
+      if (prizeId.isEmpty) {
+        GlobalNotificationService.instance.showError(
+          'Invalid prize ID for editing',
+        );
+        return;
+      }
+      await SupabaseDB.updateData(
+        table: 'prizes',
+        data: {
+          'title': title,
+          'description': description,
+          'cost': cost,
+          'stock': stock,
+          'picture': imageUrl,
+          'type': type.toString().split('.').last,
+          'key': key == '' ? null : key,
+          'coins': coins,
+          'multiplier': multiplier,
+          'countries': countries
+              .map((c) => c.toString().split('.').last)
+              .toList(),
+          'specs': specs,
+          'custom_grant': customGrant,
+        },
+        column: 'id',
+        value: prizeId,
+      );
+      if (options.isNotEmpty) {
+        await SupabaseDB.updateBulkData(
+          table: 'prize_options',
+          bulkData: options.map((option) => option.toJson()).toList(),
+          onConflict: 'id',
+        );
+      }
+      if (optionValues.isNotEmpty) {
+        await SupabaseDB.updateBulkData(
+          table: 'prize_option_values',
+          bulkData: optionValues
+              .map((optionValue) => optionValue.toJson())
+              .toList(),
+          onConflict: 'id',
+        );
+      }
+    }
   }
 
   void _showDeletePrizeDialog(Prize prize) {
@@ -2960,9 +2750,6 @@ class _AdminPageState extends State<AdminPage> {
                   final allRegionSelected = filteredCountries.every(
                     (country) => selectedCountries.contains(country),
                   );
-                  final someRegionSelected = filteredCountries.any(
-                    (country) => selectedCountries.contains(country),
-                  );
 
                   return ExpansionTile(
                     tilePadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -3049,6 +2836,531 @@ class _AdminPageState extends State<AdminPage> {
                 color: colorScheme.primary,
                 fontStyle: FontStyle.italic,
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPrizeOptionsSection({
+    required List<Map<String, dynamic>> prizeOptions,
+    required List<Map<String, dynamic>> prizeOptionValues,
+    required String prizeId,
+    required VoidCallback onChanged,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Symbols.tune, color: colorScheme.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Prize Options (optional)',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              onPressed: () async {
+                final result = await _showAddOptionDialog(
+                  prizeId: prizeId,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                );
+                if (result != null) {
+                  prizeOptions.add(result);
+                  onChanged();
+                }
+              },
+              icon: Icon(Symbols.add_circle_outline, size: 20),
+              style: IconButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (prizeOptions.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Symbols.tune, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No options added. Add options like Size, Color, RAM, etc. with their respective values.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            constraints: const BoxConstraints(maxHeight: 250),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: colorScheme.outline),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: prizeOptions.length,
+              itemBuilder: (context, index) {
+                final option = prizeOptions[index];
+                final optionId = option['id'];
+                final values = prizeOptionValues
+                    .where((v) => v['optionId'] == optionId)
+                    .toList();
+
+                return ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                  childrenPadding:
+                      const EdgeInsets.only(left: 24, right: 12, bottom: 8),
+                  leading: Icon(
+                    Symbols.label,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
+                  title: Text(
+                    option['name'] ?? 'Unnamed Option',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${values.length} ${values.length == 1 ? 'value' : 'values'}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () async {
+                          final result = await _showAddOptionValueDialog(
+                            optionId: optionId,
+                            optionName: option['name'] ?? '',
+                            colorScheme: colorScheme,
+                            textTheme: textTheme,
+                          );
+                          if (result != null) {
+                            prizeOptionValues.add(result);
+                            onChanged();
+                          }
+                        },
+                        icon: Icon(Symbols.add, size: 18),
+                        style: IconButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          prizeOptions.removeAt(index);
+                          prizeOptionValues.removeWhere(
+                            (v) => v['optionId'] == optionId,
+                          );
+                          onChanged();
+                        },
+                        icon: Icon(Symbols.delete, size: 18),
+                        style: IconButton.styleFrom(
+                          foregroundColor: TerminalColors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  children: values.isEmpty
+                      ? [
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Text(
+                              'No values added. Click + to add values.',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ]
+                      : values.map((value) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: colorScheme.outline.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        value['label'] ?? 'Unnamed Value',
+                                        style: textTheme.bodyMedium?.copyWith(
+                                          color: colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Symbols.paid,
+                                            size: 14,
+                                            color: TerminalColors.yellow,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${value['priceModifier'] >= 0 ? '+' : ''}${value['priceModifier']}',
+                                            style:
+                                                textTheme.bodySmall?.copyWith(
+                                              color: TerminalColors.yellow,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(
+                                            Symbols.inventory_2,
+                                            size: 14,
+                                            color: colorScheme.secondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${value['stock']}',
+                                            style:
+                                                textTheme.bodySmall?.copyWith(
+                                              color: colorScheme.secondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () async {
+                                    final result =
+                                        await _showEditOptionValueDialog(
+                                      value: value,
+                                      optionName: option['name'] ?? '',
+                                      colorScheme: colorScheme,
+                                      textTheme: textTheme,
+                                    );
+                                    if (result != null) {
+                                      final idx = prizeOptionValues.indexOf(
+                                        value,
+                                      );
+                                      if (idx != -1) {
+                                        prizeOptionValues[idx] = result;
+                                        onChanged();
+                                      }
+                                    }
+                                  },
+                                  icon: Icon(Symbols.edit, size: 16),
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: colorScheme.primary,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    prizeOptionValues.remove(value);
+                                    onChanged();
+                                  },
+                                  icon: Icon(Symbols.delete, size: 16),
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: TerminalColors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showAddOptionDialog({
+    required String prizeId,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) async {
+    final nameController = TextEditingController();
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: colorScheme.outline),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.label, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Add Prize Option',
+                style: textTheme.titleMedium?.copyWith(
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTextField(
+                controller: nameController,
+                label: 'Option Name (e.g., RAM, Color, Size)',
+                icon: Symbols.label,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (nameController.text.trim().isEmpty) {
+                  GlobalNotificationService.instance.showError(
+                    'Option name is required',
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  'createdAt': DateTime.now(),
+                  'prizeId': prizeId,
+                  'name': nameController.text.trim(),
+                });
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showAddOptionValueDialog({
+    required String optionId,
+    required String optionName,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) async {
+    final labelController = TextEditingController();
+    final priceModifierController = TextEditingController(text: '0');
+    final stockController = TextEditingController(text: '0');
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: colorScheme.outline),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Add Value for "$optionName"',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTextField(
+                controller: labelController,
+                label: 'Value Label (e.g., 8GB, Red, Large)',
+                icon: Symbols.label,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: priceModifierController,
+                label: 'Price Modifier (coins)',
+                icon: Symbols.paid,
+                keyboardType: TextInputType.number,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: stockController,
+                label: 'Stock',
+                icon: Symbols.inventory_2,
+                keyboardType: TextInputType.number,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (labelController.text.trim().isEmpty) {
+                  GlobalNotificationService.instance.showError(
+                    'Value label is required',
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  'createdAt': DateTime.now(),
+                  'optionId': optionId,
+                  'label': labelController.text.trim(),
+                  'priceModifier':
+                      int.tryParse(priceModifierController.text) ?? 0,
+                  'stock': int.tryParse(stockController.text) ?? 0,
+                });
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showEditOptionValueDialog({
+    required Map<String, dynamic> value,
+    required String optionName,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) async {
+    final labelController =
+        TextEditingController(text: value['label'] ?? '');
+    final priceModifierController = TextEditingController(
+      text: (value['priceModifier'] ?? 0).toString(),
+    );
+    final stockController =
+        TextEditingController(text: (value['stock'] ?? 0).toString());
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: colorScheme.outline),
+          ),
+          title: Row(
+            children: [
+              Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Edit "$optionName" Value',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTextField(
+                controller: labelController,
+                label: 'Value Label',
+                icon: Symbols.label,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: priceModifierController,
+                label: 'Price Modifier (coins)',
+                icon: Symbols.paid,
+                keyboardType: TextInputType.number,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: stockController,
+                label: 'Stock',
+                icon: Symbols.inventory_2,
+                keyboardType: TextInputType.number,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (labelController.text.trim().isEmpty) {
+                  GlobalNotificationService.instance.showError(
+                    'Value label is required',
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'id': value['id'],
+                  'createdAt': value['createdAt'],
+                  'optionId': value['optionId'],
+                  'label': labelController.text.trim(),
+                  'priceModifier':
+                      int.tryParse(priceModifierController.text) ?? 0,
+                  'stock': int.tryParse(stockController.text) ?? 0,
+                });
+              },
+              child: const Text('Update'),
             ),
           ],
         );

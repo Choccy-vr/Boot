@@ -101,6 +101,78 @@ class Prize {
   }
 }
 
+class PrizeOption{
+  final String id;
+  final DateTime createdAt;
+  final String prizeId;
+  final String name;
+
+  PrizeOption({
+    required this.id,
+    required this.createdAt,
+    required this.prizeId,
+    required this.name,
+  });
+
+  factory PrizeOption.fromJson(Map<String, dynamic> json) {
+    return PrizeOption(
+      id: json['id'] ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      prizeId: json['prize_id'] ?? '',
+      name: json['name'] ?? 'Untitled Option',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'created_at': createdAt.toIso8601String(),
+      'prize_id': prizeId,
+      'name': name,
+    };
+  }
+}
+
+class PrizeOptionValues{
+  final String id;
+  final DateTime createdAt;
+  final String optionId;
+  final String label;
+  final int priceModifier;
+  final int stock;
+
+  PrizeOptionValues({
+    required this.id,
+    required this.createdAt,
+    required this.optionId,
+    required this.label,
+    required this.priceModifier,
+    required this.stock,
+  });
+
+  factory PrizeOptionValues.fromJson(Map<String, dynamic> json) {
+    return PrizeOptionValues(
+      id: json['id'] ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      optionId: json['option_id'] ?? '',
+      label: json['label'] ?? 'No Label',
+      priceModifier: json['price_modifier'] ?? 0,
+      stock: json['stock'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'created_at': createdAt.toIso8601String(),
+      'option_id': optionId,
+      'label': label,
+      'price_modifier': priceModifier,
+      'stock': stock,
+    };
+  }
+}
+
 enum PrizeType { normal, grant, reward, keyed }
 
 enum PrizeCountries {
