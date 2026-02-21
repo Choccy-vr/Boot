@@ -177,6 +177,17 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
 
   switch (segments.first) {
     case 'login':
+    final email = Uri.base.queryParameters['email'];
+    if(email != null && email.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Authentication.signInWithHackClub(email: email);
+      });
+
+      page = const _LoadingScaffold();
+      routeName = '/login';
+      requiresAuth = false;
+      break;
+    }
       page = const LoginPage();
       routeName = '/login';
       requiresAuth = false;

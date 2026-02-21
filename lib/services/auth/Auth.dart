@@ -83,7 +83,8 @@ class Authentication {
 
   /// Sign in with Hack Club OAuth
   /// Redirects to Hack Club authorization endpoint
-  static Future<void> signInWithHackClub() async {
+  /// TODO: add support for emails
+  static Future<void> signInWithHackClub({String? email}) async {
     if (_hackClubClientId == null || _hackClubRedirectUri == null) {
       throw AuthFailure(
         'Hack Club OAuth not configured. Call configureHackClubOAuth() first.',
@@ -104,19 +105,14 @@ class Authentication {
               'response_type': 'code',
               'scope': 'openid profile email slack_id verification_status',
               'state': _hackClubState!,
+              if (email != null) 'login_hint': email,
             },
           );
 
       AppLogger.info('Redirecting to Hack Club: ${authUrl.toString()}');
 
       // Launch browser for OAuth flow
-      if (kIsWeb) {
-        // On web, redirect current window
-        await launchUrl(authUrl, webOnlyWindowName: '_self');
-      } else {
-        // On mobile/desktop, open external browser
-        await launchUrl(authUrl, mode: LaunchMode.externalApplication);
-      }
+      await launchUrl(authUrl, webOnlyWindowName: '_self');
     } catch (e, stack) {
       AppLogger.error('Hack Club OAuth redirect failed', e, stack);
       throw AuthFailure('Hack Club OAuth redirect failed: ${e.toString()}');
