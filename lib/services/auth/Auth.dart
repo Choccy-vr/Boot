@@ -83,7 +83,6 @@ class Authentication {
 
   /// Sign in with Hack Club OAuth
   /// Redirects to Hack Club authorization endpoint
-  /// TODO: add support for emails
   static Future<void> signInWithHackClub({String? email}) async {
     if (_hackClubClientId == null || _hackClubRedirectUri == null) {
       throw AuthFailure(
