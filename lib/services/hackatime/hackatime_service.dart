@@ -65,7 +65,7 @@ class HackatimeService {
     required String slackUserId,
     BuildContext? context,
   }) async {
-    if (slackUserId.isEmpty) return false;
+    if (slackUserId.isEmpty) return true;
     
     try {
       final url = Uri.parse(
@@ -78,12 +78,12 @@ class HackatimeService {
             : {};
         final String? trustLevel = decoded['trust_level'];
         if (trustLevel == 'red') return true;
-        return false;
+        return true;
       } else {
         AppLogger.warning(
           'Hackatime ban check failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
         );
-        return false;
+        return true;
       }
     } catch (e, stack) {
       AppLogger.error(
@@ -91,7 +91,7 @@ class HackatimeService {
         e,
         stack,
       );
-      return false;
+      return true;
     }
   }
 

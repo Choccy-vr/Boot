@@ -3081,14 +3081,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ElevatedButton(
-                    onPressed: _project.shipped
+                    onPressed: (UserService.currentUser?.verificationStatus ?? false) == false || _project.shipped || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null)
                         ? null
                         : () => _showShipConfirmationDialog(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _project.shipped
+                      backgroundColor: (_project.shipped || (UserService.currentUser?.verificationStatus ?? false) == false || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null))
                           ? colorScheme.outline
                           : null,
-                      foregroundColor: _project.shipped
+                      foregroundColor: (_project.shipped || (UserService.currentUser?.verificationStatus ?? false) == false || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null))
                           ? colorScheme.onSurfaceVariant
                           : null,
                       padding: EdgeInsets.symmetric(
@@ -3122,6 +3122,46 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             'You cannot ship again until your first ship is completed',
                             style: textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if ((UserService.currentUser?.verificationStatus ?? false) == false) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Symbols.warning,
+                          size: 16,
+                          color: colorScheme.error,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'You must verify your Hackclub Auth Account before shipping projects',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if ((UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null)) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Symbols.warning,
+                          size: 16,
+                          color: colorScheme.error,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Oddly enough, you are not eligible to ship projects to any YSWS. Are you over 18?',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.error,
                             ),
                           ),
                         ),
@@ -3749,6 +3789,175 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           ship.comment,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    // Ratings section
+                    if (ship.technicality > 0 || 
+                        ship.functionality > 0 || 
+                        ship.ux > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Symbols.star,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Ratings',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Technicality
+                            if (ship.technicality > 0) ...[
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Technicality',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (index) => Icon(
+                                        index < ship.technicality
+                                            ? Symbols.star
+                                            : Symbols.star,
+                                        size: 16,
+                                        color: index < ship.technicality
+                                            ? TerminalColors.yellow
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.outline
+                                                .withValues(alpha: 0.3),
+                                        fill: index < ship.technicality
+                                            ? 1.0
+                                            : 0.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            // Functionality or Originality
+                            if (ship.functionality > 0) ...[
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _project.level.toLowerCase()
+                                            .contains('scratch')
+                                        ? 'Functionality'
+                                        : 'Originality',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (index) => Icon(
+                                        index < ship.functionality
+                                            ? Symbols.star
+                                            : Symbols.star,
+                                        size: 16,
+                                        color: index < ship.functionality
+                                            ? TerminalColors.yellow
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.outline
+                                                .withValues(alpha: 0.3),
+                                        fill: index < ship.functionality
+                                            ? 1.0
+                                            : 0.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            // UX
+                            if (ship.ux > 0) ...[
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'User Experience (UX)',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (index) => Icon(
+                                        index < ship.ux
+                                            ? Symbols.star
+                                            : Symbols.star,
+                                        size: 16,
+                                        color: index < ship.ux
+                                            ? TerminalColors.yellow
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.outline
+                                                .withValues(alpha: 0.3),
+                                        fill: index < ship.ux ? 1.0 : 0.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],

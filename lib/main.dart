@@ -2,6 +2,7 @@ import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:html' as html show window;
 
@@ -32,6 +33,7 @@ import 'services/auth/supabase_auth.dart';
 import 'services/auth/auth_listener.dart';
 import 'services/misc/logger.dart';
 import 'services/notifications/notifications.dart';
+import 'services/hackatime/hackatime_service.dart';
 import 'services/users/Boot_User.dart';
 import 'services/users/User.dart';
 import 'services/prizes/Prize.dart';
@@ -45,6 +47,21 @@ const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
 
 // Maintenance Mode - Set to true to enable, false to disable
 bool isMaintenanceModeEnabled = !isRunningOnLocalhost();
+const String hackatimeBannedRoute = '/hackatime-banned';
+bool isHackatimeBanned = false;
+String? hackatimeBanReason;
+
+bool get _isBootAccessRestricted =>
+  isHackatimeBanned || (hackatimeBanReason?.isNotEmpty ?? false);
+
+bool _containsBannedReason(String? rawReason) {
+  if (rawReason == null) return false;
+  final normalized = rawReason.toLowerCase();
+  return normalized.contains('banned') ||
+    normalized.contains('ban') ||
+    normalized.contains('trust factor') ||
+    normalized.contains('fraud');
+}
 
 bool isRunningOnLocalhost() {
   if (!kIsWeb) return kDebugMode;
@@ -91,8 +108,14 @@ void main() async {
 
   final sessionRestored = results[2] as bool;
 
-  String initialRoute = '/login';
   if (sessionRestored) {
+    await _refreshHackatimeBanRestriction();
+  }
+
+  String initialRoute = '/login';
+  if (_isBootAccessRestricted) {
+    initialRoute = hackatimeBannedRoute;
+  } else if (sessionRestored) {
     initialRoute = '/dashboard';
   }
 
@@ -107,11 +130,58 @@ Future<void> _handleHackClubCallback() async {
       if (callbackUrl != null && callbackUrl.isNotEmpty) {
         html.window.sessionStorage.remove('hackclub_callback');
         final callbackUri = Uri.parse(callbackUrl);
+        final authError = callbackUri.queryParameters['error'];
+        final authErrorDescription =
+            callbackUri.queryParameters['error_description'];
+        final authReason = callbackUri.queryParameters['reason'];
+        final combinedReason =
+            [authError, authErrorDescription, authReason]
+                .whereType<String>()
+                .join(' ')
+                .trim();
+
+        if (_containsBannedReason(combinedReason)) {
+          isHackatimeBanned = true;
+          hackatimeBanReason = combinedReason.isEmpty
+              ? 'Your Hackatime account has been banned.'
+              : combinedReason;
+          return;
+        }
+
         await Authentication.handleHackClubCallback(callbackUri);
       }
     } catch (e) {
+      final reason = e.toString();
+      if (_containsBannedReason(reason)) {
+        isHackatimeBanned = true;
+        hackatimeBanReason = reason;
+        return;
+      }
       AppLogger.error('Error handling Hack Club callback', e);
     }
+  }
+}
+
+Future<void> _refreshHackatimeBanRestriction() async {
+  final slackUserId = UserService.currentUser?.slackUserId ?? '';
+  if (slackUserId.isEmpty) {
+    isHackatimeBanned = false;
+    if (_containsBannedReason(hackatimeBanReason)) {
+      return;
+    }
+    hackatimeBanReason = null;
+    return;
+  }
+
+  final banned = await HackatimeService.isHackatimeBanned(
+    slackUserId: slackUserId,
+  );
+
+  isHackatimeBanned = banned;
+  if (banned && (hackatimeBanReason == null || hackatimeBanReason!.isEmpty)) {
+    hackatimeBanReason = 'Your Hackatime account has been banned.';
+  } else if (!banned && !_containsBannedReason(hackatimeBanReason)) {
+    hackatimeBanReason = null;
   }
 }
 
@@ -139,6 +209,16 @@ class MainApp extends StatelessWidget {
 Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   final uri = Uri.parse(settings.name ?? '/');
   final segments = uri.pathSegments;
+  final isBannedPageRoute =
+      segments.length == 1 && segments.first == 'hackatime-banned';
+
+  if (_isBootAccessRestricted && !isBannedPageRoute) {
+    return _buildRoute(
+      child: const HackatimeBannedPage(),
+      name: hackatimeBannedRoute,
+    );
+  }
+
   final bool isLoggedIn = Authentication.isLoggedIn();
   final UserRole? currentRole = UserService.currentUser?.role;
 
@@ -176,6 +256,11 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   Set<UserRole>? requiredRoles;
 
   switch (segments.first) {
+    case 'hackatime-banned':
+      page = const HackatimeBannedPage();
+      routeName = hackatimeBannedRoute;
+      requiresAuth = false;
+      break;
     case 'login':
     final email = Uri.base.queryParameters['email'];
     if(email != null && email.isNotEmpty) {
@@ -372,10 +457,154 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   }
 
   return _buildRoute(
-    child: page,
+    child: routeName == hackatimeBannedRoute
+        ? page
+        : BanAccessGate(child: page),
     name: routeName,
     arguments: settings.arguments,
   );
+}
+
+class BanAccessGate extends StatefulWidget {
+  const BanAccessGate({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<BanAccessGate> createState() => _BanAccessGateState();
+}
+
+class _BanAccessGateState extends State<BanAccessGate> {
+  bool _isChecking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _enforceBanGuard();
+  }
+
+  Future<void> _enforceBanGuard() async {
+    if (!Authentication.isLoggedIn()) {
+      if (!mounted) return;
+      setState(() => _isChecking = false);
+      return;
+    }
+
+    await _refreshHackatimeBanRestriction();
+
+    if (!mounted) return;
+    setState(() => _isChecking = false);
+
+    if (_isBootAccessRestricted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          hackatimeBannedRoute,
+          (route) => false,
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isBootAccessRestricted) {
+      return const HackatimeBannedPage();
+    }
+
+    if (_isChecking) {
+      return const _LoadingScaffold();
+    }
+
+    return widget.child;
+  }
+}
+
+class HackatimeBannedPage extends StatelessWidget {
+  const HackatimeBannedPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.error.withValues(alpha: 0.7),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Symbols.warning,
+                          color: colorScheme.error,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Account Restricted',
+                          style: textTheme.headlineSmall?.copyWith(
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Your Hackatime account has been banned, so access to Boot is fully restricted.',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '• Contact the Fraud Department if you believe this is a mistake\n'
+                      '• "Naughty Naughty! :(" -Orph 2026r',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                    if (hackatimeBanReason != null &&
+                        hackatimeBanReason!.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        'Reason: $hackatimeBanReason',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Route<dynamic> _onUnknownRoute(RouteSettings settings) {
