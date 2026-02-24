@@ -579,7 +579,7 @@ class HackatimeBannedPage extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       '• Contact the Fraud Department if you believe this is a mistake\n'
-                      '• "Naughty Naughty! :(" -Orph 2026r',
+                      '• "Naughty Naughty! :(" -Orph 2026',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         height: 1.5,
