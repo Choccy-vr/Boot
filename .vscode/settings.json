@@ -1,3 +1,8 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+  "deno.enable": false,
+  "deno.enablePaths": ["edge-functions"],
+  "deno.suggest.imports.hosts": {
+    "https://deno.land": true,
+    "https://esm.sh": true
+  }
 }

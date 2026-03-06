@@ -79,6 +79,38 @@ interface HackClubUserInfo {
   ysws_eligible?: boolean;
 }
 
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (base64: string) =>
+  Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+const encryptAccessToken = async (token: string): Promise<string> => {
+  const masterKeyB64 = Deno.env.get("ACCESS_TOKEN_SECRET") ?? "";
+  if (!masterKeyB64) {
+    throw new Error("Missing ACCESS_TOKEN_SECRET");
+  }
+
+  const keyBytes = fromBase64(masterKeyB64);
+  if (keyBytes.length !== 32) {
+    throw new Error("ACCESS_TOKEN_SECRET must decode to 32 bytes");
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(token);
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, plaintext)
+  );
+
+  return `${toBase64(iv)}:${toBase64(encrypted)}`;
+};
+
 serve(async (req) => {
   const origin = req.headers.get("origin");
   const corsHeaders = buildCorsHeaders(origin);
@@ -425,6 +457,26 @@ serve(async (req) => {
         }
       );
     }
+
+    // Step 7: Encrypt Hack Club access token and store it
+    const encryptedToken = await encryptAccessToken(tokens.access_token);
+
+    const { error: updateTokenError } = await supabaseAdmin
+      .from("users")
+      .update({ encrypted_access_token: encryptedToken })
+      .eq("id", supabaseUserId);
+
+    if (updateTokenError) {
+      console.error("Error saving encrypted access token:", updateTokenError);
+      return new Response(
+        JSON.stringify({ error: "Failed to store encrypted access token" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
 
     return new Response(
       JSON.stringify({

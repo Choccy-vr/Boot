@@ -78,7 +78,7 @@ class HackatimeService {
             : {};
         final String? trustLevel = decoded['trust_level'];
         if (trustLevel == 'red') return true;
-        return true;
+        return false;
       } else {
         AppLogger.warning(
           'Hackatime ban check failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
