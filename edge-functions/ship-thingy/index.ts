@@ -20,8 +20,53 @@ interface reqPayload {
   shipId: number;
 }
 
+interface HackClubUserInfo {
+  sub: string;
+  email: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+  birthday?: string;
+  address?: {
+    street_address?: string;
+    locality?: string;
+    region?: string;
+    country?: string;
+    postal_code?: string;
+  };
+}
+
 const AIRTABLE_TOKEN = Deno.env.get("AIRTABLE_PAT")!;
 const AIRTABLE_BASE_ID = Deno.env.get("AIRTABLE_BASE_ID")!;
+
+const extractGithubUsername = (repoUrl: unknown): string => {
+  if (typeof repoUrl !== "string" || repoUrl.trim() === "") {
+    return "";
+  }
+
+  const normalized = repoUrl.startsWith("http://") || repoUrl.startsWith("https://")
+    ? repoUrl
+    : `https://${repoUrl}`;
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname !== "github.com" && hostname !== "www.github.com") {
+      return "";
+    }
+
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 1) {
+      return "";
+    }
+
+    return parts[0];
+  } catch {
+    return "";
+  }
+};
 
 const fromBase64 = (base64: string) =>
   Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -330,6 +375,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    const githubUsername = extractGithubUsername(project.github_repo);
 
     //call airtable api
     insertAirtableRow('YSWS Project Submissions', {
@@ -341,9 +387,9 @@ Deno.serve(async (req) => {
       'First Name': userInfo.given_name,
       'Last Name': userInfo.family_name,
       'Email': userInfo.email,
-      //Screenshot?
+      'Screenshot': [{ url: project.screenshot_url }],
       'Description': project.description,
-      //Github Username?
+      'Github Username': githubUsername,
       'Address (Line 1)': userInfo.address.street_address,
       'City': userInfo.address.locality,
       'State / Province': userInfo.address.region,
