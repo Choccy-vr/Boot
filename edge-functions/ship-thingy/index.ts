@@ -27,7 +27,7 @@ interface HackClubUserInfo {
   given_name?: string;
   family_name?: string;
   preferred_username?: string;
-  birthday?: string;
+  birthdate?: string;
   address?: {
     street_address?: string;
     locality?: string;
@@ -146,39 +146,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const {
-      data: { user },
-    } = await supabaseUser.auth.getUser();
-
-    if (!user) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      serviceRoleKey
     );
 
-    const { data: roleRow } = await supabaseAdmin
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+    if (!isServiceRole) {
+      const supabaseUser = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } }
+      );
 
-    if (!roleRow || !["admin", "reviewer"].includes(roleRow.role)) {
-      return new Response(JSON.stringify({ message: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const {
+        data: { user },
+      } = await supabaseUser.auth.getUser();
+
+      if (!user) {
+        return new Response(JSON.stringify({ message: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: roleRow } = await supabaseAdmin
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!roleRow || !["admin", "reviewer"].includes(roleRow.role)) {
+        return new Response(JSON.stringify({ message: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const { shipId }: reqPayload = await req.json();
@@ -365,9 +370,9 @@ Deno.serve(async (req) => {
 
     const userInfo: HackClubUserInfo = await userInfoResponse.json();
 
-    if (!userInfo.sub || !userInfo.email || !userInfo.birthday || !userInfo.name || !userInfo.address) {
+    if (!userInfo.sub || !userInfo.email || !userInfo.birthdate || !userInfo.name || !userInfo.address) {
       return new Response(
-        JSON.stringify({ error: "Invalid user info: missing sub, email, birthday, name, or address" }),
+        JSON.stringify({ error: "Invalid user info: missing sub, email, birthdate, name, or address" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -378,7 +383,7 @@ Deno.serve(async (req) => {
     const githubUsername = extractGithubUsername(project.github_repo);
 
     //call airtable api
-    insertAirtableRow('YSWS Project Submissions', {
+    insertAirtableRow('YSWS Project Submission', {
       'Code URL': project.github_repo,
       'Playable URL': project.github_repo,
       'How did you hear about this?': updatedShip.where_feedback,
@@ -387,15 +392,15 @@ Deno.serve(async (req) => {
       'First Name': userInfo.given_name,
       'Last Name': userInfo.family_name,
       'Email': userInfo.email,
-      'Screenshot': [{ url: project.screenshot_url }],
+      'Screenshot': [{ url: updatedShip.screenshot_url }],
       'Description': project.description,
-      'Github Username': githubUsername,
+      'GitHub Username': githubUsername,
       'Address (Line 1)': userInfo.address.street_address,
       'City': userInfo.address.locality,
       'State / Province': userInfo.address.region,
       'Country': userInfo.address.country,
       'ZIP / Postal Code': userInfo.address.postal_code,
-      'Birthday': userInfo.birthday,
+      'Birthday': userInfo.birthdate,
       'Automation - Submit to Unified YSWS': false, //FOR TESTING ONLY - set to true when ready
       ...(updatedShip.override_hours != null
     ? {

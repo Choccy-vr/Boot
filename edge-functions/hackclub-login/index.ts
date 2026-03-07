@@ -249,16 +249,32 @@ serve(async (req) => {
     }
 
     // Step 3: Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("Missing Supabase credentials", {
+        hasSupabaseUrl: Boolean(supabaseUrl),
+        hasServiceRoleKey: Boolean(supabaseServiceRoleKey),
+      });
+      return new Response(
+        JSON.stringify({
+          error:
+            "Server configuration error: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Step 4: Check if user exists by hc_user_id (since email column is removed from public.users)
     const { data: existingUsers, error: getUserError } = await supabaseAdmin
@@ -463,7 +479,7 @@ serve(async (req) => {
 
     const { error: updateTokenError } = await supabaseAdmin
       .from("users")
-      .update({ encrypted_access_token: encryptedToken })
+      .update({ access_token_encrypted: encryptedToken })
       .eq("id", supabaseUserId);
 
     if (updateTokenError) {

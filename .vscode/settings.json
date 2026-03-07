@@ -1,5 +1,5 @@
 {
-  "deno.enable": false,
+  "deno.enable": true,
   "deno.enablePaths": ["edge-functions"],
   "deno.suggest.imports.hosts": {
     "https://deno.land": true,
