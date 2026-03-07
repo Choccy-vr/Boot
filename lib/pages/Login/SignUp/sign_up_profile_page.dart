@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/navigation/navigation_service.dart';
 import '/services/users/signup/sign_up_service.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -731,11 +732,44 @@ class _SignUpProfilePageState extends State<SignUpProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getFriendlySignUpErrorMessage(e))),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _getFriendlySignUpErrorMessage(Object error) {
+    const duplicateUsernameMessage =
+        'That username is already taken. Please choose another username.';
+
+    if (error is PostgrestException) {
+      final message = error.message.toLowerCase();
+      final details = (error.details ?? '').toString().toLowerCase();
+
+      final isDuplicateUsername =
+          error.code == '23505' &&
+          (message.contains('users_username_key') ||
+              message.contains('username') ||
+              details.contains('users_username_key') ||
+              details.contains('username'));
+
+      if (isDuplicateUsername) {
+        return duplicateUsernameMessage;
+      }
+    }
+
+    final fallback = error.toString().toLowerCase();
+    final looksLikeDuplicateUsername =
+        fallback.contains('users_username_key') ||
+        (fallback.contains('duplicate key value') &&
+            fallback.contains('username'));
+
+    if (looksLikeDuplicateUsername) {
+      return duplicateUsernameMessage;
+    }
+
+    return 'Sign up failed. Please try again.';
   }
 }

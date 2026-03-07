@@ -56,6 +56,11 @@ class ProjectDetailPage extends StatefulWidget {
 
 class _ProjectDetailPageState extends State<ProjectDetailPage>
     with SingleTickerProviderStateMixin {
+  static final RegExp _gitRepoRegex = RegExp(
+    r'^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org|gitea\.io|codeberg\.org|sr\.ht|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    r'\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$',
+  );
+
   AnimationController? _refreshController;
   late Project _project;
   List<Devlog> _devlogs = [];
@@ -98,6 +103,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   List<HackatimeProject> _hackatimeProjects = [];
   List<HackatimeProject> _filteredHackatimeProjects = [];
   Set<String> _claimedHackatimeProjects = {};
+  bool _showEditNameValidation = false;
+  bool _showEditDescriptionValidation = false;
+  bool _showEditRepoValidation = false;
 
   final List<String> _popularTags = [
     // Build Type
@@ -204,7 +212,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         owner = user;
       });
     } catch (e) {
-      AppLogger.error('Error loading project owner for project ${_project.id}', e);
+      AppLogger.error(
+        'Error loading project owner for project ${_project.id}',
+        e,
+      );
     }
   }
 
@@ -403,7 +414,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleOpenGitHubRepo() async {
     final url = Uri.parse(_project.githubRepo);
     if (!await launchUrl(url)) {
-      AppLogger.error('Could not launch GitHub repo for project ${_project.id}', Exception('Failed to launch URL'));
+      AppLogger.error(
+        'Could not launch GitHub repo for project ${_project.id}',
+        Exception('Failed to launch URL'),
+      );
     }
   }
 
@@ -680,6 +694,36 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       return '${hours}h';
     }
     return '${minutes}m';
+  }
+
+  String? get _projectNameError {
+    final text = _titleController.text.trim();
+    if (text.isEmpty) return 'Project name is required';
+    if (text.length < 2) return 'Minimum 2 characters';
+    if (text.length > 25) return 'Maximum 25 characters';
+    return null;
+  }
+
+  String? get _projectDescriptionError {
+    final text = _descriptionController.text.trim();
+    if (text.isEmpty) return 'Description is required';
+    if (text.length < 50) return 'Minimum 50 characters';
+    if (text.length > 500) return 'Maximum 500 characters';
+    return null;
+  }
+
+  String? get _projectRepositoryError {
+    final text = _githubRepoController.text.trim();
+    if (text.isEmpty) return 'Repository URL is required';
+    if (!_isValidGitRepoUrl(text)) {
+      return 'Enter a valid Git repository URL (GitHub, GitLab, Bitbucket, etc.)';
+    }
+    return null;
+  }
+
+  bool _isValidGitRepoUrl(String url) {
+    if (url.isEmpty) return false;
+    return _gitRepoRegex.hasMatch(url.trim());
   }
 
   String? get _devlogTitleError {
@@ -1057,7 +1101,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     final whereFeedbackController = TextEditingController();
     final goodFeedbackController = TextEditingController();
     final improveFeedbackController = TextEditingController();
-    
+
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -1087,7 +1131,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Where did you hear about this?
                   Text(
                     'Where did you hear about this?',
@@ -1116,7 +1160,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // What are we doing well?
                   Text(
                     'What are we doing well?',
@@ -1145,7 +1189,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // What can we improve?
                   Text(
                     'What can we improve?',
@@ -1160,7 +1204,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     maxLines: 3,
                     maxLength: 500,
                     decoration: InputDecoration(
-                      hintText: 'What did you not like as much, how can we fix it?',
+                      hintText:
+                          'What did you not like as much, how can we fix it?',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -1189,23 +1234,31 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 final whereFeedback = whereFeedbackController.text.trim();
                 final goodFeedback = goodFeedbackController.text.trim();
                 final improveFeedback = improveFeedbackController.text.trim();
-                
-                if (whereFeedback.isEmpty || goodFeedback.isEmpty || improveFeedback.isEmpty) {
+
+                if (whereFeedback.isEmpty ||
+                    goodFeedback.isEmpty ||
+                    improveFeedback.isEmpty) {
                   GlobalNotificationService.instance.showError(
                     'Please fill in all feedback fields.',
                   );
                   return;
                 }
-                
-                if (whereFeedback.length < 2 || goodFeedback.length < 2 || improveFeedback.length < 2) {
+
+                if (whereFeedback.length < 2 ||
+                    goodFeedback.length < 2 ||
+                    improveFeedback.length < 2) {
                   GlobalNotificationService.instance.showError(
                     'Each feedback field must be at least 2 characters.',
                   );
                   return;
                 }
-                
+
                 Navigator.of(context).pop();
-                _handleShipProject(whereFeedback, goodFeedback, improveFeedback);
+                _handleShipProject(
+                  whereFeedback,
+                  goodFeedback,
+                  improveFeedback,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
@@ -2452,12 +2505,25 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 child: _isEditMode
                     ? TextField(
                         controller: _titleController,
+                        maxLength: 25,
+                        onChanged: (_) {
+                          setState(() => _showEditNameValidation = true);
+                        },
                         style: textTheme.headlineMedium?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Project Title',
+                          labelText: 'Project Name',
+                          hintText: 'MyAwesomeOS',
+                          helperText:
+                              _showEditNameValidation &&
+                                  _projectNameError != null
+                              ? null
+                              : '2-25 characters',
+                          errorText: _showEditNameValidation
+                              ? _projectNameError
+                              : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -2512,7 +2578,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   ],
                   onSelected: (value) {
                     if (value == 'edit') {
-                      setState(() => _isEditMode = true);
+                      setState(() {
+                        _isEditMode = true;
+                        _showEditNameValidation = false;
+                        _showEditDescriptionValidation = false;
+                        _showEditRepoValidation = false;
+                      });
                       _loadHackatimeData();
                     } else if (value == 'delete') {
                       _showDeleteConfirmation();
@@ -2608,12 +2679,27 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           _isEditMode
               ? TextField(
                   controller: _descriptionController,
+                  minLines: 3,
                   maxLines: 4,
+                  maxLength: 500,
+                  onChanged: (_) {
+                    setState(() => _showEditDescriptionValidation = true);
+                  },
                   style: textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Project Description',
+                    labelText: 'Description',
+                    hintText:
+                        'A powerful operating system built from scratch...',
+                    helperText:
+                        _showEditDescriptionValidation &&
+                            _projectDescriptionError != null
+                        ? null
+                        : '50-500 characters',
+                    errorText: _showEditDescriptionValidation
+                        ? _projectDescriptionError
+                        : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -2704,9 +2790,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 Expanded(
                   child: TextField(
                     controller: _githubRepoController,
+                    onChanged: (_) {
+                      setState(() => _showEditRepoValidation = true);
+                    },
                     style: textTheme.bodyMedium,
                     decoration: InputDecoration(
-                      hintText: 'GitHub Repository URL',
+                      labelText: 'Repository URL',
+                      hintText: 'https://github.com/username/my-awesome-os',
+                      helperText:
+                          _showEditRepoValidation &&
+                              _projectRepositoryError != null
+                          ? null
+                          : 'Any valid Git hosting URL (GitHub, GitLab, Bitbucket, etc.)',
+                      errorText: _showEditRepoValidation
+                          ? _projectRepositoryError
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -2760,6 +2858,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     return TextField(
                       controller: controller,
                       focusNode: focusNode,
+                      maxLength: 20,
                       style: textTheme.bodyMedium,
                       decoration: InputDecoration(
                         hintText: 'Add a tag',
@@ -2897,6 +2996,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   onPressed: () {
                     setState(() {
                       _isEditMode = false;
+                      _showEditNameValidation = false;
+                      _showEditDescriptionValidation = false;
+                      _showEditRepoValidation = false;
                       _titleController.text = _project.title;
                       _descriptionController.text = _project.description;
                       _githubRepoController.text = _project.githubRepo;
@@ -3081,14 +3183,37 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ElevatedButton(
-                    onPressed: (UserService.currentUser?.verificationStatus ?? false) == false || _project.shipped || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null)
+                    onPressed:
+                        (UserService.currentUser?.verificationStatus ??
+                                    false) ==
+                                false ||
+                            _project.shipped ||
+                            (UserService.currentUser == null) ||
+                            (UserService.currentUser?.yswsEligible == false) ||
+                            (UserService.currentUser?.yswsEligible == null)
                         ? null
                         : () => _showShipConfirmationDialog(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: (_project.shipped || (UserService.currentUser?.verificationStatus ?? false) == false || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null))
+                      backgroundColor:
+                          (_project.shipped ||
+                              (UserService.currentUser?.verificationStatus ??
+                                      false) ==
+                                  false ||
+                              (UserService.currentUser == null) ||
+                              (UserService.currentUser?.yswsEligible ==
+                                  false) ||
+                              (UserService.currentUser?.yswsEligible == null))
                           ? colorScheme.outline
                           : null,
-                      foregroundColor: (_project.shipped || (UserService.currentUser?.verificationStatus ?? false) == false || (UserService.currentUser == null) || (UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null))
+                      foregroundColor:
+                          (_project.shipped ||
+                              (UserService.currentUser?.verificationStatus ??
+                                      false) ==
+                                  false ||
+                              (UserService.currentUser == null) ||
+                              (UserService.currentUser?.yswsEligible ==
+                                  false) ||
+                              (UserService.currentUser?.yswsEligible == null))
                           ? colorScheme.onSurfaceVariant
                           : null,
                       padding: EdgeInsets.symmetric(
@@ -3127,7 +3252,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ),
                       ],
                     ),
-                  ] else if ((UserService.currentUser?.verificationStatus ?? false) == false) ...[
+                  ] else if ((UserService.currentUser?.verificationStatus ??
+                          false) ==
+                      false) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -3147,7 +3274,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         ),
                       ],
                     ),
-                  ] else if ((UserService.currentUser?.yswsEligible == false) || (UserService.currentUser?.yswsEligible == null)) ...[
+                  ] else if ((UserService.currentUser?.yswsEligible == false) ||
+                      (UserService.currentUser?.yswsEligible == null)) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -3508,18 +3636,66 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   Future<void> _handleSaveProject() async {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    final repoUrl = _githubRepoController.text.trim();
+
+    setState(() {
+      _showEditNameValidation = true;
+      _showEditDescriptionValidation = true;
+      _showEditRepoValidation = true;
+    });
+
+    final nameError = _projectNameError;
+    if (nameError != null) {
+      GlobalNotificationService.instance.showError(nameError);
+      return;
+    }
+
+    final descriptionError = _projectDescriptionError;
+    if (descriptionError != null) {
+      GlobalNotificationService.instance.showError(descriptionError);
+      return;
+    }
+
+    final repoError = _projectRepositoryError;
+    if (repoError != null) {
+      GlobalNotificationService.instance.showError(repoError);
+      return;
+    }
+
+    if (_selectedHackatimeProjects.isNotEmpty) {
+      final normalizedSelections = _selectedHackatimeProjects
+          .map((name) => name.toLowerCase())
+          .toSet();
+      final conflictingSelections = normalizedSelections
+          .where(_claimedHackatimeProjects.contains)
+          .toList();
+      if (conflictingSelections.isNotEmpty) {
+        GlobalNotificationService.instance.showError(
+          'One or more selected Hackatime projects are already linked to another build.',
+        );
+        return;
+      }
+    }
+
     try {
       setState(() {
-        _project.title = _titleController.text;
-        _project.description = _descriptionController.text;
-        _project.githubRepo = _githubRepoController.text;
+        _project.title = title;
+        _project.description = description;
+        _project.githubRepo = repoUrl;
         _project.hackatimeProjects = _selectedHackatimeProjects;
-        _isEditMode = false;
       });
 
       await ProjectService.updateProject(_project);
 
       if (!mounted) return;
+      setState(() {
+        _isEditMode = false;
+        _showEditNameValidation = false;
+        _showEditDescriptionValidation = false;
+        _showEditRepoValidation = false;
+      });
       GlobalNotificationService.instance.showSuccess(
         'Project updated successfully!',
       );
@@ -3794,8 +3970,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       const SizedBox(height: 8),
                     ],
                     // Ratings section
-                    if (ship.technicality > 0 || 
-                        ship.functionality > 0 || 
+                    if (ship.technicality > 0 ||
+                        ship.functionality > 0 ||
                         ship.ux > 0) ...[
                       const SizedBox(height: 8),
                       Container(
@@ -3824,9 +4000,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 const SizedBox(width: 6),
                                 Text(
                                   'Ratings',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
+                                  style: Theme.of(context).textTheme.bodyMedium
                                       ?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: Theme.of(
@@ -3845,13 +4019,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 children: [
                                   Text(
                                     'Technicality',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
                                   ),
                                   Row(
                                     children: List.generate(
@@ -3863,10 +4036,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                         size: 16,
                                         color: index < ship.technicality
                                             ? TerminalColors.yellow
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.outline
-                                                .withValues(alpha: 0.3),
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .outline
+                                                  .withValues(alpha: 0.3),
                                         fill: index < ship.technicality
                                             ? 1.0
                                             : 0.0,
@@ -3884,17 +4057,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    _project.level.toLowerCase()
-                                            .contains('scratch')
+                                    _project.level.toLowerCase().contains(
+                                          'scratch',
+                                        )
                                         ? 'Functionality'
                                         : 'Originality',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
                                   ),
                                   Row(
                                     children: List.generate(
@@ -3906,10 +4079,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                         size: 16,
                                         color: index < ship.functionality
                                             ? TerminalColors.yellow
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.outline
-                                                .withValues(alpha: 0.3),
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .outline
+                                                  .withValues(alpha: 0.3),
                                         fill: index < ship.functionality
                                             ? 1.0
                                             : 0.0,
@@ -3928,13 +4101,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 children: [
                                   Text(
                                     'User Experience (UX)',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
                                   ),
                                   Row(
                                     children: List.generate(
@@ -3946,10 +4118,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                         size: 16,
                                         color: index < ship.ux
                                             ? TerminalColors.yellow
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.outline
-                                                .withValues(alpha: 0.3),
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .outline
+                                                  .withValues(alpha: 0.3),
                                         fill: index < ship.ux ? 1.0 : 0.0,
                                       ),
                                     ),

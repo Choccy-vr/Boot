@@ -732,7 +732,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Optionally select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project.',
+              'Optionally select one or more Hackatime projects to link their tracked time to this build. Each Hackatime project can only be linked to a single Boot project. \nDo note that you must link one eventually. It is optional in case you do not have a Hackatime project yet.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
