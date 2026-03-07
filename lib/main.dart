@@ -46,7 +46,7 @@ const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
 
 // Maintenance Mode - Set to true to enable, false to disable
-bool isMaintenanceModeEnabled = !isRunningOnLocalhost();
+bool isMaintenanceModeEnabled = false;
 const String hackatimeBannedRoute = '/hackatime-banned';
 bool isHackatimeBanned = false;
 String? hackatimeBanReason;
