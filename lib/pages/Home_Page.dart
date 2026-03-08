@@ -11,6 +11,7 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/notifications/notifications.dart';
 import '/services/misc/deferred_pages.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -181,6 +182,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 SizedBox(height: Responsive.spacing(context) * 1.5),
                 if (!_isHackatimeBanned) ...[
                   _buildNavigationGrid(colorScheme, textTheme),
+                  if (_shouldShowSetupEnvironment()) ...[
+                    SizedBox(height: Responsive.spacing(context) * 1.5),
+                    _buildSetupEnvironmentSection(colorScheme, textTheme),
+                  ],
                   SizedBox(height: Responsive.spacing(context) * 1.5),
                   _buildBottomSection(colorScheme, textTheme),
                 ],
@@ -566,6 +571,206 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
       ],
+    );
+  }
+
+  bool _shouldShowSetupEnvironment() {
+    final user = UserService.currentUser;
+    if (user == null) return false;
+    return !_isSetupEnvironmentComplete(user);
+  }
+
+  bool _isSetupEnvironmentComplete(BootUser user) {
+    final isFirstLoginDone = true;
+    final isIdentityVerified =
+        (user.yswsEligible ?? false) && (user.verificationStatus ?? false);
+    final hasProject = user.totalProjects > 0;
+    final hasDevlog = user.devlogs > 0;
+
+    return isFirstLoginDone && isIdentityVerified && hasProject && hasDevlog;
+  }
+
+  Future<void> openInNewTab(String url) async {
+    final uri = Uri.parse(url);
+
+    final ok = await launchUrl(
+      uri,
+      webOnlyWindowName: '_blank', // new tab
+    );
+
+    if (!ok) {
+      throw Exception('Could not open $url');
+    }
+  }
+
+  Widget _buildSetupEnvironmentSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final user = UserService.currentUser;
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    final steps = [
+      (
+        title: 'First login',
+        description: 'Hi! Welcome to Boot!',
+        completed: true,
+        onTap: null,
+      ),
+      (
+        title: 'Verify identity',
+        description: 'We gotta make sure you are actually a teen.',
+        completed:
+            (user.yswsEligible ?? false) && (user.verificationStatus ?? false),
+        onTap: () {
+          openInNewTab("https://auth.hackclub.com/");
+        },
+      ),
+      (
+        title: 'Create a project',
+        description: 'Lets see what kind of OS you are going to build.',
+        completed: user.totalProjects > 0,
+        onTap: () {
+          NavigationService.navigateTo(
+            context: context,
+            destination: AppDestination.createProject,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          );
+        },
+      ),
+      (
+        title: 'Make a devlog',
+        description: 'Tell us what you did. (You have to do this regularly)',
+        completed: user.devlogs > 0,
+        onTap: () {
+          NavigationService.navigateTo(
+            context: context,
+            destination: AppDestination.project,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          );
+        },
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Symbols.task_alt, color: colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'Setup enviroment',
+              style: textTheme.headlineSmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Card(
+          color: colorScheme.surfaceContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                for (int i = 0; i < steps.length; i++) ...[
+                  _buildSetupStepCard(
+                    title: steps[i].title,
+                    description: steps[i].description,
+                    completed: steps[i].completed,
+                    onTap: steps[i].onTap,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                  ),
+                  if (i < steps.length - 1) const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSetupStepCard({
+    required String title,
+    required String description,
+    required bool completed,
+    required VoidCallback? onTap,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    final stepColor = completed ? colorScheme.primary : colorScheme.tertiary;
+
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        color: colorScheme.surfaceContainerHigh,
+        elevation: 1,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      completed
+                          ? Symbols.check_circle
+                          : Symbols.radio_button_unchecked,
+                      color: stepColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: completed ? colorScheme.onSurface : stepColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      completed ? 'DONE' : 'TODO',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: stepColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
