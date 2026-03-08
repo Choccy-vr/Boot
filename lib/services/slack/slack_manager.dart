@@ -17,4 +17,19 @@ class SlackManager {
       throw Exception('Failed to send Slack message: ${e.toString()}');
     }
   }
+
+  static Future<void> inviteToChannel(String channelId) async {
+    try {
+      await SupabaseEdgeFunction.invokeFunction(
+        'slack-invite',
+        payload: {
+          'destination': channelId,
+        },
+      );
+      AppLogger.info('User invited to Slack channel $channelId');
+    } catch (e, stack) {
+      AppLogger.error('Failed to invite user to Slack channel $channelId', e, stack);
+      throw Exception('Failed to invite user to Slack channel: ${e.toString()}');
+    }
+  }
 }
