@@ -64,7 +64,7 @@ class StorageService {
 
     for (final file in files) {
       _validateExtension(file);
-      final objectPath = '$dirPath/${file.name}';
+      final objectPath = '$dirPath/${_sanitizeFileName(file.name)}';
 
       try {
         await _uploadPlatformFile(file, objectPath);
@@ -145,6 +145,21 @@ class StorageService {
     if (!_allowedExtensions.contains(ext)) {
       throw Exception('Unsupported file type: .$ext');
     }
+  }
+
+  static String _sanitizeFileName(String name) {
+    final dotIndex = name.lastIndexOf('.');
+    final base = dotIndex > 0 ? name.substring(0, dotIndex) : name;
+    final ext  = dotIndex > 0 ? name.substring(dotIndex + 1).toLowerCase() : '';
+    final safeBase = base
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^[_.-]+|[_.-]+$'), '')
+        .toLowerCase();
+    final fallback = safeBase.isEmpty
+        ? 'file_${DateTime.now().millisecondsSinceEpoch}'
+        : safeBase;
+    return ext.isEmpty ? fallback : '$fallback.$ext';
   }
 
   static String _detectMimeType(String filename) {
