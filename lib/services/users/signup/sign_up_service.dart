@@ -40,8 +40,8 @@ class SignupService {
         message:
             "Hey ${UserService.currentUser?.username}, welcome to Boot! :roblox-wave:\n\nYS: Your own OS\nWS: Hardware to run it\n\nYou can get started by creating your first project if you haven't already.\n\nHere are some fun things you can do:  \n1. Explore other OSes in the explore page.\n2. See who is ranking the best on the leaderboards\n3. Check out some bounties",
       );
-      await SlackManager.inviteToChannel('C09EWDU9ZQT'); //#boot
-      await SlackManager.inviteToChannel('C0A0KT9CDP0'); //#boot-announcements
+      //await SlackManager.inviteToChannel('C09EWDU9ZQT'); //#boot
+      //await SlackManager.inviteToChannel('C0A0KT9CDP0'); //#boot-announcements
 
     } catch (e) {
       throw Exception('Profile update failed: ${e.toString()}');
