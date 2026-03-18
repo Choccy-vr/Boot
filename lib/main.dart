@@ -20,7 +20,6 @@ import 'pages/Explore/Explore_Page.dart' deferred as explore_page;
 import 'pages/Challenges/Challenge_page.dart' deferred as challenge_page;
 import 'pages/Reviewer/Reviewer_Page.dart' deferred as reviewer_page;
 import 'pages/not_found_page.dart';
-import 'pages/Debug_Page.dart';
 import 'pages/Maintenance_Page.dart';
 import 'pages/Admin/Admin_Page.dart' deferred as admin_page;
 import 'pages/Shop/Shop_Page.dart' deferred as shop_page;
@@ -52,30 +51,31 @@ bool isHackatimeBanned = false;
 String? hackatimeBanReason;
 
 bool get _isBootAccessRestricted =>
-  isHackatimeBanned || (hackatimeBanReason?.isNotEmpty ?? false);
+    isHackatimeBanned || (hackatimeBanReason?.isNotEmpty ?? false);
 
 bool _containsBannedReason(String? rawReason) {
   if (rawReason == null) return false;
   final normalized = rawReason.toLowerCase();
   return normalized.contains('banned') ||
-    normalized.contains('ban') ||
-    normalized.contains('trust factor') ||
-    normalized.contains('fraud');
+      normalized.contains('ban') ||
+      normalized.contains('trust factor') ||
+      normalized.contains('fraud');
 }
 
 bool isRunningOnLocalhost() {
   if (!kIsWeb) return kDebugMode;
-  
+
   try {
     final hostname = Uri.base.host;
-    return hostname == 'localhost' || 
-           hostname == '127.0.0.1' || 
-            hostname.startsWith('localhost:') ||
-            hostname.startsWith('127.0.0.1:');
-} catch (e) {
+    return hostname == 'localhost' ||
+        hostname == '127.0.0.1' ||
+        hostname.startsWith('localhost:') ||
+        hostname.startsWith('127.0.0.1:');
+  } catch (e) {
     return false;
   }
 }
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
@@ -134,11 +134,11 @@ Future<void> _handleHackClubCallback() async {
         final authErrorDescription =
             callbackUri.queryParameters['error_description'];
         final authReason = callbackUri.queryParameters['reason'];
-        final combinedReason =
-            [authError, authErrorDescription, authReason]
-                .whereType<String>()
-                .join(' ')
-                .trim();
+        final combinedReason = [
+          authError,
+          authErrorDescription,
+          authReason,
+        ].whereType<String>().join(' ').trim();
 
         if (_containsBannedReason(combinedReason)) {
           isHackatimeBanned = true;
@@ -175,6 +175,7 @@ Future<void> _refreshHackatimeBanRestriction() async {
 
   final banned = await HackatimeService.isHackatimeBanned(
     slackUserId: slackUserId,
+    hcaUserId: UserService.currentUser?.hcUserId ?? '',
   );
 
   isHackatimeBanned = banned;
@@ -225,16 +226,14 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   // Maintenance mode check - allow owners through, show maintenance page to everyone else
   if (isMaintenanceModeEnabled) {
     final isOwner = currentRole == UserRole.owner;
-    final isLoginOrSignupPage = segments.isEmpty || 
-                                 segments.first == 'login' || 
-                                 segments.first == 'signup';
-    
+    final isLoginOrSignupPage =
+        segments.isEmpty ||
+        segments.first == 'login' ||
+        segments.first == 'signup';
+
     // If not an owner and not trying to access login/signup, show maintenance page
     if (!isOwner && !isLoginOrSignupPage) {
-      return _buildRoute(
-        child: const MaintenancePage(),
-        name: '/maintenance',
-      );
+      return _buildRoute(child: const MaintenancePage(), name: '/maintenance');
     }
   }
 
@@ -262,17 +261,17 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       requiresAuth = false;
       break;
     case 'login':
-    final email = Uri.base.queryParameters['email'];
-    if(email != null && email.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Authentication.signInWithHackClub(email: email);
-      });
+      final email = Uri.base.queryParameters['email'];
+      if (email != null && email.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Authentication.signInWithHackClub(email: email);
+        });
 
-      page = const _LoadingScaffold();
-      routeName = '/login';
-      requiresAuth = false;
-      break;
-    }
+        page = const _LoadingScaffold();
+        routeName = '/login';
+        requiresAuth = false;
+        break;
+      }
       page = const LoginPage();
       routeName = '/login';
       requiresAuth = false;
@@ -377,10 +376,6 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
         placeholder: const _LoadingScaffold(),
       );
       routeName = '/reviewer';
-      break;
-    case 'debug':
-      page = const DebugPage();
-      routeName = '/debug';
       break;
     case 'admin':
       requiredRoles = {UserRole.admin, UserRole.owner};
@@ -498,10 +493,9 @@ class _BanAccessGateState extends State<BanAccessGate> {
     if (_isBootAccessRestricted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          hackatimeBannedRoute,
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(hackatimeBannedRoute, (route) => false);
       });
     }
   }
@@ -728,7 +722,8 @@ class _ProjectLoaderPageState extends State<ProjectLoaderPage> {
 
     // Fetch project by ID if not in arguments
     return FutureBuilder<Project?>(
-      future: _projectFuture ??
+      future:
+          _projectFuture ??
           (_projectFuture = ProjectService.getProjectById(widget.projectId)),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {

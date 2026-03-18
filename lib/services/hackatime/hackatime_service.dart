@@ -4,8 +4,19 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '/services/notifications/notifications.dart';
+import '/services/users/User.dart';
 
 class HackatimeService {
+  static String _resolveSlackUserId(String slackUserId) {
+    if (slackUserId.isNotEmpty) return slackUserId;
+    return UserService.currentUser?.slackUserId ?? '';
+  }
+
+  static String _resolveHcaUserId(String hcaUserId) {
+    if (hcaUserId.isNotEmpty) return hcaUserId;
+    return UserService.currentUser?.hcUserId ?? '';
+  }
+
   static String _getErrorMessage(int statusCode, String defaultMessage) {
     if (statusCode == 403 || statusCode == 404) {
       return 'Hackatime is most likely down or unavailable (Error: $defaultMessage Status: $statusCode)';
@@ -15,40 +26,69 @@ class HackatimeService {
 
   static Future<List<HackatimeProject>> fetchHackatimeProjects({
     required String slackUserId,
+    required String hcaUserId,
     BuildContext? context,
   }) async {
-    if (slackUserId.isEmpty) {
-      AppLogger.warning('Cannot fetch Hackatime projects: No Slack user ID');
+    final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
+    final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
+
+    if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+      AppLogger.warning(
+        'Cannot fetch Hackatime projects: No Slack or HCA user ID available',
+      );
       return [];
     }
-    
+
     try {
-      final url = Uri.parse(
-        'https://hackatime.hackclub.com/api/v1/users/$slackUserId/stats?features=projects',
-      );
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final decoded = response.body.isNotEmpty
-            ? jsonDecode(response.body)
-            : {};
-        final List<dynamic> projects = decoded['data']?['projects'] ?? [];
-        return projects.map((project) {
-          return HackatimeProject.fromJson(project);
-        }).toList();
-      } else {
+      if (resolvedSlackUserId.isNotEmpty) {
+        final url = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/stats?features=projects',
+        );
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final decoded = response.body.isNotEmpty
+              ? jsonDecode(response.body)
+              : {};
+          final List<dynamic> projects = decoded['data']?['projects'] ?? [];
+          return projects.map((project) {
+            return HackatimeProject.fromJson(project);
+          }).toList();
+        }
+
         AppLogger.warning(
-          'Hackatime project fetch failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
+          'Hackatime project fetch failed for Slack user $resolvedSlackUserId with status ${response.statusCode}: ${response.body}. Trying with HCA id instead.',
+        );
+      }
+
+      if (resolvedHcaUserId.isNotEmpty) {
+        final hcaURL = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/stats?features=projects',
+        );
+        final hcaResponse = await http.get(hcaURL);
+        if (hcaResponse.statusCode == 200) {
+          final decoded = hcaResponse.body.isNotEmpty
+              ? jsonDecode(hcaResponse.body)
+              : {};
+          final List<dynamic> projects = decoded['data']?['projects'] ?? [];
+          return projects.map((project) {
+            return HackatimeProject.fromJson(project);
+          }).toList();
+        }
+
+        AppLogger.warning(
+          'Hackatime project fetch failed with HCA id for user $resolvedHcaUserId with status ${hcaResponse.statusCode}: ${hcaResponse.body}',
         );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => GlobalNotificationService.instance.showError(
-            'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to load projects')}',
+            'Hackatime Error: ${_getErrorMessage(hcaResponse.statusCode, 'Failed to load projects')}',
           ),
         );
-        return [];
       }
+
+      return [];
     } catch (e, stack) {
       AppLogger.error(
-        'Network error loading Hackatime projects for user $slackUserId',
+        'Network error loading Hackatime projects for user $resolvedSlackUserId',
         e,
         stack,
       );
@@ -63,31 +103,62 @@ class HackatimeService {
 
   static Future<bool> isHackatimeBanned({
     required String slackUserId,
+    required String hcaUserId,
     BuildContext? context,
   }) async {
-    if (slackUserId.isEmpty) return true;
-    
-    try {
-      final url = Uri.parse(
-        'https://hackatime.hackclub.com/api/v1/users/$slackUserId/trust_factor',
+    final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
+    final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
+
+    if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+      AppLogger.warning(
+        'Hackatime ban check skipped: No Slack or HCA user ID available',
       );
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final decoded = response.body.isNotEmpty
-            ? jsonDecode(response.body)
-            : {};
-        final String? trustLevel = decoded['trust_level'];
-        if (trustLevel == 'red') return true;
-        return false;
-      } else {
-        AppLogger.warning(
-          'Hackatime ban check failed for user $slackUserId with status ${response.statusCode}: ${response.body}',
+      return true;
+    }
+
+    try {
+      if (resolvedSlackUserId.isNotEmpty) {
+        final url = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/trust_factor',
         );
-        return true;
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final decoded = response.body.isNotEmpty
+              ? jsonDecode(response.body)
+              : {};
+          final String? trustLevel = decoded['trust_level'];
+          if (trustLevel == 'red') return true;
+          return false;
+        }
+
+        AppLogger.warning(
+          'Hackatime ban check failed for Slack user $resolvedSlackUserId with status ${response.statusCode}: ${response.body}. Trying with HCA id instead.',
+        );
       }
+
+      if (resolvedHcaUserId.isNotEmpty) {
+        final hcaUrl = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/trust_factor',
+        );
+        final hcaResponse = await http.get(hcaUrl);
+        if (hcaResponse.statusCode == 200) {
+          final decoded = hcaResponse.body.isNotEmpty
+              ? jsonDecode(hcaResponse.body)
+              : {};
+          final String? trustLevel = decoded['trust_level'];
+          if (trustLevel == 'red') return true;
+          return false;
+        }
+
+        AppLogger.warning(
+          'Hackatime ban check also failed with HCA id for user $resolvedHcaUserId with status ${hcaResponse.statusCode}: ${hcaResponse.body}',
+        );
+      }
+
+      return true;
     } catch (e, stack) {
       AppLogger.error(
-        'Network error checking Hackatime ban status for user $slackUserId',
+        'Network error checking Hackatime ban status for user $resolvedSlackUserId',
         e,
         stack,
       );
@@ -98,15 +169,19 @@ class HackatimeService {
   static Future<Project> getProjectTime({
     required Project project,
     required String slackUserId,
+    required String hcaUserId,
     BuildContext? context,
   }) async {
     try {
       final projects = await fetchHackatimeProjects(
         slackUserId: slackUserId,
+        hcaUserId: hcaUserId,
         context: context,
       );
       if (projects.isEmpty) {
-        AppLogger.warning('Hackatime projects list empty for user $slackUserId');
+        AppLogger.warning(
+          'Hackatime projects list empty for user $slackUserId',
+        );
       }
       if (project.hackatimeProjects.isEmpty) {
         project.time = 0;

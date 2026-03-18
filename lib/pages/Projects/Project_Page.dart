@@ -313,6 +313,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     try {
       final projects = await HackatimeService.fetchHackatimeProjects(
         slackUserId: UserService.currentUser?.slackUserId ?? '',
+        hcaUserId: UserService.currentUser?.hcUserId ?? '',
       );
 
       if (!mounted) return;
@@ -445,6 +446,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       final updatedProject = await HackatimeService.getProjectTime(
         project: _project,
         slackUserId: UserService.currentUser?.slackUserId ?? '',
+        hcaUserId: UserService.currentUser?.hcUserId ?? '',
         context: context,
       );
 
@@ -610,6 +612,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         final updatedProject = await HackatimeService.getProjectTime(
           project: _project,
           slackUserId: UserService.currentUser?.slackUserId ?? '',
+          hcaUserId: UserService.currentUser?.hcUserId ?? '',
           context: context,
         );
 

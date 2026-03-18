@@ -101,6 +101,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final isBanned = await HackatimeService.isHackatimeBanned(
         slackUserId: slackUserId,
+        hcaUserId: UserService.currentUser?.hcUserId ?? '',
         context: context,
       );
       if (!mounted) return;

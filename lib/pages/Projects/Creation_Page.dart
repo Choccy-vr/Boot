@@ -155,6 +155,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     try {
       final projects = await HackatimeService.fetchHackatimeProjects(
         slackUserId: UserService.currentUser?.slackUserId ?? '',
+        hcaUserId: UserService.currentUser?.hcUserId ?? '',
         context: context,
       );
       if (!mounted) return;

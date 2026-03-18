@@ -150,7 +150,7 @@ class StorageService {
   static String _sanitizeFileName(String name) {
     final dotIndex = name.lastIndexOf('.');
     final base = dotIndex > 0 ? name.substring(0, dotIndex) : name;
-    final ext  = dotIndex > 0 ? name.substring(dotIndex + 1).toLowerCase() : '';
+    final ext = dotIndex > 0 ? name.substring(dotIndex + 1).toLowerCase() : '';
     final safeBase = base
         .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
         .replaceAll(RegExp(r'_+'), '_')
