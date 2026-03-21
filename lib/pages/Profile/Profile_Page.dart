@@ -23,10 +23,10 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   List<Project> _userProjects = [];
   List<Devlog> _userDevlogs = [];
-  List<Project> _likedProjects = [];
+  final List<Project> _likedProjects = [];
   bool _isLoadingProjects = true;
   bool _isLoadingDevlogs = true;
-  bool _isLoadingLikedProjects = true;
+  final bool _isLoadingLikedProjects = true;
   bool _isHoveringProfilePic = false;
   bool _isEditingBio = false;
   bool _isEditingUsername = false;

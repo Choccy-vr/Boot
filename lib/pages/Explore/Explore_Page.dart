@@ -30,8 +30,8 @@ class _ExplorePageState extends State<ExplorePage>
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _sortBy = 'recent'; // recent, favorites, hours
-  List<String> _selectedTags = [];
-  List<String> _allAvailableTags = [];
+  final List<String> _selectedTags = [];
+  final List<String> _allAvailableTags = [];
   List<Project> _filteredProjects = [];
 
   @override

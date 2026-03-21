@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 //Theme Data
@@ -24,7 +23,6 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
 import '../../services/Storage/storage.dart';
-import '/services/supabase/DB/functions/supabase_db_functions.dart';
 import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
 import '/theme/responsive.dart';
@@ -82,6 +80,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   bool _isEditMode = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _aiStatementController = TextEditingController();
   final TextEditingController _githubRepoController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
   TextEditingController? _currentTagController;
@@ -159,6 +158,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _project = widget.project;
     _titleController.text = _project.title;
     _descriptionController.text = _project.description;
+    _aiStatementController.text = _project.aiStatement;
     _githubRepoController.text = _project.githubRepo;
     _tagsController.text = _project.tags.join(', ');
     _selectedHackatimeProjects = List<String>.from(_project.hackatimeProjects);
@@ -382,6 +382,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     _devlogDescriptionController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
+    _aiStatementController.dispose();
     _githubRepoController.dispose();
     _tagsController.dispose();
     _hackatimeSearchController.dispose();
@@ -2747,6 +2748,63 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   ),
                 ),
+          if (_isEditMode || _project.aiStatement.trim().isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'AI Statement',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (_isEditMode)
+                  Text(
+                    'Optional',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _isEditMode
+                ? TextField(
+                    controller: _aiStatementController,
+                    minLines: 2,
+                    maxLines: 4,
+                    maxLength: 500,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'AI Statement (Optional)',
+                      hintText: 'Used AI? Tell us what you used it for here.',
+                      helperText:
+                          'Share which AI tools you used and what they helped with.',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  )
+                : Text(
+                    _project.aiStatement,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      height: 1.5,
+                    ),
+                  ),
+          ],
           const SizedBox(height: 32),
           if (_project.tags.isNotEmpty) ...[
             Row(
@@ -3004,6 +3062,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       _showEditRepoValidation = false;
                       _titleController.text = _project.title;
                       _descriptionController.text = _project.description;
+                      _aiStatementController.text = _project.aiStatement;
                       _githubRepoController.text = _project.githubRepo;
                       _tagsController.text = _project.tags.join(', ');
                       _selectedHackatimeProjects = List<String>.from(
@@ -3641,6 +3700,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   Future<void> _handleSaveProject() async {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
+    final aiStatement = _aiStatementController.text.trim();
     final repoUrl = _githubRepoController.text.trim();
 
     setState(() {
@@ -3686,6 +3746,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       setState(() {
         _project.title = title;
         _project.description = description;
+        _project.aiStatement = aiStatement;
         _project.githubRepo = repoUrl;
         _project.hackatimeProjects = _selectedHackatimeProjects;
       });

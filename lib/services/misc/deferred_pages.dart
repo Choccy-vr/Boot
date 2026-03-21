@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import 'package:boot_app/pages/Projects/My_Projects_Page.dart'
     deferred as projects_page;
 import 'package:boot_app/pages/Projects/Project_Page.dart'

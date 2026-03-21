@@ -105,8 +105,8 @@ serve(async (req) => {
     }
 
     if (path.startsWith("prizes/")) {
-      const match = path.match(/^prizes\/(\d+)\//);
-      if (!match) {
+      const prizePath = path.slice("prizes/".length);
+      if (!prizePath || prizePath.startsWith("/") || prizePath.includes("..")) {
         throw new Error("Invalid upload path");
       }
 

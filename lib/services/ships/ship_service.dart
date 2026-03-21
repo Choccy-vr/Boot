@@ -230,7 +230,7 @@ class ShipService {
       await SlackManager.sendMessage(
         destination: user?.slackUserId ?? '',
         message:
-            "Uh oh! :uhoh:\n\nYour Boot project ${project?.title} has been rejected. :surprised:\n\nDon't worry, you just have to change a few things.\n\nLuckily, @<${reviewer?.slackUserId}> left you some notes\n\n*${comment}*\n\nKeep at it. When you are ready, just ship it again.",
+            "Uh oh! :uhoh:\n\nYour Boot project ${project?.title} has been rejected. :surprised:\n\nDon't worry, you just have to change a few things.\n\nLuckily, @<${reviewer?.slackUserId}> left you some notes\n\n*$comment*\n\nKeep at it. When you are ready, just ship it again.",
       );
     } catch (e, stack) {
       AppLogger.error('Error denying ship $shipId', e, stack);

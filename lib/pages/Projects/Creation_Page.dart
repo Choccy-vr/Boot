@@ -30,6 +30,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
 
   final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _aiStatementController = TextEditingController();
   final TextEditingController _repositoryController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
 
@@ -37,8 +38,8 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   String _selectedArchitecture = 'x86_64';
   final List<String> _selectedHackatimeProjects = [];
   final List<String> _projectTags = [];
-  List<String> _filteredSuggestions = [];
-  bool _showTagSuggestions = false;
+  final List<String> _filteredSuggestions = [];
+  final bool _showTagSuggestions = false;
   TextEditingController? _currentTagController;
   Set<String> _claimedHackatimeProjects = {};
   final TextEditingController _hackatimeSearchController =
@@ -123,8 +124,9 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   String? get _repositoryError {
     final text = _repositoryController.text.trim();
     if (text.isEmpty) return 'Repository URL is required';
-    if (!_isValidGitRepoUrl(text))
+    if (!_isValidGitRepoUrl(text)) {
       return 'Enter a valid Git repository URL (GitHub, GitLab, Bitbucket, etc.)';
+    }
     return null;
   }
 
@@ -226,6 +228,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
     _typewriterController.dispose();
     _projectNameController.dispose();
     _descriptionController.dispose();
+    _aiStatementController.dispose();
     _repositoryController.dispose();
     super.dispose();
   }
@@ -361,6 +364,24 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                   Symbols.description,
                   color: colorScheme.onSurfaceVariant,
                 ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _aiStatementController,
+              minLines: 2,
+              maxLines: 4,
+              maxLength: 500,
+              style: TextStyle(color: colorScheme.onSurface),
+              decoration: InputDecoration(
+                labelText: 'AI Statement (Optional)',
+                hintText: 'Used AI? Tell us what you used it for here.',
+                helperText:
+                    'Describe which AI tools you used and what they helped with.',
+                alignLabelWithHint: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1026,6 +1047,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   Future<void> _createProject() async {
     final title = _projectNameController.text.trim();
     final description = _descriptionController.text.trim();
+    final aiStatement = _aiStatementController.text.trim();
     final repoUrl = _repositoryController.text.trim();
     final ownerId = UserService.currentUser?.id;
 
@@ -1095,6 +1117,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
         hackatimeProjects: _selectedHackatimeProjects,
         owner: ownerId,
         tags: _projectTags,
+        aiStatement: aiStatement,
       );
       if (!mounted) return;
 

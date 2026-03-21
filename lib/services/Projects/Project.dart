@@ -25,6 +25,7 @@ class Project {
   bool shipped;
   List<Challenge> pendingChallenges;
   List<int> pendingChallengeIds;
+  String aiStatement;
 
   Project({
     required this.title,
@@ -49,6 +50,7 @@ class Project {
     this.shipped = false,
     this.pendingChallenges = const [],
     this.pendingChallengeIds = const [],
+    this.aiStatement = '',
   });
 
   factory Project.fromRow(Map<String, dynamic> row) {
@@ -79,6 +81,7 @@ class Project {
       shipped: row['shipped'] ?? false,
       pendingChallenges: const [],
       pendingChallengeIds: List<int>.from(pendingChallengeIds),
+      aiStatement: row['ai_statement'] ?? '',
     );
   }
 
@@ -103,6 +106,7 @@ class Project {
     bool? shipped,
     List<Challenge>? pendingChallenges,
     List<int>? pendingChallengeIds,
+    String? aiStatement,
   }) {
     final map = <String, dynamic>{};
     if (title != null) map['name'] = title;
@@ -138,6 +142,7 @@ class Project {
     if (serializedPendingChallengeIds.isNotEmpty) {
       map['pending_challenges'] = serializedPendingChallengeIds;
     }
+    if (aiStatement != null) map['ai_statement'] = aiStatement;
     return map;
   }
 

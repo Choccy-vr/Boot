@@ -893,10 +893,11 @@ class _AdminPageState extends State<AdminPage> {
                             OutlinedButton.icon(
                               onPressed: () async {
                                 try {
+                                  final draftPrizeUploadPath =
+                                      'prizes/new_prize_${DateTime.now().millisecondsSinceEpoch}/image';
                                   final url =
                                       await StorageService.uploadFileWithPicker(
-                                        path:
-                                            'prizes/${DateTime.now().millisecondsSinceEpoch}',
+                                        path: draftPrizeUploadPath,
                                       );
                                   if (url != 'User cancelled') {
                                     final publicUrl =
@@ -1010,22 +1011,26 @@ class _AdminPageState extends State<AdminPage> {
                         specs: specsController.text,
                         customGrant: customGrant,
                         options: prizeOptions
-                            .map((o) => PrizeOption(
-                                  id: o['id'] ?? '',
-                                  createdAt: o['createdAt'] ?? DateTime.now(),
-                                  prizeId: prize?.id ?? '',
-                                  name: o['name'] ?? '',
-                                ))
+                            .map(
+                              (o) => PrizeOption(
+                                id: o['id'] ?? '',
+                                createdAt: o['createdAt'] ?? DateTime.now(),
+                                prizeId: prize?.id ?? '',
+                                name: o['name'] ?? '',
+                              ),
+                            )
                             .toList(),
                         optionValues: prizeOptionValues
-                            .map((v) => PrizeOptionValues(
-                                  id: v['id'] ?? '',
-                                  createdAt: v['createdAt'] ?? DateTime.now(),
-                                  optionId: v['optionId'] ?? '',
-                                  label: v['label'] ?? '',
-                                  priceModifier: v['priceModifier'] ?? 0,
-                                  stock: v['stock'] ?? 0,
-                                ))
+                            .map(
+                              (v) => PrizeOptionValues(
+                                id: v['id'] ?? '',
+                                createdAt: v['createdAt'] ?? DateTime.now(),
+                                optionId: v['optionId'] ?? '',
+                                label: v['label'] ?? '',
+                                priceModifier: v['priceModifier'] ?? 0,
+                                stock: v['stock'] ?? 0,
+                              ),
+                            )
                             .toList(),
                       );
                       Navigator.pop(context);
@@ -1087,15 +1092,13 @@ class _AdminPageState extends State<AdminPage> {
           'custom_grant': customGrant,
         },
       );
-      if(options.isNotEmpty){
-      await SupabaseDB.upsertData(
-        table: 'prize_options',
-        bulkData: options
-            .map((option) => option.toJson())
-            .toList(),
-      );
+      if (options.isNotEmpty) {
+        await SupabaseDB.upsertData(
+          table: 'prize_options',
+          bulkData: options.map((option) => option.toJson()).toList(),
+        );
       }
-      if(optionValues.isNotEmpty){
+      if (optionValues.isNotEmpty) {
         await SupabaseDB.upsertData(
           table: 'prize_option_values',
           bulkData: optionValues
@@ -1425,7 +1428,7 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                             const SizedBox(height: 8),
                             if (selectedRewardPrize != null)
-                              Container(
+                              SizedBox(
                                 height: 220,
                                 child: _buildShopPrizeCard(
                                   selectedRewardPrize!,
@@ -1577,7 +1580,7 @@ class _AdminPageState extends State<AdminPage> {
                             value: isActive,
                             onChanged: (value) =>
                                 setDialogState(() => isActive = value),
-                            activeColor: TerminalColors.green,
+                            activeThumbColor: TerminalColors.green,
                           ),
                         ],
                       ),
@@ -1900,7 +1903,7 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                             const SizedBox(height: 8),
                             if (selectedRewardPrize != null)
-                              Container(
+                              SizedBox(
                                 height: 220,
                                 child: _buildShopPrizeCard(
                                   selectedRewardPrize!,
@@ -2044,7 +2047,7 @@ class _AdminPageState extends State<AdminPage> {
                             value: isActive,
                             onChanged: (value) =>
                                 setDialogState(() => isActive = value),
-                            activeColor: TerminalColors.green,
+                            activeThumbColor: TerminalColors.green,
                           ),
                         ],
                       ),
@@ -2879,9 +2882,7 @@ class _AdminPageState extends State<AdminPage> {
                 }
               },
               icon: Icon(Symbols.add_circle_outline, size: 20),
-              style: IconButton.styleFrom(
-                foregroundColor: colorScheme.primary,
-              ),
+              style: IconButton.styleFrom(foregroundColor: colorScheme.primary),
             ),
           ],
         ),
@@ -2931,8 +2932,11 @@ class _AdminPageState extends State<AdminPage> {
 
                 return ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-                  childrenPadding:
-                      const EdgeInsets.only(left: 24, right: 12, bottom: 8),
+                  childrenPadding: const EdgeInsets.only(
+                    left: 24,
+                    right: 12,
+                    bottom: 8,
+                  ),
                   leading: Icon(
                     Symbols.label,
                     color: colorScheme.primary,
@@ -3038,10 +3042,10 @@ class _AdminPageState extends State<AdminPage> {
                                           const SizedBox(width: 4),
                                           Text(
                                             '${value['priceModifier'] >= 0 ? '+' : ''}${value['priceModifier']}',
-                                            style:
-                                                textTheme.bodySmall?.copyWith(
-                                              color: TerminalColors.yellow,
-                                            ),
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: TerminalColors.yellow,
+                                                ),
                                           ),
                                           const SizedBox(width: 12),
                                           Icon(
@@ -3052,10 +3056,10 @@ class _AdminPageState extends State<AdminPage> {
                                           const SizedBox(width: 4),
                                           Text(
                                             '${value['stock']}',
-                                            style:
-                                                textTheme.bodySmall?.copyWith(
-                                              color: colorScheme.secondary,
-                                            ),
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme.secondary,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -3066,11 +3070,11 @@ class _AdminPageState extends State<AdminPage> {
                                   onPressed: () async {
                                     final result =
                                         await _showEditOptionValueDialog(
-                                      value: value,
-                                      optionName: option['name'] ?? '',
-                                      colorScheme: colorScheme,
-                                      textTheme: textTheme,
-                                    );
+                                          value: value,
+                                          optionName: option['name'] ?? '',
+                                          colorScheme: colorScheme,
+                                          textTheme: textTheme,
+                                        );
                                     if (result != null) {
                                       final idx = prizeOptionValues.indexOf(
                                         value,
@@ -3276,13 +3280,13 @@ class _AdminPageState extends State<AdminPage> {
     required ColorScheme colorScheme,
     required TextTheme textTheme,
   }) async {
-    final labelController =
-        TextEditingController(text: value['label'] ?? '');
+    final labelController = TextEditingController(text: value['label'] ?? '');
     final priceModifierController = TextEditingController(
       text: (value['priceModifier'] ?? 0).toString(),
     );
-    final stockController =
-        TextEditingController(text: (value['stock'] ?? 0).toString());
+    final stockController = TextEditingController(
+      text: (value['stock'] ?? 0).toString(),
+    );
 
     return showDialog<Map<String, dynamic>>(
       context: context,

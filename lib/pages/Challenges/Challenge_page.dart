@@ -765,7 +765,7 @@ class _ChallengePageState extends State<ChallengePage>
                           const SizedBox(height: 2),
                           if (hasRewardPrize)
                             Text(
-                              rewardPrize!.title,
+                              rewardPrize.title,
                               style: textTheme.bodySmall?.copyWith(
                                 color: TerminalColors.yellow.withValues(
                                   alpha: 0.9,

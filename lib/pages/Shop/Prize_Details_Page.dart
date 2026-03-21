@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/services/prizes/Prize.dart';
-import '/services/users/User.dart';
-import '/services/notifications/notifications.dart';
 import '/widgets/shared_navigation_rail.dart';
 
 class PrizeDetailsPage extends StatefulWidget {

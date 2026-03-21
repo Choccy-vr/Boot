@@ -76,6 +76,7 @@ class ProjectService {
     required List<String>? hackatimeProjects,
     required String owner,
     List<String>? tags,
+    String? aiStatement,
   }) async {
     await SupabaseDB.insertData(
       table: 'projects',
@@ -89,6 +90,7 @@ class ProjectService {
         hackatimeProjects: hackatimeProjects,
         owner: owner,
         tags: tags,
+        aiStatement: aiStatement,
       ),
     );
     await SupabaseDBFunctions.callIncrementFunction(
@@ -141,6 +143,7 @@ class ProjectService {
         shipped: project.shipped,
         pendingChallenges: project.pendingChallenges,
         pendingChallengeIds: project.pendingChallengeIds,
+        aiStatement: project.aiStatement,
       ),
     );
   }

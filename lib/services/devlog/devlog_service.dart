@@ -1,14 +1,13 @@
-import 'package:boot_app/services/Projects/Project.dart';
 import 'package:boot_app/services/Projects/project_service.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:boot_app/services/supabase/DB/functions/supabase_db_functions.dart';
 import 'package:boot_app/services/Storage/storage.dart';
-import 'package:boot_app/services/users/User.dart';
 import 'Devlog.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:boot_app/services/misc/Utlity.dart';
+
 class DevlogService {
   static Future<List<Devlog>> getDevlogsByProjectId(String projectId) async {
     try {
@@ -108,7 +107,9 @@ class DevlogService {
         incrementBy: 1,
       );
 
-      final totalReadableTime = Utlity.formatReadableDuration(((project.time + time)* 3600).round());
+      final totalReadableTime = Utlity.formatReadableDuration(
+        ((project.time + time) * 3600).round(),
+      );
 
       await SupabaseDB.updateAndReturnData(
         table: 'projects',

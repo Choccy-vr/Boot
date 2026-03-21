@@ -6,7 +6,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/services/misc/logger.dart';
 import '/services/users/User.dart';
 import '/main.dart' show supabaseUrl, supabaseKey;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 
 class Authentication {
@@ -102,7 +101,8 @@ class Authentication {
               'client_id': _hackClubClientId!,
               'redirect_uri': _hackClubRedirectUri!,
               'response_type': 'code',
-              'scope': 'openid profile email slack_id verification_status address birthdate',
+              'scope':
+                  'openid profile email slack_id verification_status address birthdate',
               'state': _hackClubState!,
               if (email != null) 'login_hint': email,
             },

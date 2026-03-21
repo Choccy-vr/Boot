@@ -1,5 +1,4 @@
 import 'package:boot_app/services/slack/slack_manager.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/Auth.dart';
 import '/services/supabase/DB/supabase_db.dart';
@@ -42,7 +41,6 @@ class SignupService {
       );
       //await SlackManager.inviteToChannel('C09EWDU9ZQT'); //#boot
       //await SlackManager.inviteToChannel('C0A0KT9CDP0'); //#boot-announcements
-
     } catch (e) {
       throw Exception('Profile update failed: ${e.toString()}');
     }

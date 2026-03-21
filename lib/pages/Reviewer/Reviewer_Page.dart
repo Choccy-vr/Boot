@@ -24,7 +24,7 @@ class ReviewerPage extends StatefulWidget {
 
 class _ReviewerPageState extends State<ReviewerPage> {
   List<Ship> _unreviewedShips = [];
-  Map<int, Project> _projectCache = {};
+  final Map<int, Project> _projectCache = {};
   bool _isLoading = true;
 
   @override
@@ -321,10 +321,12 @@ class _ReviewerPageState extends State<ReviewerPage> {
     if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
     if (difference.inHours < 24) return '${difference.inHours}h ago';
     if (difference.inDays < 7) return '${difference.inDays}d ago';
-    if (difference.inDays < 30)
+    if (difference.inDays < 30) {
       return '${(difference.inDays / 7).floor()}w ago';
-    if (difference.inDays < 365)
+    }
+    if (difference.inDays < 365) {
       return '${(difference.inDays / 30).floor()}mo ago';
+    }
     return '${(difference.inDays / 365).floor()}y ago';
   }
 }
@@ -436,11 +438,11 @@ class ReviewDialog extends StatefulWidget {
 
 class _ReviewDialogState extends State<ReviewDialog> {
   int _step = 0;
-  Set<int> _selectedChallenges = {};
+  final Set<int> _selectedChallenges = {};
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _overrideHoursController =
       TextEditingController();
-    final TextEditingController _overrideJustificationController =
+  final TextEditingController _overrideJustificationController =
       TextEditingController();
   bool _isSubmitting = false;
   PlatformFile? _screenshotFile;
@@ -765,7 +767,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
           const SizedBox(height: 24),
 
           // Functionality Rating
-          if (widget.project.level == "scratch")...[
+          if (widget.project.level == "scratch") ...[
             _buildRatingCategory(
               'Functionality',
               'How well the OS works and meets requirements',
@@ -775,17 +777,16 @@ class _ReviewDialogState extends State<ReviewDialog> {
               textTheme,
             ),
             const SizedBox(height: 24),
-          ]
-          else...[
-          _buildRatingCategory(
-            'Orignality',
-            'Is the OS meaningfully different from existing OSes and does it show creativity?',
-            _functionalityRating,
-            (rating) => setState(() => _functionalityRating = rating),
-            colorScheme,
-            textTheme,
-          ),
-          const SizedBox(height: 24),
+          ] else ...[
+            _buildRatingCategory(
+              'Orignality',
+              'Is the OS meaningfully different from existing OSes and does it show creativity?',
+              _functionalityRating,
+              (rating) => setState(() => _functionalityRating = rating),
+              colorScheme,
+              textTheme,
+            ),
+            const SizedBox(height: 24),
           ],
 
           // UX Rating
@@ -1046,8 +1047,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
             decoration: InputDecoration(
               hintText: 'Required if you override hours',
               labelText: 'Override justification',
-              helperText:
-                  'Explain why the tracked time is being overridden',
+              helperText: 'Explain why the tracked time is being overridden',
               prefixIcon: Icon(
                 Symbols.feedback,
                 color: colorScheme.onSurfaceVariant,
@@ -1070,7 +1070,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
     setState(() => _isUploadingScreenshot = true);
 
     try {
-        final supabasePath =
+      final supabasePath =
           'projects/${widget.ship.project}/ship_${widget.ship.id}/screenshot';
       final supabasePrivateUrl = await StorageService.uploadFileWithPicker(
         path: supabasePath,

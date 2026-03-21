@@ -285,7 +285,6 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
     required ColorScheme colorScheme,
     required TextTheme textTheme,
     required VoidCallback onTap,
-    bool isDisabled = false,
   }) {
     final iconColor = colorScheme.primary;
     final textColor = colorScheme.onSurface;
