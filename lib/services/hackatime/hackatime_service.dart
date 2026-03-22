@@ -166,6 +166,54 @@ class HackatimeService {
     }
   }
 
+  static Future<bool> canReachHackatime({
+    required String slackUserId,
+    required String hcaUserId,
+  }) async {
+    try {
+      final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
+      final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
+
+      if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+        AppLogger.warning(
+          'Hackatime reachability check skipped: No Slack or HCA user ID available',
+        );
+        return false;
+      }
+
+      if (resolvedSlackUserId.isNotEmpty) {
+        final url = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/stats?features=projects',
+        );
+        final response = await http.get(url).timeout(Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          return true;
+        }
+      }
+
+      if (resolvedHcaUserId.isNotEmpty) {
+        final hcaUrl = Uri.parse(
+          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/stats?features=projects',
+        );
+        final hcaResponse = await http
+            .get(hcaUrl)
+            .timeout(Duration(seconds: 5));
+        if (hcaResponse.statusCode == 200) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e, stack) {
+      AppLogger.error(
+        'Network error checking Hackatime reachability for user $slackUserId',
+        e,
+        stack,
+      );
+      return false;
+    }
+  }
+
   static Future<Project> getProjectTime({
     required Project project,
     required String slackUserId,

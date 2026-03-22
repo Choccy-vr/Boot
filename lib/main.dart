@@ -47,11 +47,27 @@ const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
 // Maintenance Mode - Set to true to enable, false to disable
 bool isMaintenanceModeEnabled = false;
 const String hackatimeBannedRoute = '/hackatime-banned';
+const String hackatimeUnavailableRoute = '/hackatime-unavailable';
 bool isHackatimeBanned = false;
+bool isHackatimeReachable = true;
 String? hackatimeBanReason;
 
 bool get _isBootAccessRestricted =>
-    isHackatimeBanned || (hackatimeBanReason?.isNotEmpty ?? false);
+    !isHackatimeReachable ||
+    isHackatimeBanned ||
+    (hackatimeBanReason?.isNotEmpty ?? false);
+
+bool get _shouldShowHackatimeUnavailablePage => !isHackatimeReachable;
+
+String get _activeHackatimeRestrictionRoute =>
+    _shouldShowHackatimeUnavailablePage
+    ? hackatimeUnavailableRoute
+    : hackatimeBannedRoute;
+
+Widget get _activeHackatimeRestrictionPage =>
+    _shouldShowHackatimeUnavailablePage
+    ? const HackatimeUnavailablePage()
+    : const HackatimeBannedPage();
 
 bool _containsBannedReason(String? rawReason) {
   if (rawReason == null) return false;
@@ -114,7 +130,7 @@ void main() async {
 
   String initialRoute = '/login';
   if (_isBootAccessRestricted) {
-    initialRoute = hackatimeBannedRoute;
+    initialRoute = _activeHackatimeRestrictionRoute;
   } else if (sessionRestored) {
     initialRoute = '/dashboard';
   }
@@ -164,7 +180,10 @@ Future<void> _handleHackClubCallback() async {
 
 Future<void> _refreshHackatimeBanRestriction() async {
   final slackUserId = UserService.currentUser?.slackUserId ?? '';
-  if (slackUserId.isEmpty) {
+  final hcaUserId = UserService.currentUser?.hcUserId ?? '';
+
+  if (slackUserId.isEmpty && hcaUserId.isEmpty) {
+    isHackatimeReachable = true;
     isHackatimeBanned = false;
     if (_containsBannedReason(hackatimeBanReason)) {
       return;
@@ -173,9 +192,25 @@ Future<void> _refreshHackatimeBanRestriction() async {
     return;
   }
 
+  final canReachHackatime = await HackatimeService.canReachHackatime(
+    slackUserId: slackUserId,
+    hcaUserId: hcaUserId,
+  );
+
+  if (!canReachHackatime) {
+    isHackatimeReachable = false;
+    isHackatimeBanned = false;
+    if (!_containsBannedReason(hackatimeBanReason)) {
+      hackatimeBanReason = null;
+    }
+    return;
+  }
+
+  isHackatimeReachable = true;
+
   final banned = await HackatimeService.isHackatimeBanned(
     slackUserId: slackUserId,
-    hcaUserId: UserService.currentUser?.hcUserId ?? '',
+    hcaUserId: hcaUserId,
   );
 
   isHackatimeBanned = banned;
@@ -210,13 +245,15 @@ class MainApp extends StatelessWidget {
 Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   final uri = Uri.parse(settings.name ?? '/');
   final segments = uri.pathSegments;
-  final isBannedPageRoute =
-      segments.length == 1 && segments.first == 'hackatime-banned';
+  final isRestrictionPageRoute =
+      segments.length == 1 &&
+      (segments.first == 'hackatime-banned' ||
+          segments.first == 'hackatime-unavailable');
 
-  if (_isBootAccessRestricted && !isBannedPageRoute) {
+  if (_isBootAccessRestricted && !isRestrictionPageRoute) {
     return _buildRoute(
-      child: const HackatimeBannedPage(),
-      name: hackatimeBannedRoute,
+      child: _activeHackatimeRestrictionPage,
+      name: _activeHackatimeRestrictionRoute,
     );
   }
 
@@ -258,6 +295,11 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case 'hackatime-banned':
       page = const HackatimeBannedPage();
       routeName = hackatimeBannedRoute;
+      requiresAuth = false;
+      break;
+    case 'hackatime-unavailable':
+      page = const HackatimeUnavailablePage();
+      routeName = hackatimeUnavailableRoute;
       requiresAuth = false;
       break;
     case 'login':
@@ -452,7 +494,9 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   }
 
   return _buildRoute(
-    child: routeName == hackatimeBannedRoute
+    child:
+        routeName == hackatimeBannedRoute ||
+            routeName == hackatimeUnavailableRoute
         ? page
         : BanAccessGate(child: page),
     name: routeName,
@@ -493,9 +537,10 @@ class _BanAccessGateState extends State<BanAccessGate> {
     if (_isBootAccessRestricted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil(hackatimeBannedRoute, (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          _activeHackatimeRestrictionRoute,
+          (route) => false,
+        );
       });
     }
   }
@@ -503,7 +548,7 @@ class _BanAccessGateState extends State<BanAccessGate> {
   @override
   Widget build(BuildContext context) {
     if (_isBootAccessRestricted) {
-      return const HackatimeBannedPage();
+      return _activeHackatimeRestrictionPage;
     }
 
     if (_isChecking) {
@@ -590,6 +635,81 @@ class HackatimeBannedPage extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HackatimeUnavailablePage extends StatelessWidget {
+  const HackatimeUnavailablePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.tertiary.withValues(alpha: 0.7),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Symbols.cloud_off,
+                          color: colorScheme.tertiary,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Hackatime Unreachable',
+                          style: textTheme.headlineSmall?.copyWith(
+                            color: colorScheme.tertiary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'We can\'t reach Hackatime right now, so we can\'t verify your account status.',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Please try again in a little bit. If this keeps happening, ask in #boot.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
                   ],
                 ),
               ),
