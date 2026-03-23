@@ -182,13 +182,26 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const mode = String(body?.mode ?? "").trim().toLowerCase();
+    const isRestoreMode = mode === "restore";
     const clientId = String(body?.client_id ?? "").trim();
     const code = String(body?.code ?? "").trim();
     const redirectUri = String(body?.redirect_uri ?? "").trim();
     const codeVerifier = String(body?.code_verifier ?? "").trim();
 
     if (!clientId || !code || !redirectUri || !codeVerifier) {
+      if (isRestoreMode) {
+        return jsonResponse(
+          {
+            access_token: null,
+            source: "restore-miss",
+          },
+          200,
+          corsHeaders,
+        );
+      }
+
       return jsonResponse(
         {
           error:

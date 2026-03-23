@@ -110,7 +110,7 @@ class HackatimeService {
     try {
       final response = await _supabase.functions.invoke(
         'hackatime_auth',
-        body: <String, dynamic>{},
+        body: <String, dynamic>{'mode': 'restore'},
       );
 
       if (response.status < 200 || response.status >= 300) {
