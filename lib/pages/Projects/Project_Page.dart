@@ -311,10 +311,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   Future<void> _fetchHackatimeProjects() async {
     try {
-      final projects = await HackatimeService.fetchHackatimeProjects(
-        slackUserId: UserService.currentUser?.slackUserId ?? '',
-        hcaUserId: UserService.currentUser?.hcUserId ?? '',
-      );
+      final projects = await HackatimeService.fetchHackatimeProjects();
 
       if (!mounted) return;
       setState(() {
@@ -446,8 +443,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
       final updatedProject = await HackatimeService.getProjectTime(
         project: _project,
-        slackUserId: UserService.currentUser?.slackUserId ?? '',
-        hcaUserId: UserService.currentUser?.hcUserId ?? '',
         context: context,
       );
 
@@ -612,8 +607,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         // Create new devlog
         final updatedProject = await HackatimeService.getProjectTime(
           project: _project,
-          slackUserId: UserService.currentUser?.slackUserId ?? '',
-          hcaUserId: UserService.currentUser?.hcUserId ?? '',
           context: context,
         );
 

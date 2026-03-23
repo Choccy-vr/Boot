@@ -150,6 +150,16 @@ class Authentication {
     }
   }
 
+  /// Returns true when the callback state matches a pending Hack Club OAuth flow.
+  static Future<bool> hasPendingOAuthState(String? callbackState) async {
+    if (callbackState == null || callbackState.isEmpty) {
+      return false;
+    }
+
+    final savedState = await _storage.read(key: 'hackclub_state');
+    return savedState != null && savedState == callbackState;
+  }
+
   /// Exchange authorization code for Supabase session
   static Future<void> _exchangeCodeForSession(String code) async {
     AppLogger.info(

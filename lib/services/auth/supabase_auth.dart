@@ -51,7 +51,7 @@ class SupabaseAuth {
         port: base.hasPort ? base.port : null,
         path: '/', // Always redirect to root path for consistency
       ).toString();
-      
+
       AppLogger.info('OAuth redirect URL: $cleanRedirect');
       await supabase.auth.signInWithOAuth(provider, redirectTo: cleanRedirect);
     } on AuthException catch (e) {
@@ -71,6 +71,15 @@ class SupabaseAuth {
 
   static Future<void> redirectCheck() async {
     final uri = Uri.base; // current URL
+
+    // Hackatime OAuth callbacks also contain ?code=... but are not Supabase PKCE callbacks.
+    if (uri.path.contains('/hackatime/redirect')) {
+      AppLogger.info(
+        'Skipping Supabase redirectCheck for Hackatime callback URL: ${uri.path}',
+      );
+      return;
+    }
+
     if (uri.queryParameters.containsKey('code') ||
         uri.queryParameters.containsKey('access_token')) {
       try {
@@ -87,13 +96,14 @@ class SupabaseAuth {
         final user = Supabase.instance.client.auth.currentUser;
         if (session != null) {
           await Authentication.refreshSession(session);
-          
+
           // Also initialize the user profile for OAuth users
           if (user != null) {
             // Extract Slack user ID from OAuth provider metadata
-            final slackUserId = user.userMetadata?['provider_id'] ?? 
-                                user.userMetadata?['sub'] ?? 
-                                '';
+            final slackUserId =
+                user.userMetadata?['provider_id'] ??
+                user.userMetadata?['sub'] ??
+                '';
             try {
               await UserService.setCurrentUser(user.id);
             } catch (e) {

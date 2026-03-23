@@ -1,20 +1,258 @@
 import 'package:boot_app/services/Projects/Project.dart';
+import 'package:boot_app/services/auth/supabase_auth.dart';
 import 'package:boot_app/services/misc/logger.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/services/notifications/notifications.dart';
-import '/services/users/User.dart';
 
 class HackatimeService {
-  static String _resolveSlackUserId(String slackUserId) {
-    if (slackUserId.isNotEmpty) return slackUserId;
-    return UserService.currentUser?.slackUserId ?? '';
+  static final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static final SupabaseClient _supabase = Supabase.instance.client;
+  static String? _accessToken;
+  static const String _stateStorageKey = 'hackatime_state';
+  static const String _pkceVerifierStorageKey = 'hackatime_pkce_code_verifier';
+  static const String _accessTokenStorageKey = 'hackatime_access_token';
+  static const String _tokenTypeStorageKey = 'hackatime_token_type';
+  static const String _tokenExpiryStorageKey = 'hackatime_token_expiry';
+
+  // Hackatime OAuth configuration
+  static String? _hackatimeClientId;
+  static String? _hackatimeRedirectUri;
+  static String? _hackatimeState;
+
+  /// Initialize Hackatime OAuth configuration
+  static void configureHackatimeOAuth({
+    required String clientId,
+    required String redirectUri,
+  }) {
+    _hackatimeClientId = clientId;
+    _hackatimeRedirectUri = redirectUri;
   }
 
-  static String _resolveHcaUserId(String hcaUserId) {
-    if (hcaUserId.isNotEmpty) return hcaUserId;
-    return UserService.currentUser?.hcUserId ?? '';
+  /// Generate random string for state parameter
+  static String _generateRandomString(int length) {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    return List.generate(
+      length,
+      (index) => chars[(random + index) % chars.length],
+    ).join();
+  }
+
+  static String _generateCodeVerifier([int length = 64]) {
+    if (length < 43 || length > 128) {
+      throw ArgumentError('PKCE code_verifier length must be 43-128 chars.');
+    }
+
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    final random = Random.secure();
+
+    return List.generate(
+      length,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
+
+  static String _generateCodeChallenge(String codeVerifier) {
+    final bytes = utf8.encode(codeVerifier);
+    final digest = sha256.convert(bytes);
+    return base64UrlEncode(digest.bytes).replaceAll('=', '');
+  }
+
+  static Future<void> _saveOAuthToken(
+    Map<String, dynamic> tokenResponse,
+  ) async {
+    final accessToken = tokenResponse['access_token']?.toString();
+    if (accessToken == null || accessToken.isEmpty) {
+      throw AuthFailure(
+        'Hackatime token response did not include access_token.',
+      );
+    }
+
+    final tokenType = tokenResponse['token_type']?.toString() ?? 'Bearer';
+    _accessToken = accessToken;
+    await _storage.write(key: _accessTokenStorageKey, value: accessToken);
+    await _storage.write(key: _tokenTypeStorageKey, value: tokenType);
+  }
+
+  /// Returns null when missing
+  static Future<String?> getStoredAccessToken() async {
+    if (_accessToken != null && _accessToken!.isNotEmpty) {
+      return _accessToken;
+    }
+
+    final accessToken = await _storage.read(key: _accessTokenStorageKey);
+    if (accessToken == null || accessToken.isEmpty) {
+      return null;
+    }
+    _accessToken = accessToken;
+    return accessToken;
+  }
+
+  static Future<Map<String, String>?> getAuthorizationHeaders() async {
+    final accessToken = await getStoredAccessToken();
+    if (accessToken == null) {
+      return null;
+    }
+
+    final tokenType =
+        await _storage.read(key: _tokenTypeStorageKey) ?? 'Bearer';
+    return {'Authorization': '$tokenType $accessToken'};
+  }
+
+  static Future<bool> isAuthenticated() async {
+    final accessToken = await getStoredAccessToken();
+    return accessToken != null;
+  }
+
+  static Future<void> clearStoredAuth() async {
+    _accessToken = null;
+    await _storage.delete(key: _accessTokenStorageKey);
+    await _storage.delete(key: _tokenTypeStorageKey);
+    await _storage.delete(key: _tokenExpiryStorageKey);
+    await _storage.delete(key: _pkceVerifierStorageKey);
+  }
+
+  /// Sign in with Hackatime OAuth
+  /// Redirects to Hackatime authorization endpoint
+  static Future<void> signInWithHackatime() async {
+    if (_hackatimeClientId == null || _hackatimeRedirectUri == null) {
+      throw AuthFailure(
+        'Hackatime OAuth not configured. Call configureHackatimeOAuth() first.',
+      );
+    }
+
+    try {
+      // Generate random state for CSRF protection
+      _hackatimeState = _generateRandomString(32);
+      await _storage.write(key: _stateStorageKey, value: _hackatimeState);
+
+      // Generate and persist PKCE verifier for token exchange callback
+      final codeVerifier = _generateCodeVerifier();
+      final codeChallenge = _generateCodeChallenge(codeVerifier);
+      await _storage.write(key: _pkceVerifierStorageKey, value: codeVerifier);
+
+      // Build authorization URL
+      final authUrl =
+          Uri.parse('https://hackatime.hackclub.com/oauth/authorize').replace(
+            queryParameters: {
+              'client_id': _hackatimeClientId!,
+              'redirect_uri': _hackatimeRedirectUri!,
+              'response_type': 'code',
+              'scope': 'profile read',
+              'state': _hackatimeState!,
+              'code_challenge': codeChallenge,
+              'code_challenge_method': 'S256',
+            },
+          );
+
+      AppLogger.info('Redirecting to Hackatime OAuth: ${authUrl.toString()}');
+
+      // Launch browser for OAuth flow
+      await launchUrl(authUrl, webOnlyWindowName: '_self');
+    } catch (e, stack) {
+      AppLogger.error('Hackatime OAuth redirect failed', e, stack);
+      throw AuthFailure('Hackatime OAuth redirect failed: ${e.toString()}');
+    }
+  }
+
+  /// Returns true when the callback state matches a pending Hackatime OAuth flow.
+  static Future<bool> hasPendingOAuthState(String? callbackState) async {
+    if (callbackState == null || callbackState.isEmpty) {
+      return false;
+    }
+
+    final savedState = await _storage.read(key: _stateStorageKey);
+    return savedState != null && savedState == callbackState;
+  }
+
+  /// Handle OAuth callback with authorization code and persist the token.
+  static Future<void> handleHackatimeCallback(Uri callbackUri) async {
+    final code = callbackUri.queryParameters['code'];
+    final state = callbackUri.queryParameters['state'];
+    final error = callbackUri.queryParameters['error'];
+
+    if (error != null) {
+      throw AuthFailure('Hackatime OAuth error: $error');
+    }
+
+    if (code == null || code.isEmpty) {
+      throw AuthFailure('No Hackatime authorization code received.');
+    }
+
+    final savedState = await _storage.read(key: _stateStorageKey);
+    if (savedState == null || savedState.isEmpty || state != savedState) {
+      throw AuthFailure(
+        'Invalid Hackatime state parameter - possible CSRF attack.',
+      );
+    }
+
+    await _storage.delete(key: _stateStorageKey);
+    await exchangeCodeForToken(code: code);
+    AppLogger.info('Successfully authenticated with Hackatime OAuth');
+  }
+
+  /// Exchange authorization code for tokens using PKCE verifier.
+  static Future<Map<String, dynamic>> exchangeCodeForToken({
+    required String code,
+  }) async {
+    if (_hackatimeClientId == null || _hackatimeRedirectUri == null) {
+      throw AuthFailure(
+        'Hackatime OAuth not configured. Call configureHackatimeOAuth() first.',
+      );
+    }
+
+    final codeVerifier = await _storage.read(key: _pkceVerifierStorageKey);
+    if (codeVerifier == null || codeVerifier.isEmpty) {
+      throw AuthFailure('Missing PKCE code_verifier. Start OAuth flow again.');
+    }
+
+    try {
+      final response = await _supabase.functions.invoke(
+        'hackatime_auth',
+        body: {
+          'client_id': _hackatimeClientId!,
+          'code': code,
+          'redirect_uri': _hackatimeRedirectUri!,
+          'code_verifier': codeVerifier,
+        },
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        final responseBody = response.data;
+        final responseDetails = responseBody is Map<String, dynamic>
+            ? jsonEncode(responseBody)
+            : responseBody?.toString() ?? '<empty>';
+
+        AppLogger.warning(
+          'Hackatime token exchange failed with status ${response.status}: $responseDetails',
+        );
+        throw AuthFailure(
+          'Hackatime token exchange failed (status: ${response.status}).',
+        );
+      }
+
+      final decoded = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : jsonDecode(response.data.toString()) as Map<String, dynamic>;
+
+      await _saveOAuthToken(decoded);
+
+      await _storage.delete(key: _pkceVerifierStorageKey);
+
+      return decoded;
+    } catch (e, stack) {
+      AppLogger.error('Hackatime token exchange failed', e, stack);
+      rethrow;
+    }
   }
 
   static String _getErrorMessage(int statusCode, String defaultMessage) {
@@ -25,73 +263,44 @@ class HackatimeService {
   }
 
   static Future<List<HackatimeProject>> fetchHackatimeProjects({
-    required String slackUserId,
-    required String hcaUserId,
     BuildContext? context,
   }) async {
-    final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
-    final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
-
-    if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+    final authorizationHeaders = await getAuthorizationHeaders();
+    if (authorizationHeaders == null) {
       AppLogger.warning(
-        'Cannot fetch Hackatime projects: No Slack or HCA user ID available',
+        'Cannot fetch Hackatime projects: No access token available. Please authenticate first.',
       );
       return [];
     }
 
     try {
-      if (resolvedSlackUserId.isNotEmpty) {
-        final url = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/stats?features=projects',
-        );
-        final response = await http.get(url);
-        if (response.statusCode == 200) {
-          final decoded = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : {};
-          final List<dynamic> projects = decoded['data']?['projects'] ?? [];
-          return projects.map((project) {
-            return HackatimeProject.fromJson(project);
-          }).toList();
-        }
-
-        AppLogger.warning(
-          'Hackatime project fetch failed for Slack user $resolvedSlackUserId with status ${response.statusCode}: ${response.body}. Trying with HCA id instead.',
-        );
+      final url = Uri.parse(
+        'https://hackatime.hackclub.com/api/v1/authenticated/projects',
+      );
+      final response = await http.get(url, headers: authorizationHeaders);
+      if (response.statusCode == 200) {
+        final decoded = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : {};
+        final List<dynamic> projects =
+            decoded['projects'] ?? decoded['data']?['projects'] ?? [];
+        return projects.map((project) {
+          return HackatimeProject.fromJson(project);
+        }).toList();
       }
 
-      if (resolvedHcaUserId.isNotEmpty) {
-        final hcaURL = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/stats?features=projects',
-        );
-        final hcaResponse = await http.get(hcaURL);
-        if (hcaResponse.statusCode == 200) {
-          final decoded = hcaResponse.body.isNotEmpty
-              ? jsonDecode(hcaResponse.body)
-              : {};
-          final List<dynamic> projects = decoded['data']?['projects'] ?? [];
-          return projects.map((project) {
-            return HackatimeProject.fromJson(project);
-          }).toList();
-        }
-
-        AppLogger.warning(
-          'Hackatime project fetch failed with HCA id for user $resolvedHcaUserId with status ${hcaResponse.statusCode}: ${hcaResponse.body}',
-        );
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => GlobalNotificationService.instance.showError(
-            'Hackatime Error: ${_getErrorMessage(hcaResponse.statusCode, 'Failed to load projects')}',
-          ),
-        );
-      }
+      AppLogger.warning(
+        'Hackatime project fetch failed for user with status ${response.statusCode}: ${response.body}.',
+      );
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => GlobalNotificationService.instance.showError(
+          'Hackatime Error: ${_getErrorMessage(response.statusCode, 'Failed to load projects')}',
+        ),
+      );
 
       return [];
     } catch (e, stack) {
-      AppLogger.error(
-        'Network error loading Hackatime projects for user $resolvedSlackUserId',
-        e,
-        stack,
-      );
+      AppLogger.error('Network error loading Hackatime projects', e, stack);
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => GlobalNotificationService.instance.showError(
           'Hackatime Error: Network error loading projects',
@@ -101,64 +310,38 @@ class HackatimeService {
     }
   }
 
-  static Future<bool> isHackatimeBanned({
-    required String slackUserId,
-    required String hcaUserId,
-    BuildContext? context,
-  }) async {
-    final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
-    final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
-
-    if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+  static Future<bool> isHackatimeBanned({BuildContext? context}) async {
+    final authorizationHeaders = await getAuthorizationHeaders();
+    if (authorizationHeaders == null) {
       AppLogger.warning(
-        'Hackatime ban check skipped: No Slack or HCA user ID available',
+        'Hackatime ban check skipped: No access token available. Please authenticate first.',
       );
       return true;
     }
 
     try {
-      if (resolvedSlackUserId.isNotEmpty) {
-        final url = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/trust_factor',
-        );
-        final response = await http.get(url);
-        if (response.statusCode == 200) {
-          final decoded = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : {};
-          final String? trustLevel = decoded['trust_level'];
-          if (trustLevel == 'red') return true;
-          return false;
-        }
+      final url = Uri.parse(
+        'https://hackatime.hackclub.com/api/v1/authenticated/me',
+      );
 
-        AppLogger.warning(
-          'Hackatime ban check failed for Slack user $resolvedSlackUserId with status ${response.statusCode}: ${response.body}. Trying with HCA id instead.',
-        );
+      final response = await http.get(url, headers: authorizationHeaders);
+      if (response.statusCode == 200) {
+        final decoded = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : {};
+        final String? trustLevel = decoded['data']?['trust_level'];
+        if (trustLevel == 'red') return true;
+        return false;
       }
 
-      if (resolvedHcaUserId.isNotEmpty) {
-        final hcaUrl = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/trust_factor',
-        );
-        final hcaResponse = await http.get(hcaUrl);
-        if (hcaResponse.statusCode == 200) {
-          final decoded = hcaResponse.body.isNotEmpty
-              ? jsonDecode(hcaResponse.body)
-              : {};
-          final String? trustLevel = decoded['trust_level'];
-          if (trustLevel == 'red') return true;
-          return false;
-        }
-
-        AppLogger.warning(
-          'Hackatime ban check also failed with HCA id for user $resolvedHcaUserId with status ${hcaResponse.statusCode}: ${hcaResponse.body}',
-        );
-      }
+      AppLogger.warning(
+        'Hackatime ban check failed for user with status ${response.statusCode}: ${response.body}.',
+      );
 
       return true;
     } catch (e, stack) {
       AppLogger.error(
-        'Network error checking Hackatime ban status for user $resolvedSlackUserId',
+        'Network error checking Hackatime ban status for user',
         e,
         stack,
       );
@@ -166,47 +349,30 @@ class HackatimeService {
     }
   }
 
-  static Future<bool> canReachHackatime({
-    required String slackUserId,
-    required String hcaUserId,
-  }) async {
+  static Future<bool> canReachHackatime() async {
     try {
-      final resolvedSlackUserId = _resolveSlackUserId(slackUserId);
-      final resolvedHcaUserId = _resolveHcaUserId(hcaUserId);
-
-      if (resolvedSlackUserId.isEmpty && resolvedHcaUserId.isEmpty) {
+      final authorizationHeaders = await getAuthorizationHeaders();
+      if (authorizationHeaders == null) {
         AppLogger.warning(
-          'Hackatime reachability check skipped: No Slack or HCA user ID available',
+          'Hackatime reachability check skipped: No access token available. Please authenticate first.',
         );
         return false;
       }
 
-      if (resolvedSlackUserId.isNotEmpty) {
-        final url = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedSlackUserId/stats?features=projects',
-        );
-        final response = await http.get(url).timeout(Duration(seconds: 5));
-        if (response.statusCode == 200) {
-          return true;
-        }
-      }
-
-      if (resolvedHcaUserId.isNotEmpty) {
-        final hcaUrl = Uri.parse(
-          'https://hackatime.hackclub.com/api/v1/users/$resolvedHcaUserId/stats?features=projects',
-        );
-        final hcaResponse = await http
-            .get(hcaUrl)
-            .timeout(Duration(seconds: 5));
-        if (hcaResponse.statusCode == 200) {
-          return true;
-        }
+      final url = Uri.parse(
+        'https://hackatime.hackclub.com/api/v1/authenticated/me',
+      );
+      final response = await http
+          .get(url, headers: authorizationHeaders)
+          .timeout(Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        return true;
       }
 
       return false;
     } catch (e, stack) {
       AppLogger.error(
-        'Network error checking Hackatime reachability for user $slackUserId',
+        'Network error checking Hackatime reachability for user',
         e,
         stack,
       );
@@ -216,20 +382,12 @@ class HackatimeService {
 
   static Future<Project> getProjectTime({
     required Project project,
-    required String slackUserId,
-    required String hcaUserId,
     BuildContext? context,
   }) async {
     try {
-      final projects = await fetchHackatimeProjects(
-        slackUserId: slackUserId,
-        hcaUserId: hcaUserId,
-        context: context,
-      );
+      final projects = await fetchHackatimeProjects(context: context);
       if (projects.isEmpty) {
-        AppLogger.warning(
-          'Hackatime projects list empty for user $slackUserId',
-        );
+        AppLogger.warning('Hackatime projects list empty for user');
       }
       if (project.hackatimeProjects.isEmpty) {
         project.time = 0;
@@ -251,7 +409,7 @@ class HackatimeService {
       if (missingProjects.isNotEmpty) {
         final missingList = missingProjects.join(', ');
         AppLogger.warning(
-          'Hackatime project(s) $missingList not found for user $slackUserId',
+          'Hackatime project(s) $missingList not found for user',
         );
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => GlobalNotificationService.instance.showError(
@@ -319,19 +477,33 @@ class HackatimeProject {
   });
 
   factory HackatimeProject.fromJson(Map<String, dynamic> json) {
+    final totalSeconds = json['total_seconds'] is int
+        ? json['total_seconds']
+        : int.tryParse(json['total_seconds'].toString()) ?? 0;
+    final duration = Duration(seconds: totalSeconds);
+    final derivedHours = duration.inHours;
+    final derivedMinutes = duration.inMinutes.remainder(60);
+    final derivedDigital =
+        '${derivedHours.toString().padLeft(2, '0')}:${derivedMinutes.toString().padLeft(2, '0')}';
+    final derivedText = derivedHours > 0
+        ? '$derivedHours h ${derivedMinutes} m'
+        : '$derivedMinutes m';
+
     return HackatimeProject(
       name: json['name'].toString(),
-      totalSeconds: json['total_seconds'] is int
-          ? json['total_seconds']
-          : int.tryParse(json['total_seconds'].toString()) ?? 0,
-      text: json['text'].toString(),
+      totalSeconds: totalSeconds,
+      text: (json['text']?.toString().isNotEmpty ?? false)
+          ? json['text'].toString()
+          : derivedText,
       hours: json['hours'] is int
           ? json['hours']
-          : int.tryParse(json['hours'].toString()) ?? 0,
+          : int.tryParse(json['hours'].toString()) ?? derivedHours,
       minutes: json['minutes'] is int
           ? json['minutes']
-          : int.tryParse(json['minutes'].toString()) ?? 0,
-      digital: json['digital'].toString(),
+          : int.tryParse(json['minutes'].toString()) ?? derivedMinutes,
+      digital: (json['digital']?.toString().isNotEmpty ?? false)
+          ? json['digital'].toString()
+          : derivedDigital,
     );
   }
 }

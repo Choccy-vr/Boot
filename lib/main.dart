@@ -43,6 +43,7 @@ import 'widgets/deferred_page.dart';
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 const hackclubClientId = String.fromEnvironment('HACKCLUB_CLIENT_ID');
+const hackatimeClientId = String.fromEnvironment('HACKATIME_CLIENT_ID');
 
 // Maintenance Mode - Set to true to enable, false to disable
 bool isMaintenanceModeEnabled = false;
@@ -115,16 +116,25 @@ void main() async {
         : '${Uri.base.origin}/dashboard/redirect.html',
   );
 
+  final hackatimeRedirectUri = '${Uri.base.origin}/hackatime/redirect';
+  if (hackatimeClientId.isNotEmpty) {
+    HackatimeService.configureHackatimeOAuth(
+      clientId: hackatimeClientId,
+      redirectUri: hackatimeRedirectUri,
+    );
+  }
+
   // Run auth checks in parallel
   final results = await Future.wait([
     SupabaseAuth.redirectCheck(),
-    _handleHackClubCallback(),
+    _handleOAuthCallbacks(),
     Authentication.restoreStoredSession(),
   ]);
 
   final sessionRestored = results[2] as bool;
 
   if (sessionRestored) {
+    await _restoreHackatimeAuthIfAvailable();
     await _refreshHackatimeBanRestriction();
   }
 
@@ -138,14 +148,34 @@ void main() async {
   runApp(MainApp(initialRoute: initialRoute));
 }
 
-Future<void> _handleHackClubCallback() async {
-  // Check for Hack Club OAuth callback (web only)
+Future<void> _handleOAuthCallbacks() async {
+  // Check for OAuth callback (web only)
   if (kIsWeb) {
     try {
-      final callbackUrl = html.window.sessionStorage['hackclub_callback'];
+      final currentUri = Uri.base;
+      final isDirectHackatimeCallback =
+          currentUri.path.contains('/hackatime/redirect') &&
+          (currentUri.queryParameters.containsKey('code') ||
+              currentUri.queryParameters.containsKey('error'));
+
+      if (isDirectHackatimeCallback) {
+        await HackatimeService.handleHackatimeCallback(currentUri);
+        html.window.history.replaceState(
+          null,
+          'Hackatime OAuth',
+          '/dashboard/',
+        );
+        return;
+      }
+
+      final callbackUrl =
+          html.window.sessionStorage['hackatime_callback'] ??
+          html.window.sessionStorage['hackclub_callback'];
       if (callbackUrl != null && callbackUrl.isNotEmpty) {
+        html.window.sessionStorage.remove('hackatime_callback');
         html.window.sessionStorage.remove('hackclub_callback');
         final callbackUri = Uri.parse(callbackUrl);
+        final callbackState = callbackUri.queryParameters['state'];
         final authError = callbackUri.queryParameters['error'];
         final authErrorDescription =
             callbackUri.queryParameters['error_description'];
@@ -164,17 +194,47 @@ Future<void> _handleHackClubCallback() async {
           return;
         }
 
-        await Authentication.handleHackClubCallback(callbackUri);
+        final isHackClubCallback = await Authentication.hasPendingOAuthState(
+          callbackState,
+        );
+        if (isHackClubCallback) {
+          await Authentication.handleHackClubCallback(callbackUri);
+          return;
+        }
+
+        final isHackatimeCallback = await HackatimeService.hasPendingOAuthState(
+          callbackState,
+        );
+        if (isHackatimeCallback) {
+          await HackatimeService.handleHackatimeCallback(callbackUri);
+          return;
+        }
+
+        AppLogger.warning(
+          'Received OAuth callback with unknown state; skipping callback handling.',
+        );
       }
-    } catch (e) {
+    } catch (e, stack) {
       final reason = e.toString();
       if (_containsBannedReason(reason)) {
         isHackatimeBanned = true;
         hackatimeBanReason = reason;
         return;
       }
-      AppLogger.error('Error handling Hack Club callback', e);
+      AppLogger.error('Error handling OAuth callback', e, stack);
     }
+  }
+}
+
+Future<void> _restoreHackatimeAuthIfAvailable() async {
+  try {
+    final restored = await HackatimeService.isAuthenticated();
+    if (restored) {
+      AppLogger.info('Restored Hackatime OAuth token from secure storage.');
+    }
+  } catch (e, stack) {
+    AppLogger.warning('Failed to restore Hackatime OAuth token: $e');
+    AppLogger.error('Hackatime restore error details', e, stack);
   }
 }
 
@@ -192,11 +252,7 @@ Future<void> _refreshHackatimeBanRestriction() async {
     return;
   }
 
-  final canReachHackatime = await HackatimeService.canReachHackatime(
-    slackUserId: slackUserId,
-    hcaUserId: hcaUserId,
-  );
-
+  final canReachHackatime = await HackatimeService.canReachHackatime();
   if (!canReachHackatime) {
     isHackatimeReachable = false;
     isHackatimeBanned = false;
@@ -208,10 +264,7 @@ Future<void> _refreshHackatimeBanRestriction() async {
 
   isHackatimeReachable = true;
 
-  final banned = await HackatimeService.isHackatimeBanned(
-    slackUserId: slackUserId,
-    hcaUserId: hcaUserId,
-  );
+  final banned = await HackatimeService.isHackatimeBanned();
 
   isHackatimeBanned = banned;
   if (banned && (hackatimeBanReason == null || hackatimeBanReason!.isEmpty)) {
@@ -709,6 +762,25 @@ class HackatimeUnavailablePage extends StatelessWidget {
                         color: colorScheme.onSurfaceVariant,
                         height: 1.5,
                       ),
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        try {
+                          await HackatimeService.signInWithHackatime();
+                        } catch (e, stack) {
+                          AppLogger.error(
+                            'Manual Hackatime OAuth start failed',
+                            e,
+                            stack,
+                          );
+                          GlobalNotificationService.instance.showError(
+                            'Could not start Hackatime OAuth: ${e.toString()}',
+                          );
+                        }
+                      },
+                      icon: const Icon(Symbols.login),
+                      label: const Text('Start Hackatime Login'),
                     ),
                   ],
                 ),
