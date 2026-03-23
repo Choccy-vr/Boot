@@ -119,7 +119,8 @@ void main() async {
         : '${Uri.base.origin}/dashboard/redirect.html',
   );
 
-  final hackatimeRedirectUri = '${Uri.base.origin}/hackatime/redirect';
+  final hackatimeRedirectUri =
+      '${Uri.base.origin}/dashboard/hackatime/redirect';
   if (hackatimeClientId.isNotEmpty) {
     HackatimeService.configureHackatimeOAuth(
       clientId: hackatimeClientId,
