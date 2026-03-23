@@ -568,13 +568,19 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   // Allow logged-in users to access signup flow pages (profile, hackatime setup)
   // but redirect them from login page to dashboard
   if (isLoggedIn && !requiresAuth && segments.first == 'login') {
+    final shouldRouteToHackatimeLogin =
+        !isHackatimeAuthenticated &&
+        !_isBootAccessRestricted;
+
     return _buildRoute(
-      child: DeferredPage(
-        loadLibrary: home_page.loadLibrary,
-        buildPage: (_) => home_page.HomePage(),
-        placeholder: const _LoadingScaffold(),
-      ),
-      name: '/dashboard',
+      child: shouldRouteToHackatimeLogin
+          ? const HackatimeLoginPage()
+          : DeferredPage(
+              loadLibrary: home_page.loadLibrary,
+              buildPage: (_) => home_page.HomePage(),
+              placeholder: const _LoadingScaffold(),
+            ),
+      name: shouldRouteToHackatimeLogin ? hackatimeLoginRoute : '/dashboard',
     );
   }
 

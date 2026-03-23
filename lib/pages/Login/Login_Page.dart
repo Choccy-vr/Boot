@@ -120,9 +120,6 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await Authentication.signInWithHackClub();
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/dashboard');
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
