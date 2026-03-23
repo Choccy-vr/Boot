@@ -15,10 +15,9 @@ class HackatimeService {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static final SupabaseClient _supabase = Supabase.instance.client;
   static String? _accessToken;
+  static String _tokenType = 'Bearer';
   static const String _stateStorageKey = 'hackatime_state';
   static const String _pkceVerifierStorageKey = 'hackatime_pkce_code_verifier';
-  static const String _accessTokenStorageKey = 'hackatime_access_token';
-  static const String _tokenTypeStorageKey = 'hackatime_token_type';
   static const String _tokenExpiryStorageKey = 'hackatime_token_expiry';
 
   // Hackatime OAuth configuration
@@ -79,8 +78,62 @@ class HackatimeService {
 
     final tokenType = tokenResponse['token_type']?.toString() ?? 'Bearer';
     _accessToken = accessToken;
-    await _storage.write(key: _accessTokenStorageKey, value: accessToken);
-    await _storage.write(key: _tokenTypeStorageKey, value: tokenType);
+    _tokenType = tokenType;
+  }
+
+  static Future<bool> _hasServerStoredToken() async {
+    try {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) return false;
+
+      final row = await _supabase
+          .from('users')
+          .select('hackatime_access_token')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+
+      if (row == null) return false;
+
+      final stored = row['hackatime_access_token']?.toString().trim() ?? '';
+      return stored.isNotEmpty;
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed checking Hackatime token presence in users row',
+        e,
+        stack,
+      );
+      return false;
+    }
+  }
+
+  static Future<bool> _tryRestoreTokenFromEdge() async {
+    try {
+      final response = await _supabase.functions.invoke(
+        'hackatime_auth',
+        body: <String, dynamic>{},
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        return false;
+      }
+
+      final decoded = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : jsonDecode(response.data.toString()) as Map<String, dynamic>;
+
+      final accessToken = decoded['access_token']?.toString();
+      if (accessToken == null || accessToken.isEmpty) {
+        return false;
+      }
+
+      await _saveOAuthToken(decoded);
+      AppLogger.info('Restored Hackatime OAuth token from server user row.');
+      return true;
+    } catch (e, stack) {
+      AppLogger.warning('Failed to restore Hackatime token from server: $e');
+      AppLogger.error('Hackatime server restore error details', e, stack);
+      return false;
+    }
   }
 
   /// Returns null when missing
@@ -89,12 +142,11 @@ class HackatimeService {
       return _accessToken;
     }
 
-    final accessToken = await _storage.read(key: _accessTokenStorageKey);
-    if (accessToken == null || accessToken.isEmpty) {
+    final restored = await _tryRestoreTokenFromEdge();
+    if (!restored) {
       return null;
     }
-    _accessToken = accessToken;
-    return accessToken;
+    return _accessToken;
   }
 
   static Future<Map<String, String>?> getAuthorizationHeaders() async {
@@ -103,20 +155,19 @@ class HackatimeService {
       return null;
     }
 
-    final tokenType =
-        await _storage.read(key: _tokenTypeStorageKey) ?? 'Bearer';
-    return {'Authorization': '$tokenType $accessToken'};
+    return {'Authorization': '$_tokenType $accessToken'};
   }
 
   static Future<bool> isAuthenticated() async {
     final accessToken = await getStoredAccessToken();
-    return accessToken != null;
+    if (accessToken != null) return true;
+
+    return _hasServerStoredToken();
   }
 
   static Future<void> clearStoredAuth() async {
     _accessToken = null;
-    await _storage.delete(key: _accessTokenStorageKey);
-    await _storage.delete(key: _tokenTypeStorageKey);
+    _tokenType = 'Bearer';
     await _storage.delete(key: _tokenExpiryStorageKey);
     await _storage.delete(key: _pkceVerifierStorageKey);
   }
@@ -124,6 +175,23 @@ class HackatimeService {
   /// Sign in with Hackatime OAuth
   /// Redirects to Hackatime authorization endpoint
   static Future<void> signInWithHackatime() async {
+    final existingAccessToken = _accessToken;
+    if (existingAccessToken != null && existingAccessToken.isNotEmpty) {
+      return;
+    }
+
+    final hasServerToken = await _hasServerStoredToken();
+    if (hasServerToken) {
+      final restoredFromServer = await _tryRestoreTokenFromEdge();
+      if (restoredFromServer) {
+        return;
+      }
+
+      throw AuthFailure(
+        'Hackatime token exists in users row but could not be restored from edge function.',
+      );
+    }
+
     if (_hackatimeClientId == null || _hackatimeRedirectUri == null) {
       throw AuthFailure(
         'Hackatime OAuth not configured. Call configureHackatimeOAuth() first.',

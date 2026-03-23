@@ -30,6 +30,74 @@ const jsonResponse = (
   });
 };
 
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (base64: string) =>
+  Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+const encryptAccessToken = async (token: string): Promise<string> => {
+  const masterKeyB64 = Deno.env.get("ACCESS_TOKEN_SECRET") ?? "";
+  if (!masterKeyB64) {
+    throw new Error("Missing ACCESS_TOKEN_SECRET");
+  }
+
+  const keyBytes = fromBase64(masterKeyB64);
+  if (keyBytes.length !== 32) {
+    throw new Error("ACCESS_TOKEN_SECRET must decode to 32 bytes");
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"],
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(token);
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, plaintext),
+  );
+
+  return `${toBase64(iv)}:${toBase64(encrypted)}`;
+};
+
+const decryptAccessToken = async (encryptedToken: string): Promise<string> => {
+  const masterKeyB64 = Deno.env.get("ACCESS_TOKEN_SECRET") ?? "";
+  if (!masterKeyB64) {
+    throw new Error("Missing ACCESS_TOKEN_SECRET");
+  }
+
+  const [ivB64, ciphertextB64] = encryptedToken.split(":");
+  if (!ivB64 || !ciphertextB64) {
+    throw new Error("Invalid encrypted token format");
+  }
+
+  const keyBytes = fromBase64(masterKeyB64);
+  if (keyBytes.length !== 32) {
+    throw new Error("ACCESS_TOKEN_SECRET must decode to 32 bytes");
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"],
+  );
+
+  const iv = fromBase64(ivB64);
+  const ciphertext = fromBase64(ciphertextB64);
+
+  const plaintextBuffer = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    cryptoKey,
+    ciphertext,
+  );
+
+  return new TextDecoder().decode(plaintextBuffer);
+};
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const corsHeaders = buildCorsHeaders(origin);
@@ -50,8 +118,9 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       return jsonResponse(
         { error: "Server configuration error" },
         500,
@@ -71,6 +140,46 @@ Deno.serve(async (req: Request) => {
 
     if (userError || !user) {
       return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const { data: userRow, error: userRowError } = await supabaseAdmin
+      .from("users")
+      .select("hackatime_access_token")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (userRowError) {
+      console.error("Failed to read user row", userRowError);
+      return jsonResponse(
+        { error: "Failed to read user row" },
+        500,
+        corsHeaders,
+      );
+    }
+
+    const encryptedStoredToken = String(userRow?.hackatime_access_token ?? "").trim();
+    if (encryptedStoredToken.length > 0) {
+      try {
+        const decryptedToken = await decryptAccessToken(encryptedStoredToken);
+        return jsonResponse(
+          {
+            access_token: decryptedToken,
+            token_type: "Bearer",
+            source: "stored",
+          },
+          200,
+          corsHeaders,
+        );
+      } catch (decryptError) {
+        console.error("Failed to decrypt stored hackatime token", decryptError);
+        return jsonResponse(
+          { error: "Failed to decrypt stored hackatime token" },
+          500,
+          corsHeaders,
+        );
+      }
     }
 
     const body = await req.json();
@@ -134,8 +243,33 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const parsedBodyObject = (parsedBody as Record<string, unknown>) ?? {};
+    const accessToken = String(parsedBodyObject.access_token ?? "").trim();
+    if (!accessToken) {
+      return jsonResponse(
+        { error: "Hackatime response missing access_token" },
+        500,
+        corsHeaders,
+      );
+    }
+
+    const encryptedToken = await encryptAccessToken(accessToken);
+    const { error: updateTokenError } = await supabaseAdmin
+      .from("users")
+      .update({ hackatime_access_token: encryptedToken })
+      .eq("id", user.id);
+
+    if (updateTokenError) {
+      console.error("Failed to store encrypted hackatime token", updateTokenError);
+      return jsonResponse(
+        { error: "Failed to store encrypted hackatime token" },
+        500,
+        corsHeaders,
+      );
+    }
+
     return jsonResponse(
-      (parsedBody as Record<string, unknown>) ?? {},
+      parsedBodyObject,
       200,
       corsHeaders,
     );
