@@ -8,6 +8,7 @@ import 'dart:html' as html show window;
 
 import 'pages/Home_Page.dart' deferred as home_page;
 import 'pages/Login/Login_Page.dart';
+import 'pages/Login/Hackatime_Login_Page.dart';
 import 'pages/Login/SignUp/Signup_Pass_page.dart';
 import 'pages/Login/SignUp/sign_up_page.dart';
 import 'pages/Login/SignUp/sign_up_profile_page.dart';
@@ -49,8 +50,10 @@ const hackatimeClientId = String.fromEnvironment('HACKATIME_CLIENT_ID');
 bool isMaintenanceModeEnabled = false;
 const String hackatimeBannedRoute = '/hackatime-banned';
 const String hackatimeUnavailableRoute = '/hackatime-unavailable';
+const String hackatimeLoginRoute = '/hackatime-login';
 bool isHackatimeBanned = false;
 bool isHackatimeReachable = true;
+bool isHackatimeAuthenticated = false;
 String? hackatimeBanReason;
 
 bool get _isBootAccessRestricted =>
@@ -142,7 +145,9 @@ void main() async {
   if (_isBootAccessRestricted) {
     initialRoute = _activeHackatimeRestrictionRoute;
   } else if (sessionRestored) {
-    initialRoute = '/dashboard';
+    initialRoute = isHackatimeAuthenticated
+        ? '/dashboard'
+        : hackatimeLoginRoute;
   }
 
   runApp(MainApp(initialRoute: initialRoute));
@@ -229,16 +234,25 @@ Future<void> _handleOAuthCallbacks() async {
 Future<void> _restoreHackatimeAuthIfAvailable() async {
   try {
     final restored = await HackatimeService.isAuthenticated();
+    isHackatimeAuthenticated = restored;
     if (restored) {
       AppLogger.info('Restored Hackatime OAuth token from secure storage.');
     }
   } catch (e, stack) {
+    isHackatimeAuthenticated = false;
     AppLogger.warning('Failed to restore Hackatime OAuth token: $e');
     AppLogger.error('Hackatime restore error details', e, stack);
   }
 }
 
 Future<void> _refreshHackatimeBanRestriction() async {
+  if (!isHackatimeAuthenticated) {
+    isHackatimeReachable = true;
+    isHackatimeBanned = false;
+    hackatimeBanReason = null;
+    return;
+  }
+
   final slackUserId = UserService.currentUser?.slackUserId ?? '';
   final hcaUserId = UserService.currentUser?.hcUserId ?? '';
 
@@ -354,6 +368,11 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       page = const HackatimeUnavailablePage();
       routeName = hackatimeUnavailableRoute;
       requiresAuth = false;
+      break;
+    case 'hackatime-login':
+      page = const HackatimeLoginPage();
+      routeName = hackatimeLoginRoute;
+      requiresAuth = true;
       break;
     case 'login':
       final email = Uri.base.queryParameters['email'];
@@ -530,6 +549,18 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
         placeholder: const _LoadingScaffold(),
       ),
       name: '/dashboard',
+    );
+  }
+
+  if (isLoggedIn &&
+      !isHackatimeAuthenticated &&
+      requiresAuth &&
+      routeName != hackatimeLoginRoute &&
+      routeName != hackatimeBannedRoute &&
+      routeName != hackatimeUnavailableRoute) {
+    return _buildRoute(
+      child: const HackatimeLoginPage(),
+      name: hackatimeLoginRoute,
     );
   }
 
@@ -762,25 +793,6 @@ class HackatimeUnavailablePage extends StatelessWidget {
                         color: colorScheme.onSurfaceVariant,
                         height: 1.5,
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        try {
-                          await HackatimeService.signInWithHackatime();
-                        } catch (e, stack) {
-                          AppLogger.error(
-                            'Manual Hackatime OAuth start failed',
-                            e,
-                            stack,
-                          );
-                          GlobalNotificationService.instance.showError(
-                            'Could not start Hackatime OAuth: ${e.toString()}',
-                          );
-                        }
-                      },
-                      icon: const Icon(Symbols.login),
-                      label: const Text('Start Hackatime Login'),
                     ),
                   ],
                 ),
