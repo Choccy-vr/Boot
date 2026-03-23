@@ -502,11 +502,12 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       routeName = '/admin';
       break;
     case 'shop':
-      page = DeferredPage(
+      /*page = DeferredPage(
         loadLibrary: shop_page.loadLibrary,
         buildPage: (_) => shop_page.ShopPage(),
         placeholder: const _LoadingScaffold(),
-      );
+      );*/
+      page = const ShopUnderConstructionRedirectPage();
       routeName = '/shop';
       break;
     case 'prizes':
@@ -569,8 +570,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   // but redirect them from login page to dashboard
   if (isLoggedIn && !requiresAuth && segments.first == 'login') {
     final shouldRouteToHackatimeLogin =
-        !isHackatimeAuthenticated &&
-        !_isBootAccessRestricted;
+        !isHackatimeAuthenticated && !_isBootAccessRestricted;
 
     return _buildRoute(
       child: shouldRouteToHackatimeLogin
@@ -647,6 +647,36 @@ class _BanAccessGateState extends State<BanAccessGate> {
     }
 
     return widget.child;
+  }
+}
+
+class ShopUnderConstructionRedirectPage extends StatefulWidget {
+  const ShopUnderConstructionRedirectPage({super.key});
+
+  @override
+  State<ShopUnderConstructionRedirectPage> createState() =>
+      _ShopUnderConstructionRedirectPageState();
+}
+
+class _ShopUnderConstructionRedirectPageState
+    extends State<ShopUnderConstructionRedirectPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      GlobalNotificationService.instance.showInfo(
+        "Woah the shop is still under construction. Great things coming your way!",
+      );
+
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const _LoadingScaffold();
   }
 }
 
