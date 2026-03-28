@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/hackatime/hackatime_service.dart';
+import '../../services/misc/logger.dart';
 
 class HackatimeLoginPage extends StatefulWidget {
   const HackatimeLoginPage({super.key});
@@ -10,6 +11,24 @@ class HackatimeLoginPage extends StatefulWidget {
 
 class _HackatimeLoginPageState extends State<HackatimeLoginPage> {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndRedirect();
+  }
+
+  Future<void> _checkAuthAndRedirect() async {
+    // If somehow we land on Hackatime login but are already authenticated,
+    // redirect to dashboard immediately.
+    final isAuthenticated = await HackatimeService.isAuthenticated();
+    if (isAuthenticated && mounted) {
+      AppLogger.info(
+        'Hackatime login page detected existing authentication; redirecting to dashboard.',
+      );
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

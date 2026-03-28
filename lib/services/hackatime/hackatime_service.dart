@@ -20,6 +20,10 @@ class HackatimeService {
   static const String _pkceVerifierStorageKey = 'hackatime_pkce_code_verifier';
   static const String _tokenExpiryStorageKey = 'hackatime_token_expiry';
 
+  /// Fast synchronous hint used by routing guards while async restore catches up.
+  static bool get hasCachedAccessToken =>
+      _accessToken != null && _accessToken!.isNotEmpty;
+
   // Hackatime OAuth configuration
   static String? _hackatimeClientId;
   static String? _hackatimeRedirectUri;

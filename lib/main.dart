@@ -56,6 +56,9 @@ bool isHackatimeReachable = true;
 bool isHackatimeAuthenticated = false;
 String? hackatimeBanReason;
 
+bool get _isHackatimeAuthenticatedEffective =>
+    isHackatimeAuthenticated || HackatimeService.hasCachedAccessToken;
+
 bool get _isBootAccessRestricted =>
     !isHackatimeReachable ||
     isHackatimeBanned ||
@@ -146,9 +149,11 @@ void main() async {
   if (_isBootAccessRestricted) {
     initialRoute = _activeHackatimeRestrictionRoute;
   } else if (sessionRestored) {
-    initialRoute = isHackatimeAuthenticated
-        ? '/dashboard'
-        : hackatimeLoginRoute;
+    final effective = _isHackatimeAuthenticatedEffective;
+    initialRoute = effective ? '/dashboard' : hackatimeLoginRoute;
+    AppLogger.debug(
+      'Session restored; Hackatime auth effective=$effective; initial route=$initialRoute',
+    );
   }
 
   runApp(MainApp(initialRoute: initialRoute));
@@ -236,9 +241,14 @@ Future<void> _restoreHackatimeAuthIfAvailable() async {
   try {
     final restored = await HackatimeService.isAuthenticated();
     isHackatimeAuthenticated = restored;
+    final hasCached = HackatimeService.hasCachedAccessToken;
+    final effective = _isHackatimeAuthenticatedEffective;
     if (restored) {
       AppLogger.info('Restored Hackatime OAuth token from secure storage.');
     }
+    AppLogger.debug(
+      'Hackatime auth state after restore: isAuthenticated=$restored, hasCached=$hasCached, effective=$effective',
+    );
   } catch (e, stack) {
     isHackatimeAuthenticated = false;
     AppLogger.warning('Failed to restore Hackatime OAuth token: $e');
@@ -247,7 +257,7 @@ Future<void> _restoreHackatimeAuthIfAvailable() async {
 }
 
 Future<void> _refreshHackatimeBanRestriction() async {
-  if (!isHackatimeAuthenticated) {
+  if (!_isHackatimeAuthenticatedEffective) {
     isHackatimeReachable = true;
     isHackatimeBanned = false;
     hackatimeBanReason = null;
@@ -555,7 +565,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   }
 
   if (isLoggedIn &&
-      !isHackatimeAuthenticated &&
+      !_isHackatimeAuthenticatedEffective &&
       requiresAuth &&
       routeName != hackatimeLoginRoute &&
       routeName != hackatimeBannedRoute &&
@@ -570,7 +580,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   // but redirect them from login page to dashboard
   if (isLoggedIn && !requiresAuth && segments.first == 'login') {
     final shouldRouteToHackatimeLogin =
-        !isHackatimeAuthenticated && !_isBootAccessRestricted;
+        !_isHackatimeAuthenticatedEffective && !_isBootAccessRestricted;
 
     return _buildRoute(
       child: shouldRouteToHackatimeLogin
