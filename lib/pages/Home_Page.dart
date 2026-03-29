@@ -2,7 +2,6 @@ import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import '/theme/responsive.dart';
 import '/theme/terminal_theme.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/services/users/Boot_User.dart';
@@ -150,7 +149,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             final manager = NotificationScope.of(context);
             if (manager == null) {
               return IconButton(
-                icon: Icon(Symbols.notifications, color: colorScheme.primary),
+                icon: Icon(Icons.notifications, color: colorScheme.primary),
                 onPressed: () {},
                 tooltip: 'Notifications',
               );
@@ -210,7 +209,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          Icon(Symbols.warning, color: TerminalColors.red, size: 32),
+          Icon(Icons.warning, color: TerminalColors.red, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -351,7 +350,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                Icon(Symbols.monitor_heart, color: colorScheme.primary),
+                Icon(Icons.monitor_heart, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -372,7 +371,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   _buildStatusItem(
                     'User',
                     UserService.currentUser?.username ?? 'Unknown',
-                    Symbols.person,
+                    Icons.person,
                     colorScheme.secondary,
                     colorScheme,
                     textTheme,
@@ -386,7 +385,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   _buildStatusItem(
                     'Status',
                     _isHackatimeBanned ? 'ERROR' : 'READY',
-                    _isHackatimeBanned ? Symbols.error : Symbols.check_circle,
+                    _isHackatimeBanned ? Icons.error : Icons.check_circle,
                     _isHackatimeBanned
                         ? TerminalColors.red
                         : colorScheme.primary,
@@ -485,7 +484,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       children: [
         Row(
           children: [
-            Icon(Symbols.memory, color: colorScheme.primary, size: 28),
+            Icon(Icons.memory, color: colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Text(
               'My OSes',
@@ -522,7 +521,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Symbols.add_circle,
+                        Icons.add_circle,
                         size: 48,
                         color: colorScheme.primary,
                       ),
@@ -548,7 +547,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           colorScheme: colorScheme,
                           textTheme: textTheme,
                         ),
-                        icon: const Icon(Symbols.add),
+                        icon: const Icon(Icons.add),
                         label: const Text('Create Project'),
                       ),
                     ],
@@ -660,7 +659,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       children: [
         Row(
           children: [
-            Icon(Symbols.task_alt, color: colorScheme.primary, size: 28),
+            Icon(Icons.task_alt, color: colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Text(
               'Setup enviroment',
@@ -726,8 +725,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   children: [
                     Icon(
                       completed
-                          ? Symbols.check_circle
-                          : Symbols.radio_button_unchecked,
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
                       color: stepColor,
                       size: 24,
                     ),
@@ -801,7 +800,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Symbols.terminal,
+                        Icons.terminal,
                         color: colorScheme.primary,
                         size: 24,
                       ),
@@ -857,7 +856,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       children: [
         Row(
           children: [
-            Icon(Symbols.terminal, color: colorScheme.primary, size: 28),
+            Icon(Icons.terminal, color: colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Text(
               'Available Commands',
@@ -890,7 +889,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 _buildNavigationCard(
                   title: 'Projects',
                   subtitle: 'See all your projects',
-                  icon: Symbols.construction,
+                  icon: Icons.construction,
                   command: './build.sh',
                   color: colorScheme.primary,
                   colorScheme: colorScheme,
@@ -924,7 +923,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 _buildNavigationCard(
                   title: 'EXPLORE',
                   subtitle: 'Browse projects',
-                  icon: Symbols.explore,
+                  icon: Icons.explore,
                   command: './explore.sh',
                   color: TerminalColors.magenta,
                   colorScheme: colorScheme,
@@ -941,7 +940,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 _buildNavigationCard(
                   title: 'LEADERBOARD',
                   subtitle: 'Top rankings',
-                  icon: Symbols.leaderboard,
+                  icon: Icons.leaderboard,
                   command: './leaderboard.sh',
                   color: TerminalColors.red,
                   colorScheme: colorScheme,
@@ -958,7 +957,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 _buildNavigationCard(
                   title: 'PROFILE',
                   subtitle: 'Your profile and stats',
-                  icon: Symbols.account_circle,
+                  icon: Icons.account_circle,
                   command: './profile.sh',
                   color: TerminalColors.cyan,
                   colorScheme: colorScheme,
@@ -1147,7 +1146,7 @@ class _ProfileCardWithHoverState extends State<_ProfileCardWithHover>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Symbols.toll,
+                            Icons.toll,
                             size: 14,
                             color: TerminalColors.yellow,
                           ),
@@ -1171,7 +1170,7 @@ class _ProfileCardWithHoverState extends State<_ProfileCardWithHover>
                   return Transform.translate(
                     offset: Offset(_animation.value, 0),
                     child: Icon(
-                      Symbols.chevron_right,
+                      Icons.chevron_right,
                       color: widget.colorScheme.onSurfaceVariant,
                     ),
                   );

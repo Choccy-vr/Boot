@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 
 // Dialog to show project requirements after creating first project
@@ -22,7 +21,7 @@ class ProjectRequirementsDialog extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Symbols.celebration, color: colorScheme.primary, size: 32),
+                Icon(Icons.celebration, color: colorScheme.primary, size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -47,14 +46,14 @@ class ProjectRequirementsDialog extends StatelessWidget {
             const SizedBox(height: 16),
 
             _buildRequirement(
-              icon: Symbols.check_circle,
+              icon: Icons.check_circle,
               text: 'Boot successfully as a functional operating system',
               colorScheme: colorScheme,
               textTheme: textTheme,
             ),
             const SizedBox(height: 12),
             _buildRequirement(
-              icon: Symbols.check_circle,
+              icon: Icons.check_circle,
               text:
                   'Differentiate itself from the base OS (if you aren\'t building it from scratch)',
               colorScheme: colorScheme,
@@ -62,7 +61,7 @@ class ProjectRequirementsDialog extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildRequirement(
-              icon: Symbols.check_circle,
+              icon: Icons.check_circle,
               text:
                   'Be properly packaged in a standard format (such as .iso or .img)',
               colorScheme: colorScheme,
@@ -82,11 +81,7 @@ class ProjectRequirementsDialog extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Symbols.lightbulb,
-                    color: TerminalColors.yellow,
-                    size: 24,
-                  ),
+                  Icon(Icons.lightbulb, color: TerminalColors.yellow, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -119,7 +114,7 @@ class ProjectRequirementsDialog extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Symbols.done),
+                  icon: const Icon(Icons.done),
                   label: const Text('Got it!'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,

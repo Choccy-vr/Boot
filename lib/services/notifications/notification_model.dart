@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 
 /// Severity level for notification styling and behavior
 enum NotificationSeverity { error, warning, info, success, promotional }
@@ -123,7 +122,7 @@ class NotificationPalette {
           background: colorScheme.errorContainer,
           border: colorScheme.error,
           text: colorScheme.onErrorContainer,
-          icon: Symbols.error,
+          icon: Icons.error,
           iconColor: colorScheme.error,
           shadow: colorScheme.error.withValues(alpha: 0.25),
         );
@@ -132,7 +131,7 @@ class NotificationPalette {
           background: colorScheme.tertiaryContainer,
           border: colorScheme.tertiary,
           text: colorScheme.onTertiaryContainer,
-          icon: Symbols.warning,
+          icon: Icons.warning,
           iconColor: colorScheme.tertiary,
           shadow: colorScheme.tertiary.withValues(alpha: 0.25),
         );
@@ -141,7 +140,7 @@ class NotificationPalette {
           background: colorScheme.primaryContainer,
           border: colorScheme.primary,
           text: colorScheme.onPrimaryContainer,
-          icon: Symbols.info,
+          icon: Icons.info,
           iconColor: colorScheme.primary,
           shadow: colorScheme.primary.withValues(alpha: 0.25),
         );
@@ -150,7 +149,7 @@ class NotificationPalette {
           background: colorScheme.secondaryContainer,
           border: colorScheme.secondary,
           text: colorScheme.onSecondaryContainer,
-          icon: Symbols.check_circle,
+          icon: Icons.check_circle,
           iconColor: colorScheme.secondary,
           shadow: colorScheme.secondary.withValues(alpha: 0.25),
         );
@@ -159,7 +158,7 @@ class NotificationPalette {
           background: colorScheme.primaryContainer.withValues(alpha: 0.6),
           border: colorScheme.primary,
           text: colorScheme.onPrimaryContainer,
-          icon: Symbols.campaign,
+          icon: Icons.campaign,
           iconColor: colorScheme.primary,
           shadow: colorScheme.primary.withValues(alpha: 0.3),
         );

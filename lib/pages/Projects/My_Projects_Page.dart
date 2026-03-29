@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/Projects/project_service.dart';
 import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
@@ -107,7 +106,7 @@ class _ProjectsPageState extends State<ProjectsPage>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Symbols.folder_open,
+            Icons.folder_open,
             size: 64,
             color: colorScheme.onSurfaceVariant,
           ),
@@ -133,7 +132,7 @@ class _ProjectsPageState extends State<ProjectsPage>
               colorScheme: colorScheme,
               textTheme: textTheme,
             ),
-            icon: Icon(Symbols.add),
+            icon: Icon(Icons.add),
             label: Text('Create Project'),
           ),
         ],
@@ -220,7 +219,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                       alignment: Alignment.topCenter,
                       errorBuilder: (context, error, stackTrace) => Center(
                         child: Icon(
-                          Symbols.broken_image,
+                          Icons.broken_image,
                           size: 48,
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -290,7 +289,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                   project.imageURL,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
-                    Symbols.broken_image,
+                    Icons.broken_image,
                     size: 48,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -334,7 +333,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                   ],
                 ),
               ),
-              Icon(Symbols.chevron_right, color: colorScheme.onSurfaceVariant),
+              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -383,7 +382,7 @@ class _ProjectsPageState extends State<ProjectsPage>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.construction, color: colorScheme.primary, size: 20),
+              Icon(Icons.construction, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -409,7 +408,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                 );
               },
               child: IconButton(
-                icon: Icon(Symbols.refresh, color: colorScheme.onSurface),
+                icon: Icon(Icons.refresh, color: colorScheme.onSurface),
                 onPressed: () async {
                   if (!(_refreshController?.isAnimating ?? false)) {
                     _refreshController?.forward(from: 0);
@@ -421,7 +420,7 @@ class _ProjectsPageState extends State<ProjectsPage>
             ),
             IconButton(
               icon: Icon(
-                _isGridView ? Symbols.view_list : Symbols.grid_view,
+                _isGridView ? Icons.view_list : Icons.grid_view,
                 color: colorScheme.onSurface,
               ),
               onPressed: () {
@@ -441,7 +440,7 @@ class _ProjectsPageState extends State<ProjectsPage>
                   textTheme: textTheme,
                 );
               },
-              icon: const Icon(Symbols.add, size: 18),
+              icon: const Icon(Icons.add, size: 18),
               label: const Text('Create Project'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/services/users/User.dart';
@@ -330,7 +329,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                     : '2–25 characters',
                 errorText: _showNameValidation ? _projectNameError : null,
                 prefixIcon: Icon(
-                  Symbols.folder,
+                  Icons.folder,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 border: OutlineInputBorder(
@@ -359,7 +358,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                     : null,
                 alignLabelWithHint: true,
                 prefixIcon: Icon(
-                  Symbols.description,
+                  Icons.description,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 border: OutlineInputBorder(
@@ -398,7 +397,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                     : 'Any valid Git hosting URL (GitHub, GitLab, Bitbucket, etc.)',
                 errorText: _showRepoValidation ? _repositoryError : null,
                 prefixIcon: Icon(
-                  Symbols.folder_data,
+                  Icons.folder,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 border: OutlineInputBorder(
@@ -451,7 +450,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                         hintText: 'Start typing (e.g., "LFS", "Ubuntu")',
                         helperText: '${_projectTags.length} tag(s) added',
                         prefixIcon: Icon(
-                          Symbols.label,
+                          Icons.label,
                           color: colorScheme.onSurfaceVariant,
                         ),
                         border: OutlineInputBorder(
@@ -559,7 +558,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               decoration: InputDecoration(
                 labelText: 'OS Type',
                 prefixIcon: Icon(
-                  Symbols.computer,
+                  Icons.computer,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 border: OutlineInputBorder(
@@ -582,7 +581,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
               decoration: InputDecoration(
                 labelText: 'Target Architecture',
                 prefixIcon: Icon(
-                  Symbols.developer_board,
+                  Icons.developer_board,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 border: OutlineInputBorder(
@@ -645,7 +644,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       child: Icon(
-                        Symbols.info,
+                        Icons.info,
                         size: 20,
                         color: colorScheme.primary,
                       ),
@@ -668,12 +667,12 @@ class _CreateProjectPageState extends State<CreateProjectPage>
                   labelText: 'Search Hackatime Projects',
                   hintText: 'Filter by project name...',
                   prefixIcon: Icon(
-                    Symbols.search,
+                    Icons.search,
                     color: colorScheme.onSurfaceVariant,
                   ),
                   suffixIcon: _hackatimeSearchController.text.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Symbols.clear),
+                          icon: Icon(Icons.clear),
                           onPressed: () {
                             _hackatimeSearchController.clear();
                             _filterHackatimeProjects('');
@@ -719,7 +718,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       ),
       child: Row(
         children: [
-          Icon(Symbols.info, color: colorScheme.onSurfaceVariant),
+          Icon(Icons.info, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -748,7 +747,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Symbols.timer, color: colorScheme.primary),
+          Icon(Icons.timer, color: colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -803,10 +802,10 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             backgroundColor: colorScheme.surfaceContainerLow,
             avatar: Icon(
               isDisabled
-                  ? Symbols.block
+                  ? Icons.block
                   : isSelected
-                  ? Symbols.check
-                  : Symbols.add,
+                  ? Icons.check
+                  : Icons.add,
               size: 18,
               color: isDisabled
                   ? colorScheme.onSurfaceVariant
@@ -873,7 +872,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
             return InputChip(
               label: Text(projectName),
               onDeleted: () => _toggleHackatimeProject(projectName, false),
-              avatar: Icon(Symbols.bolt, size: 18),
+              avatar: Icon(Icons.bolt, size: 18),
             );
           }).toList(),
         ),
@@ -1026,7 +1025,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
       height: 56,
       child: ElevatedButton.icon(
         onPressed: _createProject,
-        icon: Icon(Symbols.rocket_launch, size: 20),
+        icon: Icon(Icons.rocket_launch, size: 20),
         label: Text(
           'Create Project',
           style: textTheme.titleMedium?.copyWith(
@@ -1161,7 +1160,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
+              Icon(Icons.add_circle, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
@@ -127,7 +126,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.leaderboard, color: colorScheme.primary, size: 28),
+              Icon(Icons.leaderboard, color: colorScheme.primary, size: 28),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
@@ -148,8 +147,8 @@ class _LeaderboardPageState extends State<LeaderboardPage>
             controller: _tabController,
             isScrollable: true,
             tabs: const [
-              Tab(icon: Icon(Symbols.schedule), text: 'Most Time'),
-              Tab(icon: Icon(Symbols.emoji_events), text: 'Most Bounties'),
+              Tab(icon: Icon(Icons.schedule), text: 'Most Time'),
+              Tab(icon: Icon(Icons.emoji_events), text: 'Most Bounties'),
             ],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
@@ -188,7 +187,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
             )
           : _mostTimeProjects.isEmpty
           ? _buildEmptyState(
-              icon: Symbols.schedule,
+              icon: Icons.schedule,
               title: 'No Projects Yet',
               subtitle: 'Start tracking your development time!',
               colorScheme: colorScheme,
@@ -202,7 +201,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                   project: _mostTimeProjects[index],
                   rank: index + 1,
                   primaryStat: _mostTimeProjects[index].readableTime,
-                  primaryIcon: Symbols.schedule,
+                  primaryIcon: Icons.schedule,
                   primaryColor: TerminalColors.cyan,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -233,7 +232,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
             )
           : _mostChallengesProjects.isEmpty
           ? _buildEmptyState(
-              icon: Symbols.emoji_events,
+              icon: Icons.emoji_events,
               title: 'No Projects Yet',
               subtitle: 'Complete bounties to climb the leaderboard!',
               colorScheme: colorScheme,
@@ -250,7 +249,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                       .challengeIds
                       .length
                       .toString(),
-                  primaryIcon: Symbols.emoji_events,
+                  primaryIcon: Icons.emoji_events,
                   primaryColor: TerminalColors.yellow,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -311,13 +310,13 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     IconData? medalIcon;
     if (rank == 1) {
       rankColor = TerminalColors.yellow;
-      medalIcon = Symbols.emoji_events;
+      medalIcon = Icons.emoji_events;
     } else if (rank == 2) {
       rankColor = Colors.grey[400];
-      medalIcon = Symbols.workspace_premium;
+      medalIcon = Icons.workspace_premium;
     } else if (rank == 3) {
       rankColor = Colors.brown[400];
-      medalIcon = Symbols.military_tech;
+      medalIcon = Icons.military_tech;
     }
 
     return Card(
@@ -385,7 +384,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          Symbols.image,
+                          Icons.image,
                           color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
@@ -401,7 +400,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      Symbols.code,
+                      Icons.code,
                       color: colorScheme.onSurfaceVariant,
                       size: 24,
                     ),
@@ -435,14 +434,14 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                       Row(
                         children: [
                           _buildInfoChip(
-                            icon: Symbols.schedule,
+                            icon: Icons.schedule,
                             label: project.readableTime,
                             colorScheme: colorScheme,
                             textTheme: textTheme,
                           ),
                           const SizedBox(width: 8),
                           _buildInfoChip(
-                            icon: Symbols.emoji_events,
+                            icon: Icons.emoji_events,
                             label: '${project.challengeIds.length}',
                             colorScheme: colorScheme,
                             textTheme: textTheme,

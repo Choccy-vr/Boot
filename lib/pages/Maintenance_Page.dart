@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 class MaintenancePage extends StatelessWidget {
   const MaintenancePage({super.key});
@@ -20,13 +19,13 @@ class MaintenancePage extends StatelessWidget {
             children: [
               // Terminal-style icon
               Icon(
-                Symbols.pause_circle,
+                Icons.pause_circle,
                 size: 120,
                 color: colorScheme.primary,
                 weight: 300,
               ),
               const SizedBox(height: 32),
-              
+
               // Main message
               Text(
                 'Boot is temporarily down',
@@ -37,7 +36,7 @@ class MaintenancePage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              
+
               // Subtext
               Text(
                 'Come back later when we are back up.',

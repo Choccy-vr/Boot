@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'notification_manager.dart';
 import 'notification_panel.dart';
 
@@ -70,7 +69,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       children: [
         IconButton(
           icon: Icon(
-            hasUnread ? Symbols.notifications_active : Symbols.notifications,
+            hasUnread ? Icons.notifications_active : Icons.notifications,
             color: colorScheme.primary,
           ),
           onPressed: _openNotificationPanel,

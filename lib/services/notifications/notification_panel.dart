@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'notification_model.dart';
 import 'notification_manager.dart';
 
@@ -101,7 +100,7 @@ class _NotificationPanelState extends State<NotificationPanel>
                         child: Row(
                           children: [
                             Icon(
-                              Symbols.notifications,
+                              Icons.notifications,
                               color: colorScheme.primary,
                               size: 28,
                             ),
@@ -122,7 +121,7 @@ class _NotificationPanelState extends State<NotificationPanel>
                                   setState(() {});
                                 },
                                 icon: Icon(
-                                  Symbols.delete_sweep,
+                                  Icons.delete_sweep,
                                   size: 18,
                                   color: colorScheme.error,
                                 ),
@@ -135,7 +134,7 @@ class _NotificationPanelState extends State<NotificationPanel>
                             IconButton(
                               onPressed: _close,
                               icon: Icon(
-                                Symbols.close,
+                                Icons.close,
                                 color: colorScheme.onSurface,
                               ),
                             ),
@@ -183,7 +182,7 @@ class _NotificationPanelState extends State<NotificationPanel>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Symbols.notifications_off,
+            Icons.notifications_off,
             size: 64,
             color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
@@ -307,7 +306,7 @@ class _NotificationHistoryItem extends StatelessWidget {
                   child: IconButton(
                     onPressed: onDismiss,
                     icon: Icon(
-                      Symbols.close,
+                      Icons.close,
                       color: colorScheme.onSurfaceVariant,
                       size: 18,
                     ),

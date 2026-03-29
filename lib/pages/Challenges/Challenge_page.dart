@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/challenges/Challenge.dart';
@@ -147,7 +146,7 @@ class _ChallengePageState extends State<ChallengePage>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.mountain_flag, color: colorScheme.primary, size: 20),
+              Icon(Icons.flag, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -167,10 +166,7 @@ class _ChallengePageState extends State<ChallengePage>
                 final manager = NotificationScope.of(context);
                 if (manager == null) {
                   return IconButton(
-                    icon: Icon(
-                      Symbols.notifications,
-                      color: colorScheme.primary,
-                    ),
+                    icon: Icon(Icons.notifications, color: colorScheme.primary),
                     onPressed: () {},
                     tooltip: 'Notifications',
                   );
@@ -229,7 +225,7 @@ class _ChallengePageState extends State<ChallengePage>
         children: [
           Row(
             children: [
-              Icon(Symbols.filter_list, color: colorScheme.primary, size: 20),
+              Icon(Icons.filter_list, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Filters',
@@ -242,7 +238,7 @@ class _ChallengePageState extends State<ChallengePage>
               if (hasActiveFilters)
                 TextButton.icon(
                   onPressed: _clearFilters,
-                  icon: Icon(Symbols.close, size: 16),
+                  icon: Icon(Icons.close, size: 16),
                   label: Text('Clear'),
                 ),
             ],
@@ -256,7 +252,7 @@ class _ChallengePageState extends State<ChallengePage>
               _buildFilterChip(
                 label:
                     'Type: ${_selectedType?.toString().split('.').last ?? 'All'}',
-                icon: Symbols.category,
+                icon: Icons.category,
                 isSelected: _selectedType != null,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -266,7 +262,7 @@ class _ChallengePageState extends State<ChallengePage>
               _buildFilterChip(
                 label:
                     'Difficulty: ${_selectedDifficulty?.toString().split('.').last ?? 'All'}',
-                icon: Symbols.signal_cellular_alt,
+                icon: Icons.signal_cellular_alt,
                 isSelected: _selectedDifficulty != null,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -420,7 +416,7 @@ class _ChallengePageState extends State<ChallengePage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Symbols.search_off,
+              Icons.search_off,
               size: 64,
               color: colorScheme.onSurfaceVariant,
             ),
@@ -643,7 +639,7 @@ class _ChallengePageState extends State<ChallengePage>
                           const SizedBox(width: 6),
                         ],
                         Icon(
-                          Symbols.schedule,
+                          Icons.schedule,
                           size: 12,
                           color: daysRemaining <= 3 && !isExpired
                               ? TerminalColors.red
@@ -666,7 +662,7 @@ class _ChallengePageState extends State<ChallengePage>
                         ),
                         const SizedBox(width: 8),
                         Icon(
-                          Symbols.signal_cellular_alt,
+                          Icons.signal_cellular_alt,
                           size: 12,
                           color: difficultyColor,
                         ),
@@ -685,7 +681,7 @@ class _ChallengePageState extends State<ChallengePage>
                         ),
                         const SizedBox(width: 8),
                         Icon(
-                          Symbols.checklist,
+                          Icons.checklist,
                           size: 12,
                           color: TerminalColors.cyan,
                         ),
@@ -741,7 +737,7 @@ class _ChallengePageState extends State<ChallengePage>
                         ),
                       ),
                       child: Icon(
-                        hasRewardPrize ? Symbols.redeem : Symbols.toll,
+                        hasRewardPrize ? Icons.redeem : Icons.toll,
                         color: TerminalColors.yellow,
                         size: 24,
                       ),
@@ -779,7 +775,7 @@ class _ChallengePageState extends State<ChallengePage>
                             Row(
                               children: [
                                 Icon(
-                                  Symbols.toll,
+                                  Icons.toll,
                                   size: 12,
                                   color: TerminalColors.yellow,
                                 ),
@@ -823,17 +819,17 @@ class _ChallengePageState extends State<ChallengePage>
   IconData _getTypeIcon(ChallengeType type) {
     switch (type) {
       case ChallengeType.special:
-        return Symbols.star_rate;
+        return Icons.star_rate;
       case ChallengeType.weekly:
-        return Symbols.date_range;
+        return Icons.date_range;
       case ChallengeType.monthly:
-        return Symbols.calendar_month;
+        return Icons.calendar_month;
       case ChallengeType.scratch:
-        return Symbols.code;
+        return Icons.code;
       case ChallengeType.base:
-        return Symbols.foundation;
+        return Icons.foundation;
       case ChallengeType.normal:
-        return Symbols.flag;
+        return Icons.flag;
     }
   }
 
@@ -936,7 +932,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Symbols.close, color: colorScheme.onSurface),
+                      icon: Icon(Icons.close, color: colorScheme.onSurface),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -952,14 +948,10 @@ class ChallengeDetailDialog extends StatelessWidget {
                       _buildBadge(
                         'ACTIVE',
                         TerminalColors.green,
-                        Symbols.check_circle,
+                        Icons.check_circle,
                       )
                     else if (isExpired)
-                      _buildBadge(
-                        'EXPIRED',
-                        TerminalColors.red,
-                        Symbols.cancel,
-                      ),
+                      _buildBadge('EXPIRED', TerminalColors.red, Icons.cancel),
                     _buildBadge(
                       challenge.difficulty
                           .toString()
@@ -967,7 +959,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                           .last
                           .toUpperCase(),
                       difficultyColor,
-                      Symbols.signal_cellular_alt,
+                      Icons.signal_cellular_alt,
                     ),
                   ],
                 ),
@@ -976,7 +968,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                 // Description
                 _buildSection(
                   title: 'Description',
-                  icon: Symbols.description,
+                  icon: Icons.description,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1001,7 +993,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                 // Requirements
                 _buildSection(
                   title: 'Requirements',
-                  icon: Symbols.checklist,
+                  icon: Icons.checklist,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1069,7 +1061,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                 // Reward
                 _buildSection(
                   title: 'Reward',
-                  icon: Symbols.emoji_events,
+                  icon: Icons.emoji_events,
                   child: rewardPrize != null
                       ? _buildRewardPrizeCard(rewardPrize!)
                       : Container(
@@ -1103,7 +1095,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                                   ),
                                 ),
                                 child: Icon(
-                                  Symbols.toll,
+                                  Icons.toll,
                                   color: TerminalColors.yellow,
                                   size: 24,
                                 ),
@@ -1138,7 +1130,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                 // Timeline
                 _buildSection(
                   title: 'Timeline',
-                  icon: Symbols.schedule,
+                  icon: Icons.schedule,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1154,7 +1146,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                         _buildTimelineRow(
                           'Start Date',
                           _formatDate(challenge.startDate),
-                          Symbols.event_available,
+                          Icons.event_available,
                           TerminalColors.green,
                         ),
                         Padding(
@@ -1167,7 +1159,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                         _buildTimelineRow(
                           'End Date',
                           _formatDate(challenge.endDate),
-                          Symbols.event_busy,
+                          Icons.event_busy,
                           TerminalColors.red,
                         ),
                         Padding(
@@ -1182,7 +1174,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                           isExpired
                               ? 'Bounty Ended'
                               : '$daysRemaining day${daysRemaining != 1 ? 's' : ''}',
-                          Symbols.timer,
+                          Icons.timer,
                           isExpired
                               ? TerminalColors.red
                               : daysRemaining <= 3
@@ -1210,7 +1202,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                         onPressed: isExpired || !challenge.isActive
                             ? null
                             : () => _handleMarkAsCompleted(context),
-                        icon: Icon(Symbols.check, size: 20),
+                        icon: Icon(Icons.check, size: 20),
                         label: Text('Mark as Completed'),
                       ),
                     ),
@@ -1283,7 +1275,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Center(
                         child: Icon(
-                          Symbols.redeem,
+                          Icons.redeem,
                           size: 48,
                           color: colorScheme.outline,
                         ),
@@ -1292,7 +1284,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                   )
                 : Center(
                     child: Icon(
-                      Symbols.redeem,
+                      Icons.redeem,
                       size: 48,
                       color: colorScheme.outline,
                     ),
@@ -1327,12 +1319,12 @@ class ChallengeDetailDialog extends StatelessWidget {
                     children: [
                       if (prize.coins > 0)
                         _buildRewardChip(
-                          icon: Symbols.toll,
+                          icon: Icons.toll,
                           label: '${prize.coins} coins',
                         ),
                       if (prize.multiplier > 0)
                         _buildRewardChip(
-                          icon: Symbols.percent,
+                          icon: Icons.percent,
                           label: '${prize.multiplier}x',
                         ),
                     ],
@@ -1449,17 +1441,17 @@ class ChallengeDetailDialog extends StatelessWidget {
   IconData _getTypeIcon(ChallengeType type) {
     switch (type) {
       case ChallengeType.special:
-        return Symbols.star_rate;
+        return Icons.star_rate;
       case ChallengeType.weekly:
-        return Symbols.date_range;
+        return Icons.date_range;
       case ChallengeType.monthly:
-        return Symbols.calendar_month;
+        return Icons.calendar_month;
       case ChallengeType.scratch:
-        return Symbols.code;
+        return Icons.code;
       case ChallengeType.base:
-        return Symbols.foundation;
+        return Icons.foundation;
       case ChallengeType.normal:
-        return Symbols.flag;
+        return Icons.flag;
     }
   }
 
@@ -1555,7 +1547,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        Symbols.folder_open,
+                        Icons.folder_open,
                         color: colorScheme.primary,
                         size: 20,
                       ),
@@ -1571,7 +1563,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(
-                          Symbols.close,
+                          Icons.close,
                           color: colorScheme.onSurface,
                           size: 20,
                         ),
@@ -1648,7 +1640,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                                                               alpha: 0.1,
                                                             ),
                                                         child: Icon(
-                                                          Symbols.image,
+                                                          Icons.image,
                                                           color: colorScheme
                                                               .primary
                                                               .withValues(
@@ -1663,7 +1655,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                                                 color: colorScheme.primary
                                                     .withValues(alpha: 0.1),
                                                 child: Icon(
-                                                  Symbols.image,
+                                                  Icons.image,
                                                   color: colorScheme.primary
                                                       .withValues(alpha: 0.3),
                                                   size: 28,
@@ -1701,13 +1693,13 @@ class ChallengeDetailDialog extends StatelessWidget {
                                                   WrapCrossAlignment.center,
                                               children: [
                                                 _buildProjectStatChip(
-                                                  icon: Symbols.schedule,
+                                                  icon: Icons.schedule,
                                                   label: '${hours}h',
                                                   color: TerminalColors.cyan,
                                                   textTheme: textTheme,
                                                 ),
                                                 _buildProjectStatChip(
-                                                  icon: Symbols.flag,
+                                                  icon: Icons.flag,
                                                   label: project.level,
                                                   color: TerminalColors.yellow,
                                                   textTheme: textTheme,

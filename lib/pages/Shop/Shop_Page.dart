@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/widgets/shared_navigation_rail.dart';
 import '/services/prizes/Prize.dart';
@@ -446,7 +445,7 @@ class _ShopPageState extends State<ShopPage> {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.storefront, color: colorScheme.primary, size: 20),
+              Icon(Icons.storefront, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -474,7 +473,7 @@ class _ShopPageState extends State<ShopPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Symbols.toll, size: 18, color: TerminalColors.yellow),
+                  Icon(Icons.toll, size: 18, color: TerminalColors.yellow),
                   const SizedBox(width: 6),
                   Text(
                     '${UserService.currentUser?.bootCoins ?? 0}',
@@ -511,7 +510,7 @@ class _ShopPageState extends State<ShopPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Symbols.storefront,
+                      Icons.storefront,
                       size: 64,
                       color: colorScheme.outline,
                     ),
@@ -556,7 +555,7 @@ class _ShopPageState extends State<ShopPage> {
                             child: Row(
                               children: [
                                 Icon(
-                                  Symbols.construction,
+                                  Icons.construction,
                                   size: 28,
                                   color: TerminalColors.blue,
                                 ),
@@ -600,7 +599,7 @@ class _ShopPageState extends State<ShopPage> {
                                   child: Row(
                                     children: [
                                       Icon(
-                                        Symbols.public,
+                                        Icons.public,
                                         size: 20,
                                         color: colorScheme.primary,
                                       ),
@@ -664,7 +663,7 @@ class _ShopPageState extends State<ShopPage> {
                                   child: Row(
                                     children: [
                                       Icon(
-                                        Symbols.sort,
+                                        Icons.sort,
                                         size: 20,
                                         color: colorScheme.primary,
                                       ),
@@ -879,7 +878,7 @@ class _ShopPageState extends State<ShopPage> {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Center(
                               child: Icon(
-                                Symbols.redeem,
+                                Icons.redeem,
                                 size: 64,
                                 color: colorScheme.outline,
                               ),
@@ -889,7 +888,7 @@ class _ShopPageState extends State<ShopPage> {
                       else
                         Center(
                           child: Icon(
-                            Symbols.redeem,
+                            Icons.redeem,
                             size: 64,
                             color: colorScheme.outline,
                           ),
@@ -911,7 +910,7 @@ class _ShopPageState extends State<ShopPage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Symbols.lock,
+                                    Icons.lock,
                                     size: 48,
                                     color: Colors.white,
                                   ),
@@ -947,7 +946,7 @@ class _ShopPageState extends State<ShopPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
-                                            Symbols.key,
+                                            Icons.key,
                                             size: 14,
                                             color: TerminalColors.yellow,
                                           ),
@@ -1050,7 +1049,7 @@ class _ShopPageState extends State<ShopPage> {
                     Row(
                       children: [
                         Icon(
-                          Symbols.toll,
+                          Icons.toll,
                           size: 16,
                           color: TerminalColors.yellow.withValues(alpha: 0.7),
                         ),
@@ -1092,7 +1091,7 @@ class _ShopPageState extends State<ShopPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Symbols.inventory_2,
+                              Icons.inventory_2,
                               size: 16,
                               color: colorScheme.secondary,
                             ),
@@ -1145,7 +1144,7 @@ class _ShopPageState extends State<ShopPage> {
                                 onPressed: quantity > (isGrant ? 1 : 1)
                                     ? () => _updateQuantity(prize.id, -1)
                                     : null,
-                                icon: const Icon(Symbols.remove, size: 18),
+                                icon: const Icon(Icons.remove, size: 18),
                                 style: IconButton.styleFrom(
                                   minimumSize: const Size(32, 32),
                                   padding: EdgeInsets.zero,
@@ -1168,7 +1167,7 @@ class _ShopPageState extends State<ShopPage> {
                               ),
                               IconButton(
                                 onPressed: () => _updateQuantity(prize.id, 1),
-                                icon: const Icon(Symbols.add, size: 18),
+                                icon: const Icon(Icons.add, size: 18),
                                 style: IconButton.styleFrom(
                                   minimumSize: const Size(32, 32),
                                   padding: EdgeInsets.zero,
@@ -1397,7 +1396,7 @@ class _CartDialogState extends State<_CartDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Symbols.shopping_cart, color: colorScheme.primary),
+                  Icon(Icons.shopping_cart, color: colorScheme.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -1409,7 +1408,7 @@ class _CartDialogState extends State<_CartDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Symbols.close),
+                    icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1424,7 +1423,7 @@ class _CartDialogState extends State<_CartDialog> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Symbols.shopping_cart,
+                            Icons.shopping_cart,
                             size: 64,
                             color: colorScheme.outline,
                           ),
@@ -1469,13 +1468,13 @@ class _CartDialogState extends State<_CartDialog> {
                                         prize.picture!,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Icon(
-                                          Symbols.redeem,
+                                          Icons.redeem,
                                           color: colorScheme.outline,
                                         ),
                                       ),
                                     )
                                   : Icon(
-                                      Symbols.redeem,
+                                      Icons.redeem,
                                       color: colorScheme.outline,
                                     ),
                             ),
@@ -1488,7 +1487,7 @@ class _CartDialogState extends State<_CartDialog> {
                             subtitle: Row(
                               children: [
                                 Icon(
-                                  Symbols.toll,
+                                  Icons.toll,
                                   size: 14,
                                   color: TerminalColors.yellow,
                                 ),
@@ -1513,7 +1512,7 @@ class _CartDialogState extends State<_CartDialog> {
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
-                                  icon: const Icon(Symbols.delete, size: 20),
+                                  icon: const Icon(Icons.delete, size: 20),
                                   color: TerminalColors.red,
                                   onPressed: () {
                                     widget.onRemoveItem(prizeId);
@@ -1555,7 +1554,7 @@ class _CartDialogState extends State<_CartDialog> {
                       Row(
                         children: [
                           Icon(
-                            Symbols.toll,
+                            Icons.toll,
                             size: 20,
                             color: TerminalColors.yellow,
                           ),
@@ -1581,9 +1580,7 @@ class _CartDialogState extends State<_CartDialog> {
                           ? widget.onCheckout
                           : null,
                       icon: Icon(
-                        isCheckoutEnabled
-                            ? Symbols.shopping_bag
-                            : Symbols.block,
+                        isCheckoutEnabled ? Icons.shopping_bag : Icons.block,
                         size: 20,
                       ),
                       label: Text(

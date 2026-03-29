@@ -2,7 +2,6 @@ import 'package:boot_app/services/Storage/storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:html' as html show window;
 
@@ -723,11 +722,7 @@ class HackatimeBannedPage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Symbols.warning,
-                          color: colorScheme.error,
-                          size: 30,
-                        ),
+                        Icon(Icons.warning, color: colorScheme.error, size: 30),
                         const SizedBox(width: 10),
                         Text(
                           'Account Restricted',
@@ -811,7 +806,7 @@ class HackatimeUnavailablePage extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          Symbols.cloud_off,
+                          Icons.cloud_off,
                           color: colorScheme.tertiary,
                           size: 30,
                         ),

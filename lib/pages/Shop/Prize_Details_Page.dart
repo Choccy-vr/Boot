@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/theme/terminal_theme.dart';
 import '/services/prizes/Prize.dart';
 import '/widgets/shared_navigation_rail.dart';
@@ -52,11 +51,11 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
           title: Row(
             children: [
               IconButton(
-                icon: const Icon(Symbols.arrow_back),
+                icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 8),
-              Icon(Symbols.storefront, color: colorScheme.primary, size: 20),
+              Icon(Icons.storefront, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               const Text('Shop'),
             ],
@@ -188,7 +187,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Center(
                   child: Icon(
-                    Symbols.redeem,
+                    Icons.redeem,
                     size: 120,
                     color: colorScheme.outline,
                   ),
@@ -196,7 +195,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
               )
             : Center(
                 child: Icon(
-                  Symbols.redeem,
+                  Icons.redeem,
                   size: 120,
                   color: colorScheme.outline,
                 ),
@@ -229,7 +228,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
         if (!isGrant)
           Row(
             children: [
-              Icon(Symbols.toll, size: 28, color: TerminalColors.yellow),
+              Icon(Icons.toll, size: 28, color: TerminalColors.yellow),
               const SizedBox(width: 8),
               Text(
                 '${widget.prize.cost}',
@@ -262,7 +261,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Symbols.volunteer_activism,
+                  Icons.volunteer_activism,
                   size: 24,
                   color: TerminalColors.green,
                 ),
@@ -284,7 +283,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
         Row(
           children: [
             Icon(
-              Symbols.inventory_2,
+              Icons.inventory_2,
               size: 20,
               color: isOutOfStock
                   ? TerminalColors.red
@@ -417,7 +416,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
           if (!isGrant) ...[
             Row(
               children: [
-                Icon(Symbols.toll, size: 32, color: TerminalColors.yellow),
+                Icon(Icons.toll, size: 32, color: TerminalColors.yellow),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

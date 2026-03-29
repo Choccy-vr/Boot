@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
@@ -195,7 +194,7 @@ class _ExplorePageState extends State<ExplorePage>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.explore, color: colorScheme.primary, size: 28),
+              Icon(Icons.explore, color: colorScheme.primary, size: 28),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
@@ -214,7 +213,7 @@ class _ExplorePageState extends State<ExplorePage>
           automaticallyImplyLeading: false,
           bottom: TabBar(
             controller: _tabController,
-            tabs: const [Tab(icon: Icon(Symbols.public), text: 'All Projects')],
+            tabs: const [Tab(icon: Icon(Icons.public), text: 'All Projects')],
             labelColor: colorScheme.primary,
             unselectedLabelColor: colorScheme.onSurfaceVariant,
             indicatorColor: colorScheme.primary,
@@ -243,13 +242,13 @@ class _ExplorePageState extends State<ExplorePage>
                 decoration: InputDecoration(
                   hintText: 'Search projects by title, description, or tags...',
                   prefixIcon: Icon(
-                    Symbols.search,
+                    Icons.search,
                     color: colorScheme.onSurfaceVariant,
                   ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           icon: Icon(
-                            Symbols.close,
+                            Icons.close,
                             color: colorScheme.onSurfaceVariant,
                           ),
                           onPressed: () {
@@ -336,7 +335,7 @@ class _ExplorePageState extends State<ExplorePage>
                         )
                       : (_allProjects.isEmpty
                             ? _buildEmptyState(
-                                icon: Symbols.search_off,
+                                icon: Icons.search_off,
                                 title: 'No Projects Found',
                                 subtitle:
                                     'There are no projects to explore yet.',
@@ -371,7 +370,7 @@ class _ExplorePageState extends State<ExplorePage>
                               )))
                 : (_filteredProjects.isEmpty
                       ? _buildEmptyState(
-                          icon: Symbols.search_off,
+                          icon: Icons.search_off,
                           title: 'No Projects Match',
                           subtitle: 'Try adjusting your search or filters.',
                           colorScheme: colorScheme,
@@ -466,7 +465,7 @@ class _ExplorePageState extends State<ExplorePage>
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            Symbols.image,
+                            Icons.image,
                             color: colorScheme.onSurfaceVariant,
                             size: 24,
                           ),
@@ -482,7 +481,7 @@ class _ExplorePageState extends State<ExplorePage>
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Symbols.code,
+                        Icons.code,
                         color: colorScheme.onSurfaceVariant,
                         size: 24,
                       ),
@@ -519,7 +518,7 @@ class _ExplorePageState extends State<ExplorePage>
               Row(
                 children: [
                   _buildInfoChip(
-                    icon: Symbols.schedule,
+                    icon: Icons.schedule,
                     label: project.time > 0
                         ? '${project.time.toStringAsFixed(1)}h'
                         : '0h',

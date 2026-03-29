@@ -13,7 +13,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 //Theme Data
@@ -804,11 +803,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Symbols.computer,
-                      color: colorScheme.primary,
-                      size: 28,
-                    ),
+                    Icon(Icons.computer, color: colorScheme.primary, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -820,7 +815,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Symbols.close),
+                      icon: Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                       padding: EdgeInsets.zero,
                       constraints: BoxConstraints(),
@@ -848,7 +843,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       Row(
                         children: [
                           Icon(
-                            Symbols.lightbulb,
+                            Icons.lightbulb,
                             size: 20,
                             color: colorScheme.primary,
                           ),
@@ -936,7 +931,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Symbols.directions_boat, color: colorScheme.primary),
+              Icon(Icons.directions_boat, color: colorScheme.primary),
               const SizedBox(width: 8),
               Text('Ship Your Project'),
             ],
@@ -1014,7 +1009,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Symbols.schedule,
+                        Icons.schedule,
                         size: 18,
                         color: _project.timeTrackedShip <= 0
                             ? colorScheme.error
@@ -1060,7 +1055,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Symbols.directions_boat, size: 16),
+                          Icon(Icons.directions_boat, size: 16),
                           const SizedBox(width: 4),
                           Text('Ship It!'),
                         ],
@@ -1086,7 +1081,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Symbols.check_circle, color: colorScheme.primary, size: 16),
+          Icon(Icons.check_circle, color: colorScheme.primary, size: 16),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: textTheme.bodyMedium)),
         ],
@@ -1109,7 +1104,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Symbols.feedback, color: colorScheme.primary),
+              Icon(Icons.feedback, color: colorScheme.primary),
               const SizedBox(width: 8),
               Text('Ship Feedback'),
             ],
@@ -1322,7 +1317,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Symbols.celebration, color: colorScheme.primary),
+              Icon(Icons.celebration, color: colorScheme.primary),
               const SizedBox(width: 8),
               Text('Congratulations!'),
             ],
@@ -1339,7 +1334,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 child: Column(
                   children: [
                     Icon(
-                      Symbols.rocket_launch,
+                      Icons.rocket_launch,
                       size: 48,
                       color: colorScheme.primary,
                     ),
@@ -1460,7 +1455,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Row(
         children: [
           Icon(
-            Symbols.edit_note,
+            Icons.edit_note,
             color: Theme.of(context).colorScheme.primary,
             size: 24,
           ),
@@ -1476,7 +1471,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           IconButton(
             onPressed: _closeDevlogEditor,
             icon: Icon(
-              Symbols.close,
+              Icons.close,
               color: Theme.of(context).colorScheme.onSurface,
             ),
             tooltip: 'Close',
@@ -1588,7 +1583,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         url,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Icon(
-                          Symbols.broken_image,
+                          Icons.broken_image,
                           color: Theme.of(context).colorScheme.error,
                         ),
                       ),
@@ -1603,11 +1598,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: Icon(
-                          Symbols.close,
-                          size: 16,
-                          color: Colors.white,
-                        ),
+                        icon: Icon(Icons.close, size: 16, color: Colors.white),
                         padding: EdgeInsets.all(4),
                         constraints: BoxConstraints(),
                         onPressed: () {
@@ -1660,7 +1651,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Symbols.error,
+                  Icons.error,
                   size: 18,
                   color: Theme.of(context).colorScheme.error,
                 ),
@@ -1684,7 +1675,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _handleUploadDevlogMedia,
-                  icon: Icon(Symbols.add, size: 16),
+                  icon: Icon(Icons.add, size: 16),
                   label: Text('Add More'),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1702,7 +1693,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     _devlogMediaDirty = true;
                   });
                 },
-                icon: Icon(Symbols.delete, size: 16),
+                icon: Icon(Icons.delete, size: 16),
                 label: Text('Clear New'),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1742,7 +1733,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Symbols.cloud_upload,
+                    Icons.cloud_upload,
                     size: 48,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -1822,8 +1813,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 children: [
                                   Icon(
                                     _getMediaType(file) == 'video'
-                                        ? Symbols.play_circle
-                                        : Symbols.error, // Fallback icon
+                                        ? Icons.play_circle
+                                        : Icons.error, // Fallback icon
                                     size: 32,
                                     color: Theme.of(
                                       context,
@@ -1880,7 +1871,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         });
                       },
                       borderRadius: BorderRadius.circular(12),
-                      child: Icon(Symbols.close, color: Colors.white, size: 16),
+                      child: Icon(Icons.close, color: Colors.white, size: 16),
                     ),
                   ),
                 ),
@@ -1920,7 +1911,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Symbols.broken_image,
+              Icons.broken_image,
               size: 24,
               color: Theme.of(context).colorScheme.error,
             ),
@@ -2027,7 +2018,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         Row(
           children: [
             Icon(
-              Symbols.flag,
+              Icons.flag,
               size: 20,
               color: Theme.of(context).colorScheme.primary,
             ),
@@ -2139,7 +2130,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Symbols.schedule,
+                      Icons.schedule,
                       size: 18,
                       color: _timeToAdd > 0
                           ? Theme.of(context).colorScheme.primary
@@ -2188,7 +2179,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           ),
                         ),
                       )
-                    : Icon(Symbols.save, size: 20),
+                    : Icon(Icons.save, size: 20),
                 label: Text(
                   _isSubmittingDevlog
                       ? (_editingDevlog != null
@@ -2327,7 +2318,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Symbols.broken_image,
+                                Icons.broken_image,
                                 size: 64,
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -2357,7 +2348,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                                 ),
                                           ),
                                         )
-                                      : Icon(Symbols.upload, size: 20),
+                                      : Icon(Icons.upload, size: 20),
                                   label: Text(
                                     _isLoading
                                         ? 'Uploading...'
@@ -2415,7 +2406,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                           MainAxisAlignment.center,
                                       children: [
                                         Icon(
-                                          Symbols.upload,
+                                          Icons.upload,
                                           size: 48,
                                           color: Colors.white,
                                         ),
@@ -2446,7 +2437,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Symbols.image,
+                        Icons.image,
                         size: 64,
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -2472,7 +2463,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                     ),
                                   ),
                                 )
-                              : Icon(Symbols.upload, size: 20),
+                              : Icon(Icons.upload, size: 20),
                           label: Text(
                             _isLoading ? 'Uploading...' : 'Upload Image',
                           ),
@@ -2543,13 +2534,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
               if (_isOwner() && !_isEditMode)
                 PopupMenuButton<String>(
-                  icon: Icon(Symbols.more_vert, color: colorScheme.onSurface),
+                  icon: Icon(Icons.more_vert, color: colorScheme.onSurface),
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Symbols.edit, size: 20),
+                          Icon(Icons.edit, size: 20),
                           const SizedBox(width: 8),
                           Text('Edit Project'),
                         ],
@@ -2560,7 +2551,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       child: Row(
                         children: [
                           Icon(
-                            Symbols.delete,
+                            Icons.delete,
                             size: 20,
                             color: colorScheme.error,
                           ),
@@ -2627,7 +2618,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                 else
                                   CircleAvatar(
                                     radius: 16,
-                                    child: Icon(Symbols.person, size: 14),
+                                    child: Icon(Icons.person, size: 14),
                                   ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -2803,7 +2794,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             Row(
               children: [
                 Icon(
-                  Symbols.label,
+                  Icons.label,
                   size: 16,
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -2835,11 +2826,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           if (_isEditMode) ...[
             Row(
               children: [
-                Icon(
-                  Symbols.link,
-                  size: 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                Icon(Icons.link, size: 16, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -2985,7 +2972,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       child: Icon(
-                        Symbols.info,
+                        Icons.info,
                         size: 20,
                         color: colorScheme.primary,
                       ),
@@ -3011,12 +2998,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   labelText: 'Search Hackatime Projects',
                   hintText: 'Filter by project name...',
                   prefixIcon: Icon(
-                    Symbols.search,
+                    Icons.search,
                     color: colorScheme.onSurfaceVariant,
                   ),
                   suffixIcon: _hackatimeSearchController.text.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Symbols.clear),
+                          icon: Icon(Icons.clear),
                           onPressed: () {
                             _hackatimeSearchController.clear();
                             _filterHackatimeProjects('');
@@ -3068,7 +3055,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: _handleSaveProject,
-                  icon: Icon(Symbols.save, size: 20),
+                  icon: Icon(Icons.save, size: 20),
                   label: Text('Save Changes'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
@@ -3090,7 +3077,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 child: Row(
                   children: [
                     Icon(
-                      Symbols.schedule,
+                      Icons.schedule,
                       size: 16,
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -3106,7 +3093,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
               ElevatedButton.icon(
                 onPressed: _handleOpenGitHubRepo,
-                icon: Icon(Symbols.folder_data, size: 18),
+                icon: Icon(Icons.folder, size: 18),
                 label: Text('Github Repo'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primaryContainer,
@@ -3133,7 +3120,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       children: [
         Expanded(
           child: _buildStatCard(
-            icon: Symbols.calendar_today,
+            icon: Icons.calendar_today,
             label: 'Created',
             value: timeAgoSinceDate(_project.createdAt),
             colorScheme: colorScheme,
@@ -3143,7 +3130,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            icon: Symbols.trending_up,
+            icon: Icons.trending_up,
             label: 'Build Type',
             value: _project.level.toLowerCase().contains('scratch')
                 ? 'Made from scratch'
@@ -3279,7 +3266,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Symbols.directions_boat, size: 20),
+                        Icon(Icons.directions_boat, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           _project.shipped ? 'Already Shipped' : 'Ship Project',
@@ -3292,7 +3279,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     Row(
                       children: [
                         Icon(
-                          Symbols.info,
+                          Icons.info,
                           size: 16,
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -3313,11 +3300,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
-                          Symbols.warning,
-                          size: 16,
-                          color: colorScheme.error,
-                        ),
+                        Icon(Icons.warning, size: 16, color: colorScheme.error),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -3334,11 +3317,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
-                          Symbols.warning,
-                          size: 16,
-                          color: colorScheme.error,
-                        ),
+                        Icon(Icons.warning, size: 16, color: colorScheme.error),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -3364,7 +3343,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Symbols.play_circle, size: 20),
+                        Icon(Icons.play_circle, size: 20),
                         const SizedBox(width: 8),
                         Text('Test OS'),
                       ],
@@ -3383,7 +3362,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                     children: [
                       Expanded(
                         child: _buildStyledFilter(
-                          icon: Symbols.category,
+                          icon: Icons.category,
                           label: _selectedChallengeType == null
                               ? 'Type'
                               : _selectedChallengeType
@@ -3426,7 +3405,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStyledFilter(
-                          icon: Symbols.signal_cellular_alt,
+                          icon: Icons.signal_cellular_alt,
                           label: _selectedChallengeDifficulty == null
                               ? 'Difficulty'
                               : _selectedChallengeDifficulty
@@ -3471,11 +3450,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Icon(
-                        Symbols.mountain_flag,
-                        color: colorScheme.primary,
-                        size: 20,
-                      ),
+                      Icon(Icons.flag, color: colorScheme.primary, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         'Available Bounties',
@@ -3502,7 +3477,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Symbols.search_off,
+                              Icons.search_off,
                               size: 48,
                               color: colorScheme.onSurfaceVariant.withValues(
                                 alpha: 0.6,
@@ -3627,7 +3602,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               ),
             ),
             Icon(
-              Symbols.arrow_drop_down,
+              Icons.arrow_drop_down,
               size: 18,
               color: isActive
                   ? TerminalColors.green
@@ -3639,7 +3614,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       itemBuilder: (context) => items.map((item) {
         final bool isSelected =
             item.value ==
-            (icon == Symbols.category
+            (icon == Icons.category
                 ? _selectedChallengeType
                 : _selectedChallengeDifficulty);
         return PopupMenuItem(
@@ -3665,7 +3640,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               child: Row(
                 children: [
                   if (isSelected) ...[
-                    Icon(Symbols.check, size: 18, color: TerminalColors.green),
+                    Icon(Icons.check, size: 18, color: TerminalColors.green),
                     const SizedBox(width: 8),
                   ],
                   Expanded(
@@ -3775,7 +3750,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Symbols.warning, color: colorScheme.error),
+              Icon(Icons.warning, color: colorScheme.error),
               const SizedBox(width: 8),
               Text('Delete Project?'),
             ],
@@ -3832,7 +3807,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Symbols.warning, color: colorScheme.error),
+              Icon(Icons.warning, color: colorScheme.error),
               const SizedBox(width: 8),
               Text('Final Confirmation'),
             ],
@@ -3914,7 +3889,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
         sortDate: _ensureUtc(_project.createdAt),
         title: 'Project created',
         subtitle: _formatTimelineDate(_project.createdAt),
-        icon: Symbols.flag,
+        icon: Icons.flag,
         color: TerminalColors.green,
       ),
     );
@@ -3928,7 +3903,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           sortDate: _ensureUtc(_project.lastModified),
           title: 'Project updated',
           subtitle: _formatTimelineDate(_project.lastModified),
-          icon: Symbols.edit,
+          icon: Icons.edit,
           color: TerminalColors.cyan,
         ),
       );
@@ -3943,7 +3918,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           title: 'Ship submitted',
           subtitle:
               '${_formatTimelineDate(ship.createdAt)} · ${ship.time.toStringAsFixed(1)}h tracked',
-          icon: Symbols.directions_boat,
+          icon: Icons.directions_boat,
           color: TerminalColors.yellow,
         ),
       );
@@ -3958,7 +3933,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ), // small offset for ordering without affecting display
             title: ship.approved ? 'Ship approved ✓' : 'Ship reviewed',
             subtitle: _formatTimelineDate(ship.createdAt),
-            icon: ship.approved ? Symbols.check_circle : Symbols.rate_review,
+            icon: ship.approved ? Icons.check_circle : Icons.rate_review,
             color: TerminalColors.yellow,
             body: FutureBuilder<BootUser?>(
               future: ship.reviewer.isNotEmpty
@@ -3972,7 +3947,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       Row(
                         children: [
                           Icon(
-                            Symbols.person,
+                            Icons.person,
                             size: 14,
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -4050,7 +4025,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                             Row(
                               children: [
                                 Icon(
-                                  Symbols.star,
+                                  Icons.star,
                                   size: 16,
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
@@ -4088,8 +4063,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                       5,
                                       (index) => Icon(
                                         index < ship.technicality
-                                            ? Symbols.star
-                                            : Symbols.star,
+                                            ? Icons.star
+                                            : Icons.star,
                                         size: 16,
                                         color: index < ship.technicality
                                             ? TerminalColors.yellow
@@ -4131,8 +4106,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                       5,
                                       (index) => Icon(
                                         index < ship.functionality
-                                            ? Symbols.star
-                                            : Symbols.star,
+                                            ? Icons.star
+                                            : Icons.star,
                                         size: 16,
                                         color: index < ship.functionality
                                             ? TerminalColors.yellow
@@ -4170,8 +4145,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                       5,
                                       (index) => Icon(
                                         index < ship.ux
-                                            ? Symbols.star
-                                            : Symbols.star,
+                                            ? Icons.star
+                                            : Icons.star,
                                         size: 16,
                                         color: index < ship.ux
                                             ? TerminalColors.yellow
@@ -4206,7 +4181,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           sortDate: _ensureUtc(devlog.createdAt),
           title: devlog.title,
           subtitle: _formatTimelineDate(devlog.createdAt),
-          icon: Symbols.edit_note,
+          icon: Icons.edit_note,
           color: TerminalColors.blue,
           devlog: devlog,
           onEdit: _isOwner() ? () => _handleEditDevlog(devlog) : null,
@@ -4216,11 +4191,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
               if (devlog.timeReadable.isNotEmpty) ...[
                 Row(
                   children: [
-                    Icon(
-                      Symbols.schedule,
-                      size: 14,
-                      color: TerminalColors.blue,
-                    ),
+                    Icon(Icons.schedule, size: 14, color: TerminalColors.blue),
                     const SizedBox(width: 6),
                     Text(
                       'Time tracked: ${devlog.timeReadable}',
@@ -4252,7 +4223,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                           Row(
                             children: [
                               Icon(
-                                Symbols.flag,
+                                Icons.flag,
                                 size: 14,
                                 color: TerminalColors.green,
                               ),
@@ -4277,7 +4248,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 avatar: Icon(
-                                  Symbols.check_circle,
+                                  Icons.check_circle,
                                   size: 16,
                                   color: TerminalColors.green,
                                 ),
@@ -4423,7 +4394,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: entry.onEdit,
-                        icon: Icon(Symbols.edit, size: 18),
+                        icon: Icon(Icons.edit, size: 18),
                         tooltip: 'Edit devlog',
                         style: IconButton.styleFrom(
                           foregroundColor: colorScheme.primary,
@@ -4472,7 +4443,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           children: [
             Row(
               children: [
-                Icon(Symbols.timeline, color: colorScheme.primary, size: 24),
+                Icon(Icons.timeline, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Timeline',
@@ -4485,7 +4456,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 if (_isOwner())
                   OutlinedButton.icon(
                     onPressed: _handleCreateDevlog,
-                    icon: Icon(Symbols.add, size: 18),
+                    icon: Icon(Icons.add, size: 18),
                     label: Text('New Devlog'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(
@@ -4537,7 +4508,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       Row(
                         children: [
                           Icon(
-                            Symbols.person,
+                            Icons.person,
                             size: 20,
                             color: colorScheme.primary,
                           ),
@@ -4561,7 +4532,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _handleCreateDevlog,
-                        icon: Icon(Symbols.edit, size: 20),
+                        icon: Icon(Icons.edit, size: 20),
                         label: Text('Write Your First Entry'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
@@ -4591,7 +4562,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 child: Column(
                   children: [
                     Icon(
-                      Symbols.article,
+                      Icons.article,
                       size: 64,
                       color: colorScheme.onSurfaceVariant.withValues(
                         alpha: 0.6,
@@ -4793,7 +4764,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         const SizedBox(width: 8),
                       // Difficulty
                       Icon(
-                        Symbols.signal_cellular_alt,
+                        Icons.signal_cellular_alt,
                         size: 12,
                         color: difficultyColor,
                       ),
@@ -4813,7 +4784,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       const SizedBox(width: 12),
                       // Days remaining
                       Icon(
-                        Symbols.schedule,
+                        Icons.schedule,
                         size: 12,
                         color: isExpired
                             ? TerminalColors.red
@@ -4837,9 +4808,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            challenge.key.isNotEmpty
-                                ? Symbols.key
-                                : Symbols.toll,
+                            challenge.key.isNotEmpty ? Icons.key : Icons.toll,
                             size: 14,
                             color: TerminalColors.yellow,
                           ),
@@ -4862,7 +4831,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ),
             const SizedBox(width: 12),
             Icon(
-              Symbols.chevron_right,
+              Icons.chevron_right,
               size: 16,
               color: colorScheme.onSurfaceVariant,
             ),
@@ -4929,17 +4898,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   IconData _getChallengeTypeIcon(ChallengeType type) {
     switch (type) {
       case ChallengeType.special:
-        return Symbols.star_rate;
+        return Icons.star_rate;
       case ChallengeType.weekly:
-        return Symbols.date_range;
+        return Icons.date_range;
       case ChallengeType.monthly:
-        return Symbols.calendar_month;
+        return Icons.calendar_month;
       case ChallengeType.scratch:
-        return Symbols.code;
+        return Icons.code;
       case ChallengeType.base:
-        return Symbols.foundation;
+        return Icons.foundation;
       case ChallengeType.normal:
-        return Symbols.flag;
+        return Icons.flag;
     }
   }
 
@@ -4974,7 +4943,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       ),
       child: Row(
         children: [
-          Icon(Symbols.info, color: colorScheme.onSurfaceVariant),
+          Icon(Icons.info, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -5003,7 +4972,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Symbols.timer, color: colorScheme.primary),
+          Icon(Icons.timer, color: colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -5058,10 +5027,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             backgroundColor: colorScheme.surfaceContainerLow,
             avatar: Icon(
               isDisabled
-                  ? Symbols.block
+                  ? Icons.block
                   : isSelected
-                  ? Symbols.check
-                  : Symbols.add,
+                  ? Icons.check
+                  : Icons.add,
               size: 18,
               color: isDisabled
                   ? colorScheme.onSurfaceVariant
@@ -5128,7 +5097,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             return InputChip(
               label: Text(projectName),
               onDeleted: () => _toggleHackatimeProject(projectName, false),
-              avatar: Icon(Symbols.bolt, size: 18),
+              avatar: Icon(Icons.bolt, size: 18),
             );
           }).toList(),
         ),
@@ -5209,7 +5178,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Symbols.broken_image,
+                              Icons.broken_image,
                               size: 48,
                               color: widget.colorScheme.error,
                             ),
@@ -5249,7 +5218,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                               });
                             },
                             icon: Icon(
-                              Symbols.chevron_left,
+                              Icons.chevron_left,
                               color: Colors.white,
                               size: 20,
                             ),
@@ -5280,7 +5249,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                               });
                             },
                             icon: Icon(
-                              Symbols.chevron_right,
+                              Icons.chevron_right,
                               color: Colors.white,
                               size: 20,
                             ),

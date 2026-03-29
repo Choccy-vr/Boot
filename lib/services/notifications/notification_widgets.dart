@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'notification_model.dart';
 import 'notification_manager.dart';
 
@@ -172,7 +171,7 @@ class _NotificationCardState extends State<NotificationCard>
                     child: IconButton(
                       onPressed: _handleDismiss,
                       icon: Icon(
-                        Symbols.close,
+                        Icons.close,
                         color: palette.iconColor,
                         size: 18,
                       ),
@@ -304,7 +303,7 @@ class _NotificationCenterState extends State<NotificationCenter> {
                         child: Padding(
                           padding: const EdgeInsets.all(4),
                           child: Icon(
-                            Symbols.clear_all,
+                            Icons.clear_all,
                             size: 16,
                             color: widget.colorScheme.primary,
                           ),

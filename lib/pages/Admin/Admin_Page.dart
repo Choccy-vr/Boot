@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
 import '/services/challenges/Challenge.dart';
@@ -56,13 +55,13 @@ class _AdminPageState extends State<AdminPage> {
         backgroundColor: colorScheme.surfaceContainerLowest,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Symbols.arrow_back, color: colorScheme.primary),
+          icon: Icon(Icons.arrow_back, color: colorScheme.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           children: [
             Icon(
-              Symbols.admin_panel_settings,
+              Icons.admin_panel_settings,
               color: TerminalColors.cyan,
               size: 20,
             ),
@@ -78,7 +77,7 @@ class _AdminPageState extends State<AdminPage> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Symbols.refresh, color: colorScheme.primary),
+            icon: Icon(Icons.refresh, color: colorScheme.primary),
             onPressed: _loadData,
           ),
         ],
@@ -95,14 +94,14 @@ class _AdminPageState extends State<AdminPage> {
             child: Column(
               children: [
                 _buildTabButton(
-                  icon: Symbols.redeem,
+                  icon: Icons.redeem,
                   label: 'Prizes',
                   index: 0,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                 ),
                 _buildTabButton(
-                  icon: Symbols.emoji_events,
+                  icon: Icons.emoji_events,
                   label: 'Bounties',
                   index: 1,
                   colorScheme: colorScheme,
@@ -194,7 +193,7 @@ class _AdminPageState extends State<AdminPage> {
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => _showPrizeDialog(),
-                icon: const Icon(Symbols.add),
+                icon: const Icon(Icons.add),
                 label: const Text('Create Prize'),
               ),
             ],
@@ -207,11 +206,7 @@ class _AdminPageState extends State<AdminPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Symbols.redeem,
-                        size: 64,
-                        color: colorScheme.outline,
-                      ),
+                      Icon(Icons.redeem, size: 64, color: colorScheme.outline),
                       const SizedBox(height: 16),
                       Text(
                         'No prizes yet',
@@ -266,10 +261,10 @@ class _AdminPageState extends State<AdminPage> {
                       prize.picture!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
-                          Icon(Symbols.image, color: colorScheme.outline),
+                          Icon(Icons.image, color: colorScheme.outline),
                     ),
                   )
-                : Icon(Symbols.redeem, color: colorScheme.outline),
+                : Icon(Icons.redeem, color: colorScheme.outline),
           ),
           const SizedBox(width: 16),
           // Info
@@ -296,7 +291,7 @@ class _AdminPageState extends State<AdminPage> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Symbols.paid, size: 16, color: TerminalColors.yellow),
+                    Icon(Icons.paid, size: 16, color: TerminalColors.yellow),
                     const SizedBox(width: 4),
                     Text(
                       '${prize.cost} coins',
@@ -306,7 +301,7 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                     const SizedBox(width: 16),
                     Icon(
-                      Symbols.inventory_2,
+                      Icons.inventory_2,
                       size: 16,
                       color: colorScheme.secondary,
                     ),
@@ -326,7 +321,7 @@ class _AdminPageState extends State<AdminPage> {
           // Edit button
           IconButton(
             onPressed: () => _showPrizeDialog(prize: prize),
-            icon: Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+            icon: Icon(Icons.edit, color: colorScheme.primary, size: 20),
             style: IconButton.styleFrom(
               backgroundColor: colorScheme.surfaceContainerHighest,
               shape: RoundedRectangleBorder(
@@ -339,7 +334,7 @@ class _AdminPageState extends State<AdminPage> {
           // Delete button
           IconButton(
             onPressed: () => _showDeletePrizeDialog(prize),
-            icon: Icon(Symbols.delete, color: TerminalColors.red, size: 20),
+            icon: Icon(Icons.delete, color: TerminalColors.red, size: 20),
             style: IconButton.styleFrom(
               backgroundColor: colorScheme.surfaceContainerHighest,
               shape: RoundedRectangleBorder(
@@ -379,7 +374,7 @@ class _AdminPageState extends State<AdminPage> {
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => _showCreateChallengeDialog(),
-                icon: const Icon(Symbols.add),
+                icon: const Icon(Icons.add),
                 label: const Text('Create Bounty'),
               ),
             ],
@@ -393,7 +388,7 @@ class _AdminPageState extends State<AdminPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Symbols.emoji_events,
+                        Icons.emoji_events,
                         size: 64,
                         color: colorScheme.outline,
                       ),
@@ -444,7 +439,7 @@ class _AdminPageState extends State<AdminPage> {
     final rewardLabel = rewardPrize != null
         ? 'Reward: ${rewardPrize.title}'
         : '${challenge.coins} coins';
-    final rewardIcon = rewardPrize != null ? Symbols.redeem : Symbols.toll;
+    final rewardIcon = rewardPrize != null ? Icons.redeem : Icons.toll;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -506,19 +501,19 @@ class _AdminPageState extends State<AdminPage> {
             runSpacing: 8,
             children: [
               _buildChip(
-                icon: Symbols.category,
+                icon: Icons.category,
                 label: challenge.type.toString().split('.').last.toUpperCase(),
                 color: colorScheme.secondary,
                 textTheme: textTheme,
               ),
               _buildChip(
-                icon: Symbols.flag,
+                icon: Icons.flag,
                 label: challenge.difficulty.toString().split('.').last,
                 color: difficultyColor,
                 textTheme: textTheme,
               ),
               _buildChip(
-                icon: Symbols.calendar_month,
+                icon: Icons.calendar_month,
                 label:
                     '${challenge.startDate.month}/${challenge.startDate.day} - ${challenge.endDate.month}/${challenge.endDate.day}',
                 color: colorScheme.tertiary,
@@ -538,7 +533,7 @@ class _AdminPageState extends State<AdminPage> {
             children: [
               IconButton(
                 onPressed: () => _showEditChallengeDialog(challenge),
-                icon: Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+                icon: Icon(Icons.edit, color: colorScheme.primary, size: 20),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainerHighest,
                   shape: RoundedRectangleBorder(
@@ -552,7 +547,7 @@ class _AdminPageState extends State<AdminPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () => _showDeleteChallengeDialog(challenge),
-                icon: Icon(Symbols.delete, color: TerminalColors.red, size: 20),
+                icon: Icon(Icons.delete, color: TerminalColors.red, size: 20),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainerHighest,
                   shape: RoundedRectangleBorder(
@@ -685,7 +680,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
               title: Row(
                 children: [
-                  Icon(Symbols.redeem, color: colorScheme.primary, size: 20),
+                  Icon(Icons.redeem, color: colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
                   if (isEditing) ...[
                     Text(
@@ -719,7 +714,7 @@ class _AdminPageState extends State<AdminPage> {
                             _buildTextField(
                               controller: titleController,
                               label: 'Title',
-                              icon: Symbols.title,
+                              icon: Icons.title,
                               colorScheme: colorScheme,
                               textTheme: textTheme,
                             ),
@@ -727,7 +722,7 @@ class _AdminPageState extends State<AdminPage> {
                             _buildTextField(
                               controller: descriptionController,
                               label: 'Description',
-                              icon: Symbols.description,
+                              icon: Icons.description,
                               maxLines: 3,
                               colorScheme: colorScheme,
                               textTheme: textTheme,
@@ -739,7 +734,7 @@ class _AdminPageState extends State<AdminPage> {
                                   child: _buildTextField(
                                     controller: stockController,
                                     label: 'Stock',
-                                    icon: Symbols.inventory_2,
+                                    icon: Icons.inventory_2,
                                     keyboardType: TextInputType.number,
                                     colorScheme: colorScheme,
                                     textTheme: textTheme,
@@ -771,7 +766,7 @@ class _AdminPageState extends State<AdminPage> {
                                 _buildTextField(
                                   controller: costController,
                                   label: 'Cost Per Dollar',
-                                  icon: Symbols.paid,
+                                  icon: Icons.paid,
                                   keyboardType: TextInputType.number,
                                   colorScheme: colorScheme,
                                   textTheme: textTheme,
@@ -781,7 +776,7 @@ class _AdminPageState extends State<AdminPage> {
                                 _buildTextField(
                                   controller: costController,
                                   label: 'Cost (coins)',
-                                  icon: Symbols.paid,
+                                  icon: Icons.paid,
                                   keyboardType: TextInputType.number,
                                   colorScheme: colorScheme,
                                   textTheme: textTheme,
@@ -797,7 +792,7 @@ class _AdminPageState extends State<AdminPage> {
                                 label: selectedType == PrizeType.keyed
                                     ? 'Required Key (required)'
                                     : 'Key (optional)',
-                                icon: Symbols.key,
+                                icon: Icons.key,
                                 colorScheme: colorScheme,
                                 textTheme: textTheme,
                               ),
@@ -810,7 +805,7 @@ class _AdminPageState extends State<AdminPage> {
                                     child: _buildTextField(
                                       controller: coinsController,
                                       label: 'Coin Reward',
-                                      icon: Symbols.toll,
+                                      icon: Icons.toll,
                                       keyboardType: TextInputType.number,
                                       colorScheme: colorScheme,
                                       textTheme: textTheme,
@@ -821,7 +816,7 @@ class _AdminPageState extends State<AdminPage> {
                                     child: _buildTextField(
                                       controller: multiplierController,
                                       label: 'Multiplier',
-                                      icon: Symbols.percent,
+                                      icon: Icons.percent,
                                       keyboardType:
                                           TextInputType.numberWithOptions(
                                             decimal: true,
@@ -838,7 +833,7 @@ class _AdminPageState extends State<AdminPage> {
                             _buildTextField(
                               controller: specsController,
                               label: 'Specs (optional)',
-                              icon: Symbols.notes,
+                              icon: Icons.notes,
                               maxLines: 5,
                               colorScheme: colorScheme,
                               textTheme: textTheme,
@@ -910,7 +905,7 @@ class _AdminPageState extends State<AdminPage> {
                                   AppLogger.error('Failed to upload image', e);
                                 }
                               },
-                              icon: Icon(Symbols.upload),
+                              icon: Icon(Icons.upload),
                               label: Text(
                                 imageUrl == null
                                     ? 'Upload Image'
@@ -1168,7 +1163,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.warning, color: TerminalColors.red, size: 20),
+              Icon(Icons.warning, color: TerminalColors.red, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Delete Prize',
@@ -1213,7 +1208,7 @@ class _AdminPageState extends State<AdminPage> {
                             prize.picture!,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
-                                Icon(Symbols.image, color: colorScheme.outline),
+                                Icon(Icons.image, color: colorScheme.outline),
                           ),
                         ),
                       ),
@@ -1318,7 +1313,7 @@ class _AdminPageState extends State<AdminPage> {
               title: Row(
                 children: [
                   Icon(
-                    Symbols.emoji_events,
+                    Icons.emoji_events,
                     color: colorScheme.primary,
                     size: 20,
                   ),
@@ -1341,7 +1336,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: titleController,
                         label: 'Title',
-                        icon: Symbols.title,
+                        icon: Icons.title,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
                       ),
@@ -1349,7 +1344,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: descriptionController,
                         label: 'Description',
-                        icon: Symbols.description,
+                        icon: Icons.description,
                         maxLines: 3,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
@@ -1358,7 +1353,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: requirementsController,
                         label: 'Requirements',
-                        icon: Symbols.checklist,
+                        icon: Icons.checklist,
                         maxLines: 2,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
@@ -1368,7 +1363,7 @@ class _AdminPageState extends State<AdminPage> {
                       Row(
                         children: [
                           Icon(
-                            Symbols.redeem,
+                            Icons.redeem,
                             color: colorScheme.primary,
                             size: 20,
                           ),
@@ -1385,12 +1380,12 @@ class _AdminPageState extends State<AdminPage> {
                               ButtonSegment(
                                 value: false,
                                 label: Text('Coins'),
-                                icon: Icon(Symbols.toll, size: 16),
+                                icon: Icon(Icons.toll, size: 16),
                               ),
                               ButtonSegment(
                                 value: true,
                                 label: Text('Reward Prize'),
-                                icon: Icon(Symbols.redeem, size: 16),
+                                icon: Icon(Icons.redeem, size: 16),
                               ),
                             ],
                             selected: {useRewardPrize},
@@ -1411,7 +1406,7 @@ class _AdminPageState extends State<AdminPage> {
                         _buildTextField(
                           controller: coinsController,
                           label: 'Coins Reward',
-                          icon: Symbols.toll,
+                          icon: Icons.toll,
                           keyboardType: TextInputType.number,
                           colorScheme: colorScheme,
                           textTheme: textTheme,
@@ -1451,7 +1446,7 @@ class _AdminPageState extends State<AdminPage> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Symbols.redeem,
+                                      Icons.redeem,
                                       color: colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 12),
@@ -1479,7 +1474,7 @@ class _AdminPageState extends State<AdminPage> {
                                   );
                                 }
                               },
-                              icon: const Icon(Symbols.search),
+                              icon: const Icon(Icons.search),
                               label: const Text('Select Reward Prize'),
                             ),
                           ],
@@ -1564,7 +1559,7 @@ class _AdminPageState extends State<AdminPage> {
                       Row(
                         children: [
                           Icon(
-                            Symbols.power_settings_new,
+                            Icons.power_settings_new,
                             color: colorScheme.primary,
                             size: 20,
                           ),
@@ -1683,7 +1678,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.redeem, color: colorScheme.primary, size: 20),
+              Icon(Icons.redeem, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Select Reward Prize',
@@ -1798,7 +1793,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
               title: Row(
                 children: [
-                  Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+                  Icon(Icons.edit, color: colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Edit Bounty',
@@ -1818,7 +1813,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: titleController,
                         label: 'Title',
-                        icon: Symbols.title,
+                        icon: Icons.title,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
                       ),
@@ -1826,7 +1821,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: descriptionController,
                         label: 'Description',
-                        icon: Symbols.description,
+                        icon: Icons.description,
                         maxLines: 3,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
@@ -1835,7 +1830,7 @@ class _AdminPageState extends State<AdminPage> {
                       _buildTextField(
                         controller: requirementsController,
                         label: 'Requirements',
-                        icon: Symbols.checklist,
+                        icon: Icons.checklist,
                         maxLines: 2,
                         colorScheme: colorScheme,
                         textTheme: textTheme,
@@ -1844,7 +1839,7 @@ class _AdminPageState extends State<AdminPage> {
                       Row(
                         children: [
                           Icon(
-                            Symbols.redeem,
+                            Icons.redeem,
                             color: colorScheme.primary,
                             size: 20,
                           ),
@@ -1861,12 +1856,12 @@ class _AdminPageState extends State<AdminPage> {
                               ButtonSegment(
                                 value: false,
                                 label: Text('Coins'),
-                                icon: Icon(Symbols.toll, size: 16),
+                                icon: Icon(Icons.toll, size: 16),
                               ),
                               ButtonSegment(
                                 value: true,
                                 label: Text('Reward Prize'),
-                                icon: Icon(Symbols.redeem, size: 16),
+                                icon: Icon(Icons.redeem, size: 16),
                               ),
                             ],
                             selected: {useRewardPrize},
@@ -1886,7 +1881,7 @@ class _AdminPageState extends State<AdminPage> {
                         _buildTextField(
                           controller: coinsController,
                           label: 'Coins Reward',
-                          icon: Symbols.toll,
+                          icon: Icons.toll,
                           keyboardType: TextInputType.number,
                           colorScheme: colorScheme,
                           textTheme: textTheme,
@@ -1926,7 +1921,7 @@ class _AdminPageState extends State<AdminPage> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Symbols.redeem,
+                                      Icons.redeem,
                                       color: colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 12),
@@ -1954,7 +1949,7 @@ class _AdminPageState extends State<AdminPage> {
                                   );
                                 }
                               },
-                              icon: const Icon(Symbols.search),
+                              icon: const Icon(Icons.search),
                               label: const Text('Select Reward Prize'),
                             ),
                           ],
@@ -2031,7 +2026,7 @@ class _AdminPageState extends State<AdminPage> {
                       Row(
                         children: [
                           Icon(
-                            Symbols.power_settings_new,
+                            Icons.power_settings_new,
                             color: colorScheme.primary,
                             size: 20,
                           ),
@@ -2148,7 +2143,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.warning, color: TerminalColors.red, size: 20),
+              Icon(Icons.warning, color: TerminalColors.red, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Delete Bounty',
@@ -2300,7 +2295,7 @@ class _AdminPageState extends State<AdminPage> {
             Row(
               children: [
                 Icon(
-                  Symbols.calendar_month,
+                  Icons.calendar_month,
                   color: colorScheme.primary,
                   size: 16,
                 ),
@@ -2363,7 +2358,7 @@ class _AdminPageState extends State<AdminPage> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Center(
                           child: Icon(
-                            Symbols.redeem,
+                            Icons.redeem,
                             size: 64,
                             color: colorScheme.outline,
                           ),
@@ -2373,7 +2368,7 @@ class _AdminPageState extends State<AdminPage> {
                   else
                     Center(
                       child: Icon(
-                        Symbols.redeem,
+                        Icons.redeem,
                         size: 64,
                         color: colorScheme.outline,
                       ),
@@ -2473,7 +2468,7 @@ class _AdminPageState extends State<AdminPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Symbols.toll,
+                                Icons.toll,
                                 size: 18,
                                 color: TerminalColors.yellow,
                               ),
@@ -2508,7 +2503,7 @@ class _AdminPageState extends State<AdminPage> {
                         child: Row(
                           children: [
                             Icon(
-                              Symbols.inventory_2,
+                              Icons.inventory_2,
                               size: 16,
                               color: colorScheme.secondary,
                             ),
@@ -2695,7 +2690,7 @@ class _AdminPageState extends State<AdminPage> {
               decoration: InputDecoration(
                 hintText: 'Search countries...',
                 prefixIcon: Icon(
-                  Symbols.search,
+                  Icons.search,
                   color: colorScheme.primary,
                   size: 20,
                 ),
@@ -2859,7 +2854,7 @@ class _AdminPageState extends State<AdminPage> {
       children: [
         Row(
           children: [
-            Icon(Symbols.tune, color: colorScheme.primary, size: 20),
+            Icon(Icons.tune, color: colorScheme.primary, size: 20),
             const SizedBox(width: 8),
             Text(
               'Prize Options (optional)',
@@ -2881,7 +2876,7 @@ class _AdminPageState extends State<AdminPage> {
                   onChanged();
                 }
               },
-              icon: Icon(Symbols.add_circle_outline, size: 20),
+              icon: Icon(Icons.add_circle_outline, size: 20),
               style: IconButton.styleFrom(foregroundColor: colorScheme.primary),
             ),
           ],
@@ -2899,7 +2894,7 @@ class _AdminPageState extends State<AdminPage> {
             ),
             child: Row(
               children: [
-                Icon(Symbols.tune, color: colorScheme.onSurfaceVariant),
+                Icon(Icons.tune, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -2938,7 +2933,7 @@ class _AdminPageState extends State<AdminPage> {
                     bottom: 8,
                   ),
                   leading: Icon(
-                    Symbols.label,
+                    Icons.label,
                     color: colorScheme.primary,
                     size: 20,
                   ),
@@ -2971,7 +2966,7 @@ class _AdminPageState extends State<AdminPage> {
                             onChanged();
                           }
                         },
-                        icon: Icon(Symbols.add, size: 18),
+                        icon: Icon(Icons.add, size: 18),
                         style: IconButton.styleFrom(
                           foregroundColor: colorScheme.primary,
                         ),
@@ -2984,7 +2979,7 @@ class _AdminPageState extends State<AdminPage> {
                           );
                           onChanged();
                         },
-                        icon: Icon(Symbols.delete, size: 18),
+                        icon: Icon(Icons.delete, size: 18),
                         style: IconButton.styleFrom(
                           foregroundColor: TerminalColors.red,
                         ),
@@ -3035,7 +3030,7 @@ class _AdminPageState extends State<AdminPage> {
                                       Row(
                                         children: [
                                           Icon(
-                                            Symbols.paid,
+                                            Icons.paid,
                                             size: 14,
                                             color: TerminalColors.yellow,
                                           ),
@@ -3049,7 +3044,7 @@ class _AdminPageState extends State<AdminPage> {
                                           ),
                                           const SizedBox(width: 12),
                                           Icon(
-                                            Symbols.inventory_2,
+                                            Icons.inventory_2,
                                             size: 14,
                                             color: colorScheme.secondary,
                                           ),
@@ -3085,7 +3080,7 @@ class _AdminPageState extends State<AdminPage> {
                                       }
                                     }
                                   },
-                                  icon: Icon(Symbols.edit, size: 16),
+                                  icon: Icon(Icons.edit, size: 16),
                                   style: IconButton.styleFrom(
                                     foregroundColor: colorScheme.primary,
                                   ),
@@ -3095,7 +3090,7 @@ class _AdminPageState extends State<AdminPage> {
                                     prizeOptionValues.remove(value);
                                     onChanged();
                                   },
-                                  icon: Icon(Symbols.delete, size: 16),
+                                  icon: Icon(Icons.delete, size: 16),
                                   style: IconButton.styleFrom(
                                     foregroundColor: TerminalColors.red,
                                   ),
@@ -3130,7 +3125,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.label, color: colorScheme.primary, size: 20),
+              Icon(Icons.label, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Add Prize Option',
@@ -3146,7 +3141,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: nameController,
                 label: 'Option Name (e.g., RAM, Color, Size)',
-                icon: Symbols.label,
+                icon: Icons.label,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
               ),
@@ -3201,7 +3196,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.add_circle, color: colorScheme.primary, size: 20),
+              Icon(Icons.add_circle, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -3219,7 +3214,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: labelController,
                 label: 'Value Label (e.g., 8GB, Red, Large)',
-                icon: Symbols.label,
+                icon: Icons.label,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
               ),
@@ -3227,7 +3222,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: priceModifierController,
                 label: 'Price Modifier (coins)',
-                icon: Symbols.paid,
+                icon: Icons.paid,
                 keyboardType: TextInputType.number,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -3236,7 +3231,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: stockController,
                 label: 'Stock',
-                icon: Symbols.inventory_2,
+                icon: Icons.inventory_2,
                 keyboardType: TextInputType.number,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -3299,7 +3294,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           title: Row(
             children: [
-              Icon(Symbols.edit, color: colorScheme.primary, size: 20),
+              Icon(Icons.edit, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -3317,7 +3312,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: labelController,
                 label: 'Value Label',
-                icon: Symbols.label,
+                icon: Icons.label,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
               ),
@@ -3325,7 +3320,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: priceModifierController,
                 label: 'Price Modifier (coins)',
-                icon: Symbols.paid,
+                icon: Icons.paid,
                 keyboardType: TextInputType.number,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -3334,7 +3329,7 @@ class _AdminPageState extends State<AdminPage> {
               _buildTextField(
                 controller: stockController,
                 label: 'Stock',
-                icon: Symbols.inventory_2,
+                icon: Icons.inventory_2,
                 keyboardType: TextInputType.number,
                 colorScheme: colorScheme,
                 textTheme: textTheme,

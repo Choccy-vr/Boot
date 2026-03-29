@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 
 class DialogService {
   static void showComingSoon(
@@ -14,7 +13,7 @@ class DialogService {
         backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
         title: Row(
           children: [
-            Icon(Symbols.construction, color: colorScheme.primary),
+            Icon(Icons.construction, color: colorScheme.primary),
             const SizedBox(width: 8),
             Text(
               '$feature Coming Soon!',

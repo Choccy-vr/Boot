@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:boot_app/services/ships/ship_service.dart';
 import 'package:boot_app/services/ships/Boot_Ship.dart';
@@ -86,7 +85,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Symbols.rate_review, color: colorScheme.primary),
+              Icon(Icons.rate_review, color: colorScheme.primary),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
@@ -113,7 +112,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Symbols.check_circle,
+                      Icons.check_circle,
                       size: 64,
                       color: colorScheme.onSurfaceVariant.withValues(
                         alpha: 0.6,
@@ -188,7 +187,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      Symbols.directions_boat,
+                      Icons.directions_boat,
                       color: colorScheme.primary,
                       size: 24,
                     ),
@@ -216,7 +215,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
                     ),
                   ),
                   Icon(
-                    Symbols.chevron_right,
+                    Icons.chevron_right,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ],
@@ -230,7 +229,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
               Row(
                 children: [
                   _buildInfoChip(
-                    icon: Symbols.schedule,
+                    icon: Icons.schedule,
                     label: 'Time: ${project.readableTime}',
                     colorScheme: colorScheme,
                     textTheme: textTheme,
@@ -238,7 +237,7 @@ class _ReviewerPageState extends State<ReviewerPage> {
                   const SizedBox(width: 12),
                   if (ship.challengesRequested.isNotEmpty)
                     _buildInfoChip(
-                      icon: Symbols.emoji_events,
+                      icon: Icons.emoji_events,
                       label:
                           '${ship.challengesRequested.length} ${ship.challengesRequested.length == 1 ? 'bounty' : 'bounties'}',
                       colorScheme: colorScheme,
@@ -385,7 +384,7 @@ class _ProjectReviewWrapperState extends State<ProjectReviewWrapper> {
               ),
               ElevatedButton.icon(
                 onPressed: () => _showReviewDialog(context),
-                icon: const Icon(Symbols.rate_review, size: 20),
+                icon: const Icon(Icons.rate_review, size: 20),
                 label: const Text('Review'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -561,7 +560,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
           children: [
             Row(
               children: [
-                Icon(Symbols.rate_review, color: colorScheme.primary, size: 28),
+                Icon(Icons.rate_review, color: colorScheme.primary, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -579,7 +578,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Symbols.close),
+                  icon: const Icon(Icons.close),
                   onPressed: _isSubmitting
                       ? null
                       : () => Navigator.pop(context),
@@ -619,7 +618,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Symbols.info, size: 48, color: colorScheme.onSurfaceVariant),
+            Icon(Icons.info, size: 48, color: colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'No bounties requested',
@@ -862,7 +861,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                   child: Column(
                     children: [
                       Icon(
-                        rating == 0 ? Symbols.close : Symbols.star,
+                        rating == 0 ? Icons.close : Icons.star,
                         color: isSelected
                             ? colorScheme.primary
                             : (rating == 0
@@ -960,7 +959,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    Icon(Symbols.image, color: colorScheme.primary),
+                    Icon(Icons.image, color: colorScheme.primary),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -970,7 +969,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Symbols.close, size: 20),
+                      icon: const Icon(Icons.close, size: 20),
                       onPressed: () {
                         setState(() {
                           _screenshotFile = null;
@@ -993,7 +992,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Symbols.upload),
+                  : const Icon(Icons.upload),
               label: Text(
                 _isUploadingScreenshot ? 'Uploading...' : 'Choose Screenshot',
               ),
@@ -1027,7 +1026,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
               labelText: 'Override hours',
               helperText: 'Only enter if you need to manually set the hours',
               prefixIcon: Icon(
-                Symbols.schedule,
+                Icons.schedule,
                 color: colorScheme.onSurfaceVariant,
               ),
               suffixText: 'hrs',
@@ -1049,7 +1048,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
               labelText: 'Override justification',
               helperText: 'Explain why the tracked time is being overridden',
               prefixIcon: Icon(
-                Symbols.feedback,
+                Icons.feedback,
                 color: colorScheme.onSurfaceVariant,
               ),
               border: OutlineInputBorder(
@@ -1142,7 +1141,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
         children: [
           TextButton.icon(
             onPressed: _isSubmitting ? null : () => setState(() => _step = 0),
-            icon: const Icon(Symbols.arrow_back, size: 20),
+            icon: const Icon(Icons.arrow_back, size: 20),
             label: const Text('Back'),
           ),
           ElevatedButton(
@@ -1163,7 +1162,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
         children: [
           TextButton.icon(
             onPressed: _isSubmitting ? null : () => setState(() => _step = 1),
-            icon: const Icon(Symbols.arrow_back, size: 20),
+            icon: const Icon(Icons.arrow_back, size: 20),
             label: const Text('Back'),
           ),
           ElevatedButton(
@@ -1183,7 +1182,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
       children: [
         TextButton.icon(
           onPressed: _isSubmitting ? null : () => setState(() => _step = 2),
-          icon: const Icon(Symbols.arrow_back, size: 20),
+          icon: const Icon(Icons.arrow_back, size: 20),
           label: const Text('Back'),
         ),
         Row(
@@ -1196,7 +1195,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Symbols.close, size: 20),
+                  : const Icon(Icons.close, size: 20),
               label: const Text('Deny'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: colorScheme.error,
@@ -1212,7 +1211,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Symbols.check, size: 20),
+                  : const Icon(Icons.check, size: 20),
               label: const Text('Approve'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,

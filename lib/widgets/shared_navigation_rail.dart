@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '../services/auth/Auth.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
@@ -126,7 +125,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   child: Row(
                     children: [
                       Icon(
-                        Symbols.terminal,
+                        Icons.terminal,
                         color: colorScheme.primary,
                         size: 24,
                       ),
@@ -143,7 +142,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 )
               : Center(
                   child: Icon(
-                    Symbols.terminal,
+                    Icons.terminal,
                     color: colorScheme.primary,
                     size: 28,
                   ),
@@ -155,7 +154,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
               _buildRailItem(
-                icon: Symbols.home,
+                icon: Icons.home,
                 title: 'Dashboard',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -169,7 +168,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.construction,
+                icon: Icons.construction,
                 title: 'My Projects',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -183,7 +182,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.explore,
+                icon: Icons.explore,
                 title: 'Explore',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -197,7 +196,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.leaderboard,
+                icon: Icons.leaderboard,
                 title: 'Leaderboard',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -211,7 +210,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.mountain_flag,
+                icon: Icons.flag,
                 title: 'Bounties',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -225,7 +224,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 },
               ),
               _buildRailItem(
-                icon: Symbols.storefront,
+                icon: Icons.storefront,
                 title: 'Shop',
                 colorScheme: colorScheme,
                 textTheme: textTheme,
@@ -242,7 +241,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   user?.role == UserRole.admin ||
                   user?.role == UserRole.owner)
                 _buildRailItem(
-                  icon: Symbols.grading,
+                  icon: Icons.grading,
                   title: 'Reviewer Center',
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -257,7 +256,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 ),
               if (user?.role == UserRole.admin || user?.role == UserRole.owner)
                 _buildRailItem(
-                  icon: Symbols.admin_panel_settings,
+                  icon: Icons.admin_panel_settings,
                   title: 'Admin Panel',
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -487,7 +486,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Symbols.toll,
+                                  Icons.toll,
                                   size: 11,
                                   color: TerminalColors.yellow,
                                 ),
@@ -535,7 +534,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                     textTheme: textTheme,
                   );
                 },
-                icon: Icon(Symbols.logout, size: 16, color: TerminalColors.red),
+                icon: Icon(Icons.logout, size: 16, color: TerminalColors.red),
                 label: Text(
                   'Logout',
                   style: textTheme.bodySmall?.copyWith(

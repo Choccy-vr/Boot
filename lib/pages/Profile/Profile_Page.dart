@@ -1,6 +1,5 @@
 import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import '/services/users/Boot_User.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
@@ -197,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Row(
               children: [
-                Icon(Symbols.folder_open, color: colorScheme.primary, size: 24),
+                Icon(Icons.folder_open, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Projects',
@@ -225,7 +224,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildEmptyState(
                 'No projects yet',
                 'This user hasn\'t created any projects.',
-                Symbols.folder_open,
+                Icons.folder_open,
                 colorScheme,
                 textTheme,
               )
@@ -260,7 +259,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Row(
               children: [
-                Icon(Symbols.article, color: colorScheme.secondary, size: 24),
+                Icon(Icons.article, color: colorScheme.secondary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Devlogs',
@@ -288,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildEmptyState(
                 'No devlogs yet',
                 'This user hasn\'t written any devlogs.',
-                Symbols.article,
+                Icons.article,
                 colorScheme,
                 textTheme,
               )
@@ -347,14 +346,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                 height: 100,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Icon(
-                                    Symbols.person,
+                                    Icons.person,
                                     color: colorScheme.primary,
                                     size: 50,
                                   );
                                 },
                               )
                             : Icon(
-                                Symbols.person,
+                                Icons.person,
                                 color: colorScheme.primary,
                                 size: 50,
                               ),
@@ -368,7 +367,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             borderRadius: BorderRadius.circular(47),
                           ),
                           child: Icon(
-                            Symbols.camera_alt,
+                            Icons.camera_alt,
                             color: Colors.white,
                             size: 30,
                           ),
@@ -414,15 +413,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       Column(
                         children: [
                           IconButton(
-                            icon: Icon(
-                              Symbols.check,
-                              color: colorScheme.primary,
-                            ),
+                            icon: Icon(Icons.check, color: colorScheme.primary),
                             onPressed: _saveUsername,
                             tooltip: 'Save',
                           ),
                           IconButton(
-                            icon: Icon(Symbols.close, color: colorScheme.error),
+                            icon: Icon(Icons.close, color: colorScheme.error),
                             onPressed: _cancelUsernameEdit,
                             tooltip: 'Cancel',
                           ),
@@ -480,12 +476,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     Column(
                       children: [
                         IconButton(
-                          icon: Icon(Symbols.check, color: colorScheme.primary),
+                          icon: Icon(Icons.check, color: colorScheme.primary),
                           onPressed: _saveBio,
                           tooltip: 'Save',
                         ),
                         IconButton(
-                          icon: Icon(Symbols.close, color: colorScheme.error),
+                          icon: Icon(Icons.close, color: colorScheme.error),
                           onPressed: _cancelBioEdit,
                           tooltip: 'Cancel',
                         ),
@@ -551,7 +547,7 @@ class _ProfilePageState extends State<ProfilePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Symbols.event,
+                  Icons.event,
                   color: colorScheme.onSurfaceVariant,
                   size: 16,
                 ),
@@ -580,7 +576,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Row(
               children: [
-                Icon(Symbols.analytics, color: colorScheme.primary, size: 20),
+                Icon(Icons.analytics, color: colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Stats',
@@ -600,7 +596,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: _buildCompactStatItem(
                     'Projects',
                     widget.user.totalProjects.toString(),
-                    Symbols.folder_open,
+                    Icons.folder_open,
                     colorScheme.primary,
                     colorScheme,
                     textTheme,
@@ -611,7 +607,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: _buildCompactStatItem(
                     'Devlogs',
                     widget.user.devlogs.toString(),
-                    Symbols.article,
+                    Icons.article,
                     colorScheme.secondary,
                     colorScheme,
                     textTheme,
@@ -626,7 +622,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: _buildCompactStatItem(
                     'Boot Coins',
                     widget.user.bootCoins.toString(),
-                    Symbols.toll,
+                    Icons.toll,
                     TerminalColors.yellow,
                     colorScheme,
                     textTheme,
@@ -674,13 +670,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           project.imageURL,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Icon(
-                            Symbols.broken_image,
+                            Icons.broken_image,
                             color: colorScheme.onSurfaceVariant,
                             size: 24,
                           ),
                         )
                       : Icon(
-                          Symbols.folder_open,
+                          Icons.folder_open,
                           color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
@@ -1128,7 +1124,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Symbols.broken_image,
+                              Icons.broken_image,
                               size: 48,
                               color: widget.colorScheme.error,
                             ),
@@ -1168,7 +1164,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                               });
                             },
                             icon: Icon(
-                              Symbols.chevron_left,
+                              Icons.chevron_left,
                               color: Colors.white,
                               size: 20,
                             ),
@@ -1199,7 +1195,7 @@ class _DevlogMediaViewerState extends State<_DevlogMediaViewer> {
                               });
                             },
                             icon: Icon(
-                              Symbols.chevron_right,
+                              Icons.chevron_right,
                               color: Colors.white,
                               size: 20,
                             ),
