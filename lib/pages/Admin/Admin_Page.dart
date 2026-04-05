@@ -2610,67 +2610,6 @@ class _AdminPageState extends State<AdminPage> {
       ],
     };
 
-    // Country name mapping
-    final Map<PrizeCountries, String> countryNames = {
-      PrizeCountries.all: 'All Countries',
-      PrizeCountries.us: 'United States',
-      PrizeCountries.ca: 'Canada',
-      PrizeCountries.mx: 'Mexico',
-      PrizeCountries.ar: 'Argentina',
-      PrizeCountries.br: 'Brazil',
-      PrizeCountries.cl: 'Chile',
-      PrizeCountries.co: 'Colombia',
-      PrizeCountries.pe: 'Peru',
-      PrizeCountries.ve: 'Venezuela',
-      PrizeCountries.ec: 'Ecuador',
-      PrizeCountries.bo: 'Bolivia',
-      PrizeCountries.py: 'Paraguay',
-      PrizeCountries.uy: 'Uruguay',
-      PrizeCountries.gb: 'United Kingdom',
-      PrizeCountries.de: 'Germany',
-      PrizeCountries.fr: 'France',
-      PrizeCountries.it: 'Italy',
-      PrizeCountries.es: 'Spain',
-      PrizeCountries.nl: 'Netherlands',
-      PrizeCountries.be: 'Belgium',
-      PrizeCountries.ch: 'Switzerland',
-      PrizeCountries.at: 'Austria',
-      PrizeCountries.se: 'Sweden',
-      PrizeCountries.no: 'Norway',
-      PrizeCountries.dk: 'Denmark',
-      PrizeCountries.fi: 'Finland',
-      PrizeCountries.ie: 'Ireland',
-      PrizeCountries.pt: 'Portugal',
-      PrizeCountries.pl: 'Poland',
-      PrizeCountries.cz: 'Czech Republic',
-      PrizeCountries.gr: 'Greece',
-      PrizeCountries.ro: 'Romania',
-      PrizeCountries.hu: 'Hungary',
-      PrizeCountries.cn: 'China',
-      PrizeCountries.jp: 'Japan',
-      PrizeCountries.kr: 'South Korea',
-      PrizeCountries.ind: 'India',
-      PrizeCountries.sg: 'Singapore',
-      PrizeCountries.my: 'Malaysia',
-      PrizeCountries.th: 'Thailand',
-      PrizeCountries.vn: 'Vietnam',
-      PrizeCountries.ph: 'Philippines',
-      PrizeCountries.id: 'Indonesia',
-      PrizeCountries.tw: 'Taiwan',
-      PrizeCountries.hk: 'Hong Kong',
-      PrizeCountries.au: 'Australia',
-      PrizeCountries.nz: 'New Zealand',
-      PrizeCountries.ae: 'UAE',
-      PrizeCountries.sa: 'Saudi Arabia',
-      PrizeCountries.il: 'Israel',
-      PrizeCountries.tr: 'Turkey',
-      PrizeCountries.za: 'South Africa',
-      PrizeCountries.ng: 'Nigeria',
-      PrizeCountries.eg: 'Egypt',
-      PrizeCountries.ke: 'Kenya',
-      PrizeCountries.ma: 'Morocco',
-    };
-
     return StatefulBuilder(
       builder: (context, setRegionState) {
         return Column(
@@ -2738,8 +2677,9 @@ class _AdminPageState extends State<AdminPage> {
                   final filteredCountries = searchQuery.isEmpty
                       ? countriesInRegion
                       : countriesInRegion.where((country) {
-                          final name =
-                              countryNames[country]?.toLowerCase() ?? '';
+                          final name = prizeCountryDisplayName(
+                            country,
+                          ).toLowerCase();
                           return name.contains(searchQuery);
                         }).toList();
 
@@ -2811,7 +2751,7 @@ class _AdminPageState extends State<AdminPage> {
                           });
                         },
                         title: Text(
-                          countryNames[country] ?? country.toString(),
+                          prizeCountryDisplayName(country),
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurface,
                           ),

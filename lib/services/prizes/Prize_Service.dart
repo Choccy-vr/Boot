@@ -16,6 +16,15 @@ class PrizeService {
     }
   }
 
+  static Future<void> updatePrizes() async {
+    try {
+      final response = await SupabaseDB.getAllRowData(table: 'prizes');
+      prizes = (response as List).map((json) => Prize.fromJson(json)).toList();
+    } catch (e, stack) {
+      AppLogger.error('Error getting prizes', e, stack);
+    }
+  }
+
   static Future<Prize?> getPrizeById(String id) async {
     try {
       final response = await SupabaseDB.getRowData(table: 'prizes', rowID: id);

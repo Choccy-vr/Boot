@@ -511,12 +511,12 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       routeName = '/admin';
       break;
     case 'shop':
-      /*page = DeferredPage(
+      page = DeferredPage(
         loadLibrary: shop_page.loadLibrary,
         buildPage: (_) => shop_page.ShopPage(),
         placeholder: const _LoadingScaffold(),
-      );*/
-      page = const ShopUnderConstructionRedirectPage();
+      );
+      /*page = const ShopUnderConstructionRedirectPage();*/
       routeName = '/shop';
       break;
     case 'prizes':

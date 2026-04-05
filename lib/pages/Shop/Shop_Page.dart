@@ -1,14 +1,12 @@
-import 'package:flutter/material.dart';
-import '/theme/terminal_theme.dart';
-import '/widgets/shared_navigation_rail.dart';
-import '/services/prizes/Prize.dart';
-import '/services/prizes/Prize_Service.dart';
-import '/services/users/User.dart';
-import '/services/notifications/notifications.dart';
 import 'dart:convert';
+import 'package:boot_app/services/misc/logger.dart';
+import 'package:boot_app/services/prizes/Prize.dart';
+import 'package:boot_app/services/prizes/Prize_Service.dart';
+import 'package:boot_app/services/users/User.dart';
+import 'package:boot_app/theme/terminal_theme.dart';
+import 'package:boot_app/widgets/shared_navigation_rail.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
-enum SortOption { priceAscending, priceDescending, alphabetical }
 
 class ShopPage extends StatefulWidget {
   const ShopPage({super.key});
@@ -18,24 +16,181 @@ class ShopPage extends StatefulWidget {
 }
 
 class _ShopPageState extends State<ShopPage> {
-  static const int DEFAULT_MAX_QUANTITY = 99;
+  static const double _contentMaxWidth = 1280;
+  static const bool _showAllPrizesInNewSectionForTesting = false;
 
-  List<Prize> _allPrizes = [];
-  List<Prize> _availablePrizes = [];
-  List<Prize> _lockedPrizes = [];
-  Set<String> _cartItems = {};
-  Map<String, int> _quantities = {}; // Track quantity for each prize
-  bool _isLoading = true;
-  SortOption _sortOption = SortOption.priceAscending;
-  PrizeCountries _selectedCountry = PrizeCountries.all;
+  final TextEditingController _searchController = TextEditingController();
+  final List<PrizeCountries> _regions = PrizeCountries.values;
+  PrizeCountries _selectedRegion = PrizeCountries.all;
+  String _selectedSort = 'cost_asc';
   bool _isDetectingCountry = false;
+  bool _isLoadingPrizes = true;
+  bool _isNewPrizesCollapsed = false;
+  final ScrollController _newPrizesScrollController = ScrollController();
+  List<Prize> _allPrizes = [];
+  List<Prize> _newPrizes = [];
+  List<Prize> _filteredPrizes = [];
+  List<Prize> _keyedPrizes = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPrizes();
-    _loadCart();
-    _detectUserCountry();
+  static const Map<String, PrizeCountries> _alpha2ToPrizeCountry = {
+    'us': PrizeCountries.us,
+    'ca': PrizeCountries.ca,
+    'mx': PrizeCountries.mx,
+    'ar': PrizeCountries.ar,
+    'br': PrizeCountries.br,
+    'cl': PrizeCountries.cl,
+    'co': PrizeCountries.co,
+    'pe': PrizeCountries.pe,
+    've': PrizeCountries.ve,
+    'ec': PrizeCountries.ec,
+    'bo': PrizeCountries.bo,
+    'py': PrizeCountries.py,
+    'uy': PrizeCountries.uy,
+    'gb': PrizeCountries.gb,
+    'uk': PrizeCountries.gb,
+    'de': PrizeCountries.de,
+    'fr': PrizeCountries.fr,
+    'it': PrizeCountries.it,
+    'es': PrizeCountries.es,
+    'nl': PrizeCountries.nl,
+    'be': PrizeCountries.be,
+    'ch': PrizeCountries.ch,
+    'at': PrizeCountries.at,
+    'se': PrizeCountries.se,
+    'no': PrizeCountries.no,
+    'dk': PrizeCountries.dk,
+    'fi': PrizeCountries.fi,
+    'ie': PrizeCountries.ie,
+    'pt': PrizeCountries.pt,
+    'pl': PrizeCountries.pl,
+    'cz': PrizeCountries.cz,
+    'gr': PrizeCountries.gr,
+    'ro': PrizeCountries.ro,
+    'hu': PrizeCountries.hu,
+    'cn': PrizeCountries.cn,
+    'jp': PrizeCountries.jp,
+    'kr': PrizeCountries.kr,
+    'in': PrizeCountries.ind,
+    'sg': PrizeCountries.sg,
+    'my': PrizeCountries.my,
+    'th': PrizeCountries.th,
+    'vn': PrizeCountries.vn,
+    'ph': PrizeCountries.ph,
+    'id': PrizeCountries.id,
+    'tw': PrizeCountries.tw,
+    'hk': PrizeCountries.hk,
+    'au': PrizeCountries.au,
+    'nz': PrizeCountries.nz,
+    'ae': PrizeCountries.ae,
+    'sa': PrizeCountries.sa,
+    'il': PrizeCountries.il,
+    'tr': PrizeCountries.tr,
+    'za': PrizeCountries.za,
+    'ng': PrizeCountries.ng,
+    'eg': PrizeCountries.eg,
+    'ke': PrizeCountries.ke,
+    'ma': PrizeCountries.ma,
+  };
+
+  String _regionLabel(PrizeCountries region) {
+    return region == PrizeCountries.all
+        ? 'All'
+        : prizeCountryDisplayName(region);
+  }
+
+  double _regionDropdownIdealWidth(TextTheme textTheme) {
+    final textStyle = textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
+    var maxLabelWidth = 0.0;
+
+    for (final region in _regions) {
+      final painter = TextPainter(
+        text: TextSpan(text: _regionLabel(region), style: textStyle),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      if (painter.width > maxLabelWidth) {
+        maxLabelWidth = painter.width;
+      }
+    }
+
+    // Add room for horizontal padding and the dropdown icon.
+    return (maxLabelWidth + 96).clamp(220.0, 420.0);
+  }
+
+  PrizeCountries? _countryCodeToEnum(String countryCode) {
+    final normalizedCode = countryCode.trim().toLowerCase();
+    return _alpha2ToPrizeCountry[normalizedCode];
+  }
+
+  bool _userHasPrizeKey(Prize prize) {
+    final currentUserKeys = UserService.currentUser?.keys;
+    if (currentUserKeys == null || currentUserKeys.isEmpty) {
+      return false;
+    }
+
+    return currentUserKeys.contains(prize.key);
+  }
+
+  Future<void> _loadPrizes() async {
+    if (!mounted) return;
+    setState(() => _isLoadingPrizes = true);
+
+    await PrizeService.updatePrizes();
+    if (!mounted) return;
+
+    _allPrizes = List<Prize>.from(PrizeService.prizes);
+    _setNewPrizes();
+    _applyFilters();
+    setState(() => _isLoadingPrizes = false);
+  }
+
+  void _applyFilters() {
+    if (!mounted) return;
+
+    final query = _searchController.text.trim().toLowerCase();
+
+    final filtered = _allPrizes.where((prize) {
+      final matchesSearch =
+          query.isEmpty ||
+          prize.title.toLowerCase().contains(query) ||
+          prize.description.toLowerCase().contains(query);
+
+      final matchesRegion =
+          _selectedRegion == PrizeCountries.all ||
+          prize.countries.contains(PrizeCountries.all) ||
+          prize.countries.contains(_selectedRegion);
+
+      return matchesSearch && matchesRegion;
+    }).toList();
+
+    switch (_selectedSort) {
+      case 'cost_desc':
+        filtered.sort((a, b) => b.cost.compareTo(a.cost));
+        break;
+      case 'cost_asc':
+      default:
+        filtered.sort((a, b) => a.cost.compareTo(b.cost));
+        break;
+    }
+
+    final normalPrizes = filtered
+        .where(
+          (prize) =>
+              prize.type != PrizeType.reward &&
+              (prize.type != PrizeType.keyed || _userHasPrizeKey(prize)),
+        )
+        .toList();
+
+    final keyedPrizes = filtered
+        .where(
+          (prize) => prize.type == PrizeType.keyed && !_userHasPrizeKey(prize),
+        )
+        .toList();
+
+    setState(() {
+      _filteredPrizes = normalPrizes;
+      _keyedPrizes = keyedPrizes;
+    });
   }
 
   Future<void> _detectUserCountry() async {
@@ -51,7 +206,7 @@ class _ShopPageState extends State<ShopPage> {
           final country = _countryCodeToEnum(countryCode);
           if (country != null && mounted) {
             setState(() {
-              _selectedCountry = country;
+              _selectedRegion = country;
               _isDetectingCountry = false;
             });
             _applyFilters();
@@ -66,367 +221,41 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  PrizeCountries? _countryCodeToEnum(String code) {
-    final mapping = {
-      'us': PrizeCountries.us,
-      'ca': PrizeCountries.ca,
-      'mx': PrizeCountries.mx,
-      'ar': PrizeCountries.ar,
-      'br': PrizeCountries.br,
-      'cl': PrizeCountries.cl,
-      'co': PrizeCountries.co,
-      'pe': PrizeCountries.pe,
-      've': PrizeCountries.ve,
-      'ec': PrizeCountries.ec,
-      'bo': PrizeCountries.bo,
-      'py': PrizeCountries.py,
-      'uy': PrizeCountries.uy,
-      'gb': PrizeCountries.gb,
-      'de': PrizeCountries.de,
-      'fr': PrizeCountries.fr,
-      'it': PrizeCountries.it,
-      'es': PrizeCountries.es,
-      'nl': PrizeCountries.nl,
-      'be': PrizeCountries.be,
-      'ch': PrizeCountries.ch,
-      'at': PrizeCountries.at,
-      'se': PrizeCountries.se,
-      'no': PrizeCountries.no,
-      'dk': PrizeCountries.dk,
-      'fi': PrizeCountries.fi,
-      'ie': PrizeCountries.ie,
-      'pt': PrizeCountries.pt,
-      'pl': PrizeCountries.pl,
-      'cz': PrizeCountries.cz,
-      'gr': PrizeCountries.gr,
-      'ro': PrizeCountries.ro,
-      'hu': PrizeCountries.hu,
-      'cn': PrizeCountries.cn,
-      'jp': PrizeCountries.jp,
-      'kr': PrizeCountries.kr,
-      'in': PrizeCountries.ind,
-      'sg': PrizeCountries.sg,
-      'my': PrizeCountries.my,
-      'th': PrizeCountries.th,
-      'vn': PrizeCountries.vn,
-      'ph': PrizeCountries.ph,
-      'id': PrizeCountries.id,
-      'tw': PrizeCountries.tw,
-      'hk': PrizeCountries.hk,
-      'au': PrizeCountries.au,
-      'nz': PrizeCountries.nz,
-      'ae': PrizeCountries.ae,
-      'sa': PrizeCountries.sa,
-      'il': PrizeCountries.il,
-      'tr': PrizeCountries.tr,
-      'za': PrizeCountries.za,
-      'ng': PrizeCountries.ng,
-      'eg': PrizeCountries.eg,
-      'ke': PrizeCountries.ke,
-      'ma': PrizeCountries.ma,
-    };
-    return mapping[code];
-  }
-
-  void _loadCart() {
-    final currentUser = UserService.currentUser;
-    if (currentUser != null) {
-      setState(() {
-        _cartItems = Set<String>.from(currentUser.cart);
-      });
-    }
-  }
-
-  Future<void> _loadPrizes() async {
-    setState(() => _isLoading = true);
+  void _setNewPrizes() {
     try {
-      final allPrizes = await PrizeService.fetchPrizes();
-      final userKeys = Set<String>.from(UserService.currentUser?.keys ?? []);
-
-      // Filter out unlisted prizes
-      final listedPrizes = allPrizes
-          .where((prize) => prize.type != PrizeType.reward)
-          .toList();
-
-      // Separate prizes into available and locked
-      final available = <Prize>[];
-      final locked = <Prize>[];
-
-      for (final prize in listedPrizes) {
-        if (prize.type == PrizeType.normal) {
-          available.add(prize);
-        } else if (prize.type == PrizeType.keyed) {
-          // If user has the required key, add to available, otherwise locked
-          if (prize.key.isNotEmpty && userKeys.contains(prize.key)) {
-            available.add(prize);
-          } else {
-            locked.add(prize);
-          }
-        }
+      if (_showAllPrizesInNewSectionForTesting) {
+        _newPrizes = List<Prize>.from(_allPrizes)
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return;
       }
 
-      if (mounted) {
-        setState(() {
-          _allPrizes = listedPrizes;
-          _availablePrizes = available;
-          _lockedPrizes = locked;
-        });
-        _applyFilters();
-        await _cleanupCart();
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _newPrizes =
+          _allPrizes
+              .where(
+                (prize) =>
+                    DateTime.now().difference(prize.createdAt).inDays <= 7 &&
+                    prize.type != PrizeType.reward,
+              )
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e, stack) {
+      AppLogger.error('Error getting prizes', e, stack);
+      _newPrizes = [];
     }
   }
 
-  Future<void> _cleanupCart() async {
-    // Remove items from cart that are deleted or out of stock
-    final validPrizeIds = _allPrizes
-        .where((p) => p.stock > 0)
-        .map((p) => p.id)
-        .toSet();
-
-    final itemsToRemove = _cartItems
-        .where((id) => !validPrizeIds.contains(id))
-        .toList();
-
-    if (itemsToRemove.isNotEmpty) {
-      // Store original state for rollback
-      final originalCartItems = Set<String>.from(_cartItems);
-      final originalQuantities = Map<String, int>.from(_quantities);
-
-      setState(() {
-        for (final id in itemsToRemove) {
-          _cartItems.remove(id);
-          _quantities.remove(id);
-        }
-      });
-
-      // Update user's cart in the backend
-      await _syncUserCart(
-        originalCartItems: originalCartItems,
-        originalQuantities: originalQuantities,
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadPrizes();
+    _detectUserCountry();
   }
 
-  void _applyFilters() {
-    setState(() {
-      // Filter by country first
-      final userKeys = Set<String>.from(UserService.currentUser?.keys ?? []);
-      final available = <Prize>[];
-      final locked = <Prize>[];
-
-      for (final prize in _allPrizes) {
-        // Check country eligibility
-        final isCountryEligible =
-            _selectedCountry == PrizeCountries.all ||
-            prize.countries.contains(PrizeCountries.all) ||
-            prize.countries.contains(_selectedCountry);
-
-        if (!isCountryEligible) continue;
-
-        // Check prize type and key requirements
-        if (prize.type == PrizeType.normal || prize.type == PrizeType.grant) {
-          available.add(prize);
-        } else if (prize.type == PrizeType.keyed) {
-          if (prize.key.isNotEmpty && userKeys.contains(prize.key)) {
-            available.add(prize);
-          } else {
-            locked.add(prize);
-          }
-        }
-      }
-
-      _availablePrizes = available;
-      _lockedPrizes = locked;
-
-      // Apply sorting
-      switch (_sortOption) {
-        case SortOption.priceAscending:
-          _availablePrizes.sort((a, b) => a.cost.compareTo(b.cost));
-          break;
-        case SortOption.priceDescending:
-          _availablePrizes.sort((a, b) => b.cost.compareTo(a.cost));
-          break;
-        case SortOption.alphabetical:
-          _availablePrizes.sort((a, b) => a.title.compareTo(b.title));
-          break;
-      }
-    });
-  }
-
-  /// Synchronizes the local cart state with the backend.
-  /// Includes error handling with rollback on failure.
-  Future<void> _syncUserCart({
-    Set<String>? originalCartItems,
-    Map<String, int>? originalQuantities,
-  }) async {
-    final currentUser = UserService.currentUser;
-    if (currentUser == null) return;
-
-    try {
-      currentUser.cart = _cartItems.toList();
-      await UserService.updateUser();
-    } catch (e) {
-      // Revert local cart changes on error if originals provided
-      if (originalCartItems != null || originalQuantities != null) {
-        setState(() {
-          if (originalCartItems != null) _cartItems = originalCartItems;
-          if (originalQuantities != null) _quantities = originalQuantities;
-        });
-        // Restore user cart to original state
-        if (originalCartItems != null) {
-          currentUser.cart = originalCartItems.toList();
-        }
-      }
-
-      // Show error to user
-      GlobalNotificationService.instance.showError(
-        'Failed to save cart changes. Please try again.',
-      );
-    }
-  }
-
-  void _toggleCartItem(String prizeId) {
-    // Store original state for rollback
-    final originalCartItems = Set<String>.from(_cartItems);
-    final originalQuantities = Map<String, int>.from(_quantities);
-
-    setState(() {
-      if (_cartItems.contains(prizeId)) {
-        _cartItems.remove(prizeId);
-        _quantities.remove(prizeId);
-      } else {
-        _cartItems.add(prizeId);
-        // Check if it's a grant prize
-        final prize = _allPrizes.firstWhere(
-          (p) => p.id == prizeId,
-          orElse: Prize.empty,
-        );
-        // For grants, default to $10; for others, default to quantity 1
-        _quantities[prizeId] = prize.type == PrizeType.grant ? 10 : 1;
-      }
-    });
-
-    // Update user's cart in the backend
-    _syncUserCart(
-      originalCartItems: originalCartItems,
-      originalQuantities: originalQuantities,
-    );
-  }
-
-  void _updateQuantity(String prizeId, int delta) {
-    // Get the prize to check stock
-    final prize = _allPrizes.firstWhere(
-      (p) => p.id == prizeId,
-      orElse: Prize.empty,
-    );
-
-    // Return early if prize not found
-    if (prize.id.isEmpty) return;
-
-    // Store original state for rollback
-    final originalCartItems = Set<String>.from(_cartItems);
-    final originalQuantities = Map<String, int>.from(_quantities);
-
-    setState(() {
-      final currentQty = _quantities[prizeId] ?? 1;
-      final maxQty = prize.stock > 0 ? prize.stock : 0;
-      final newQty = (currentQty + delta).clamp(0, maxQty);
-
-      if (newQty == 0) {
-        // Remove from cart when quantity reaches 0
-        _cartItems.remove(prizeId);
-        _quantities.remove(prizeId);
-      } else {
-        _quantities[prizeId] = newQty;
-      }
-    });
-
-    // Update user's cart in the backend
-    _syncUserCart(
-      originalCartItems: originalCartItems,
-      originalQuantities: originalQuantities,
-    );
-  }
-
-  int _calculateCartTotal() {
-    int total = 0;
-    for (final prizeId in _cartItems) {
-      final prize = _allPrizes.firstWhere(
-        (p) => p.id == prizeId,
-        orElse: Prize.empty,
-      );
-      final quantity = _quantities[prizeId] ?? 1;
-      total += prize.cost * quantity;
-    }
-    return total;
-  }
-
-  String? _getCheckoutDisabledReason() {
-    if (_cartItems.isEmpty) return null;
-
-    final userCoins = UserService.currentUser?.bootCoins ?? 0;
-    final cartTotal = _calculateCartTotal();
-
-    // Check if all items are in stock with sufficient quantity
-    for (final prizeId in _cartItems) {
-      final prize = _allPrizes.firstWhere(
-        (p) => p.id == prizeId,
-        orElse: Prize.empty,
-      );
-      final quantity = _quantities[prizeId] ?? 1;
-
-      // If prize doesn't exist
-      if (prize.id.isEmpty) {
-        return 'Item no longer available';
-      }
-
-      // If prize is out of stock or quantity exceeds stock
-      if (prize.stock <= 0) {
-        return 'Item out of stock';
-      }
-
-      if (quantity > prize.stock) {
-        return 'Insufficient stock';
-      }
-    }
-
-    // Check if user can afford
-    if (userCoins < cartTotal) {
-      return 'Insufficient Coins';
-    }
-
-    return null; // No disabled reason, checkout is enabled
-  }
-
-  void _showCartDialog() {
-    final disabledReason = _getCheckoutDisabledReason();
-    showDialog(
-      context: context,
-      builder: (context) => _CartDialog(
-        cartItems: _cartItems,
-        allPrizes: _allPrizes,
-        quantities: _quantities,
-        onRemoveItem: _toggleCartItem,
-        disabledReason: disabledReason,
-        onCheckout: disabledReason == null
-            ? () {
-                // TODO: Implement checkout
-                Navigator.pop(context);
-                GlobalNotificationService.instance.showInfo(
-                  'Checkout not yet implemented',
-                );
-              }
-            : null,
-      ),
-    );
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _newPrizesScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -437,361 +266,90 @@ class _ShopPageState extends State<ShopPage> {
     return SharedNavigationRail(
       showAppBar: false,
       child: Scaffold(
-        backgroundColor: colorScheme.surface,
         appBar: AppBar(
-          backgroundColor: colorScheme.surfaceContainerLowest,
-          elevation: 0,
-          automaticallyImplyLeading: false,
           title: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.storefront, color: colorScheme.primary, size: 20),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'Shop',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              const Icon(Icons.storefront),
+              const SizedBox(width: 12),
+              const Text('Shop'),
             ],
           ),
-          actions: [
-            // Coin balance
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: TerminalColors.yellow.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: TerminalColors.yellow.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.toll, size: 18, color: TerminalColors.yellow),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${UserService.currentUser?.bootCoins ?? 0}',
-                    style: textTheme.titleSmall?.copyWith(
-                      color: TerminalColors.yellow,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-          ],
+          automaticallyImplyLeading: false,
         ),
-        body: _isLoading
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: colorScheme.primary),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Loading prizes...',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+        body: _isLoadingPrizes
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: _contentMaxWidth,
                     ),
-                  ],
-                ),
-              )
-            : _availablePrizes.isEmpty && _lockedPrizes.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.storefront,
-                      size: 64,
-                      color: colorScheme.outline,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No prizes available',
-                      style: textTheme.headlineSmall?.copyWith(
-                        color: colorScheme.outline,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Check back later for new items!',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: CustomScrollView(
-                    slivers: [
-                      // Shop notice
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: TerminalColors.blue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: TerminalColors.blue.withValues(
-                                  alpha: 0.3,
-                                ),
-                                width: 2,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: _buildShopFilters(colorScheme, textTheme),
+                        ),
+                        const Divider(height: 1, thickness: 1),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: _buildNewPrizes(colorScheme, textTheme),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_filteredPrizes.isEmpty && _keyedPrizes.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            child: Center(
+                              child: Text(
+                                'No prizes found',
+                                style: textTheme.bodyLarge,
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.construction,
-                                  size: 28,
-                                  color: TerminalColors.blue,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'More OSes have to be shipped before the Shop can have its grand opening. What are you waiting for? Go build your OS.',
-                                    style: textTheme.bodyLarge?.copyWith(
-                                      color: colorScheme.onSurface,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          )
+                        else ...[
+                          if (_filteredPrizes.isNotEmpty)
+                            _buildPrizeGrid(
+                              prizes: _filteredPrizes,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
                             ),
-                          ),
-                        ),
-                      ),
-
-                      // Filters section
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                          child: Row(
-                            children: [
-                              // Country filter
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 4,
+                          if (_keyedPrizes.isNotEmpty) ...[
+                            const Divider(height: 1, thickness: 1),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.key_rounded,
+                                    color: colorScheme.primary,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerLow,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colorScheme.outline,
-                                      width: 1,
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Keyed Prizes',
+                                    style: textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.public,
-                                        size: 20,
-                                        color: colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      if (_isDetectingCountry)
-                                        const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      else
-                                        Expanded(
-                                          child: DropdownButton<PrizeCountries>(
-                                            value: _selectedCountry,
-                                            isExpanded: true,
-                                            underline: const SizedBox(),
-                                            onChanged: (country) {
-                                              if (country != null) {
-                                                setState(
-                                                  () => _selectedCountry =
-                                                      country,
-                                                );
-                                                _applyFilters();
-                                              }
-                                            },
-                                            items: _getAllCountries().map((
-                                              country,
-                                            ) {
-                                              return DropdownMenuItem(
-                                                value: country,
-                                                child: Text(
-                                                  _getCountryName(country),
-                                                  style: textTheme.bodyMedium,
-                                                ),
-                                              );
-                                            }).toList(),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              // Sort filter
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerLow,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colorScheme.outline,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.sort,
-                                        size: 20,
-                                        color: colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: DropdownButton<SortOption>(
-                                          value: _sortOption,
-                                          isExpanded: true,
-                                          underline: const SizedBox(),
-                                          onChanged: (option) {
-                                            if (option != null) {
-                                              setState(
-                                                () => _sortOption = option,
-                                              );
-                                              _applyFilters();
-                                            }
-                                          },
-                                          items: [
-                                            DropdownMenuItem(
-                                              value: SortOption.priceAscending,
-                                              child: Text(
-                                                'Price: Low to High',
-                                                style: textTheme.bodyMedium,
-                                              ),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: SortOption.priceDescending,
-                                              child: Text(
-                                                'Price: High to Low',
-                                                style: textTheme.bodyMedium,
-                                              ),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: SortOption.alphabetical,
-                                              child: Text(
-                                                'Alphabetical',
-                                                style: textTheme.bodyMedium,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Available prizes section
-                      if (_availablePrizes.isNotEmpty) ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: _getGridColumns(context),
-                                  childAspectRatio: 0.68,
-                                  crossAxisSpacing: 24,
-                                  mainAxisSpacing: 24,
-                                ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              return _buildPrizeCard(
-                                _availablePrizes[index],
-                                colorScheme,
-                                textTheme,
-                                isLocked: false,
-                              );
-                            }, childCount: _availablePrizes.length),
-                          ),
-                        ),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildPrizeGrid(
+                              prizes: _keyedPrizes,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                              locked: true,
+                            ),
+                          ],
+                        ],
                       ],
-
-                      // Locked prizes section
-                      if (_lockedPrizes.isNotEmpty) ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                          sliver: SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Locked Prizes',
-                                  style: textTheme.headlineSmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Unlock these prizes by obtaining the required keys',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: _getGridColumns(context),
-                                  childAspectRatio: 0.68,
-                                  crossAxisSpacing: 24,
-                                  mainAxisSpacing: 24,
-                                ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              return _buildPrizeCard(
-                                _lockedPrizes[index],
-                                colorScheme,
-                                textTheme,
-                                isLocked: true,
-                              );
-                            }, childCount: _lockedPrizes.length),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -799,824 +357,646 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 
-  int _getGridColumns(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 1400) return 4;
-    if (width > 1000) return 3;
-    if (width > 600) return 2;
-    return 1;
+  Widget _buildPrizeGrid({
+    required List<Prize> prizes,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    bool locked = false,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1280
+            ? 3
+            : width >= 600
+            ? 2
+            : 1;
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 40,
+            mainAxisSpacing: 40,
+            childAspectRatio: 0.74,
+          ),
+          itemCount: prizes.length,
+          itemBuilder: (context, index) => _buildPrizeCard(
+            prizes[index],
+            colorScheme,
+            textTheme,
+            isLocked: locked,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShopFilters(ColorScheme colorScheme, TextTheme textTheme) {
+    final dropdownIdealWidth = _regionDropdownIdealWidth(textTheme);
+    const sortIdealWidth = 225.0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWideScreen =
+              constraints.maxWidth >=
+              (320 + sortIdealWidth + dropdownIdealWidth + 48);
+          final twoColumnSmall = constraints.maxWidth >= 520;
+
+          final searchWidth = isWideScreen ? 320.0 : constraints.maxWidth;
+          final splitWidth = twoColumnSmall
+              ? (constraints.maxWidth - 16) / 2
+              : constraints.maxWidth;
+          final sortWidth = isWideScreen ? sortIdealWidth : splitWidth;
+          final dropdownWidth = isWideScreen ? dropdownIdealWidth : splitWidth;
+
+          final searchField = SizedBox(
+            width: searchWidth,
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search prizes...',
+                prefixIcon: const Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (_) {
+                _applyFilters();
+              },
+            ),
+          );
+
+          final sortDropdown = SizedBox(
+            width: sortWidth,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedSort,
+              isDense: true,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Sort By',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: 'cost_asc',
+                  child: Text('Cost: Ascending'),
+                ),
+                const DropdownMenuItem(
+                  value: 'cost_desc',
+                  child: Text('Cost: Descending'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _selectedSort = value;
+                });
+                _applyFilters();
+              },
+            ),
+          );
+
+          final regionDropdown = SizedBox(
+            width: dropdownWidth,
+            child: DropdownButtonFormField<PrizeCountries>(
+              initialValue: _selectedRegion,
+              isDense: true,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Region',
+                suffixIcon: _isDetectingCountry
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              selectedItemBuilder: (context) {
+                return _regions
+                    .map(
+                      (region) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _regionLabel(region),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList();
+              },
+              items: _regions
+                  .map(
+                    (region) => DropdownMenuItem<PrizeCountries>(
+                      value: region,
+                      child: Text(
+                        _regionLabel(region),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _selectedRegion = value;
+                });
+                _applyFilters();
+              },
+            ),
+          );
+
+          if (isWideScreen) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                searchField,
+                Row(
+                  children: [
+                    sortDropdown,
+                    const SizedBox(width: 16),
+                    regionDropdown,
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            children: [searchField, sortDropdown, regionDropdown],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNewPrizes(ColorScheme colorScheme, TextTheme textTheme) {
+    if (_isLoadingPrizes || _newPrizes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final constrainedWidth = constraints.maxWidth > _contentMaxWidth
+            ? _contentMaxWidth
+            : constraints.maxWidth;
+        final crossAxisCount = constrainedWidth >= 1280
+            ? 3
+            : constrainedWidth >= 600
+            ? 2
+            : 1;
+
+        const horizontalPadding = 16.0;
+        const gridSpacing = 40.0;
+        const cardAspectRatio = 0.74;
+
+        final gridContentWidth =
+            constrainedWidth -
+            (horizontalPadding * 2) -
+            ((crossAxisCount - 1) * gridSpacing);
+        final cardWidth = gridContentWidth / crossAxisCount;
+        final cardHeight = cardWidth / cardAspectRatio;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Material(
+                elevation: 2,
+                color: colorScheme.surfaceContainer,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Recently Added Prizes',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: _isNewPrizesCollapsed
+                                ? 'Expand'
+                                : 'Collapse',
+                            onPressed: () {
+                              setState(() {
+                                _isNewPrizesCollapsed = !_isNewPrizesCollapsed;
+                              });
+                            },
+                            icon: Icon(
+                              _isNewPrizesCollapsed
+                                  ? Icons.expand_more
+                                  : Icons.expand_less,
+                            ),
+                          ),
+                        ],
+                      ),
+                      AnimatedCrossFade(
+                        firstChild: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Check out these brand new prizes!',
+                              style: textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            Scrollbar(
+                              controller: _newPrizesScrollController,
+                              thumbVisibility: true,
+                              interactive: true,
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: ListView.separated(
+                                  controller: _newPrizesScrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _newPrizes.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 24),
+                                  itemBuilder: (context, index) {
+                                    final prize = _newPrizes[index];
+                                    return SizedBox(
+                                      width: cardWidth,
+                                      child: _buildPrizeCard(
+                                        prize,
+                                        colorScheme,
+                                        textTheme,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                        secondChild: const SizedBox.shrink(),
+                        crossFadeState: _isNewPrizesCollapsed
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                        duration: const Duration(milliseconds: 180),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildPrizeCard(
     Prize prize,
     ColorScheme colorScheme,
     TextTheme textTheme, {
-    required bool isLocked,
+    bool isLocked = false,
   }) {
-    final bool isOutOfStock = prize.stock <= 0;
-    final bool isLowStock = prize.stock > 0 && prize.stock <= 5;
-    final bool isInCart = _cartItems.contains(prize.id);
-    final int quantity = _quantities[prize.id] ?? 1;
-    final bool isGrant = prize.type == PrizeType.grant;
+    final availableCoins = UserService.currentUser?.bootCoins.toInt() ?? 0;
+    final canAfford = prize.cost <= availableCoins;
 
-    return Opacity(
-      opacity: isLocked ? 0.5 : 1.0,
-      child: InkWell(
-        onTap: isLocked
-            ? null
-            : () async {
-                // Navigate using URL routing and wait for result
-                final result = await Navigator.pushNamed(
-                  context,
-                  '/prizes/${prize.id}',
-                );
-                // If cart was updated, refresh the shop data
-                if (result == true && mounted) {
-                  setState(() {
-                    // This will rebuild and refresh the cart items display
-                  });
-                }
-              },
-        child: Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isLocked
-                  ? colorScheme.outline.withValues(alpha: 0.3)
-                  : colorScheme.outline,
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Image
-              Expanded(
-                flex: 3,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(11),
-                      topRight: Radius.circular(11),
+    final buttonText = isLocked
+        ? 'Locked'
+        : !canAfford
+        ? 'Need ${prize.cost - availableCoins} more coins'
+        : prize.stock <= 0
+        ? 'Out of Stock'
+        : 'Order Now';
+
+    final buttonEnabled = !isLocked && canAfford && prize.stock > 0;
+
+    final keyPrizeName = prize.key.isEmpty
+        ? 'Unknown'
+        : (() {
+            try {
+              return PrizeService.prizes
+                      .cast<Prize?>()
+                      .firstWhere(
+                        (candidate) =>
+                            (candidate?.key == prize.key) &&
+                            (candidate?.type == PrizeType.reward),
+                      )
+                      ?.title ??
+                  'Unknown';
+            } catch (_) {
+              return 'Unknown';
+            }
+          })();
+
+    final card = InkWell(
+      onTap: () {
+        //TODO: Navigate to prize details page
+      },
+      child: Card(
+        color: colorScheme.surfaceContainerLow,
+        elevation: 3,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: TerminalColors.green.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 6,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.35,
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      // Prize image
-                      if (prize.picture != null && prize.picture!.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(11),
-                            topRight: Radius.circular(11),
-                          ),
-                          child: Image.network(
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    top: 24,
+                    bottom: 10,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.outline.withValues(alpha: 0.2),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: prize.picture != null && prize.picture!.isNotEmpty
+                        ? Image.network(
                             prize.picture!,
-                            width: double.infinity,
-                            height: double.infinity,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
+                            alignment: Alignment.center,
+                            errorBuilder: (_, __, ___) => Container(
+                              alignment: Alignment.center,
                               child: Icon(
-                                Icons.redeem,
-                                size: 64,
+                                Icons.image_not_supported_outlined,
                                 color: colorScheme.outline,
                               ),
                             ),
-                          ),
-                        )
-                      else
-                        Center(
-                          child: Icon(
-                            Icons.redeem,
-                            size: 64,
-                            color: colorScheme.outline,
-                          ),
-                        ),
-
-                      // Locked overlay
-                      if (isLocked)
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(11),
-                                topRight: Radius.circular(11),
-                              ),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.lock,
-                                    size: 48,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'LOCKED',
-                                    style: textTheme.titleMedium?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  if (prize.key.isNotEmpty)
-                                    Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: TerminalColors.yellow.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: TerminalColors.yellow,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.key,
-                                            size: 14,
-                                            color: TerminalColors.yellow,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              'Requires key',
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        TerminalColors.yellow,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
+                          )
+                        : Container(
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.redeem,
+                              size: 40,
+                              color: colorScheme.outline,
                             ),
                           ),
-                        ),
-
-                      // Stock badge
-                      if (!isLocked && (isOutOfStock || isLowStock))
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isOutOfStock
-                                  ? TerminalColors.red.withValues(alpha: 0.9)
-                                  : TerminalColors.yellow.withValues(
-                                      alpha: 0.9,
-                                    ),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isOutOfStock
-                                    ? TerminalColors.red
-                                    : TerminalColors.yellow,
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK',
-                              style: textTheme.labelSmall?.copyWith(
-                                color: TerminalColors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
                   ),
-                ),
+                  if (_buildPrizeBadges(
+                    prize,
+                    colorScheme,
+                    textTheme,
+                  ).isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface.withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: colorScheme.outline.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: _buildPrizeBadges(
+                              prize,
+                              colorScheme,
+                              textTheme,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-
-              // Details Section
-              Padding(
-                padding: const EdgeInsets.all(16),
+            ),
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title
                     Text(
                       prize.title,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: isLocked
-                            ? colorScheme.onSurfaceVariant
-                            : colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Description
-                    Text(
-                      isLocked
-                          ? 'You need the corresponding key to unlock this prize'
-                          : prize.description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.4,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Price - Subtle, below description
+                    const SizedBox(height: 6),
+                    Text(
+                      prize.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall,
+                    ),
+                    Spacer(),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.toll,
-                          size: 16,
-                          color: TerminalColors.yellow.withValues(alpha: 0.7),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${prize.cost}',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: TerminalColors.yellow.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.bold,
-                          ),
+                          Icons.toll_rounded,
+                          size: 18,
+                          color: TerminalColors.yellow,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'coins',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          '${prize.cost} coins',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.primary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-
-                    // Stock info (only if locked or out of stock)
-                    if (isLocked || isOutOfStock)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: colorScheme.outline,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.inventory_2,
-                              size: 16,
-                              color: colorScheme.secondary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Stock: ${prize.stock}',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.secondary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Quantity selector and Add to Cart button (full width at bottom)
-              if (!isLocked && !isOutOfStock) ...[
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      // Quantity/Amount selector - only shown when in cart
-                      if (isInCart)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: colorScheme.outline,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                isGrant ? 'Amount:' : 'Quantity:',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: quantity > (isGrant ? 1 : 1)
-                                    ? () => _updateQuantity(prize.id, -1)
-                                    : null,
-                                icon: const Icon(Icons.remove, size: 18),
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size(32, 32),
-                                  padding: EdgeInsets.zero,
-                                  backgroundColor:
-                                      colorScheme.surfaceContainerHigh,
-                                ),
-                              ),
-                              Container(
-                                width: 50,
-                                alignment: Alignment.center,
-                                child: Text(
-                                  isGrant ? '\$$quantity' : '$quantity',
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: isGrant
-                                        ? TerminalColors.green
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => _updateQuantity(prize.id, 1),
-                                icon: const Icon(Icons.add, size: 18),
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size(32, 32),
-                                  padding: EdgeInsets.zero,
-                                  backgroundColor:
-                                      colorScheme.surfaceContainerHigh,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<PrizeCountries> _getAllCountries() {
-    // Return all countries in alphabetical order
-    final allCountries = [
-      PrizeCountries.all,
-      PrizeCountries.ar, // Argentina
-      PrizeCountries.au, // Australia
-      PrizeCountries.at, // Austria
-      PrizeCountries.be, // Belgium
-      PrizeCountries.bo, // Bolivia
-      PrizeCountries.br, // Brazil
-      PrizeCountries.ca, // Canada
-      PrizeCountries.cl, // Chile
-      PrizeCountries.cn, // China
-      PrizeCountries.co, // Colombia
-      PrizeCountries.cz, // Czech Republic
-      PrizeCountries.dk, // Denmark
-      PrizeCountries.ec, // Ecuador
-      PrizeCountries.eg, // Egypt
-      PrizeCountries.fi, // Finland
-      PrizeCountries.fr, // France
-      PrizeCountries.de, // Germany
-      PrizeCountries.gr, // Greece
-      PrizeCountries.hk, // Hong Kong
-      PrizeCountries.hu, // Hungary
-      PrizeCountries.ind, // India
-      PrizeCountries.id, // Indonesia
-      PrizeCountries.ie, // Ireland
-      PrizeCountries.il, // Israel
-      PrizeCountries.it, // Italy
-      PrizeCountries.jp, // Japan
-      PrizeCountries.ke, // Kenya
-      PrizeCountries.kr, // South Korea
-      PrizeCountries.ma, // Morocco
-      PrizeCountries.my, // Malaysia
-      PrizeCountries.mx, // Mexico
-      PrizeCountries.nl, // Netherlands
-      PrizeCountries.nz, // New Zealand
-      PrizeCountries.ng, // Nigeria
-      PrizeCountries.no, // Norway
-      PrizeCountries.py, // Paraguay
-      PrizeCountries.pe, // Peru
-      PrizeCountries.ph, // Philippines
-      PrizeCountries.pl, // Poland
-      PrizeCountries.pt, // Portugal
-      PrizeCountries.ro, // Romania
-      PrizeCountries.sa, // Saudi Arabia
-      PrizeCountries.sg, // Singapore
-      PrizeCountries.za, // South Africa
-      PrizeCountries.es, // Spain
-      PrizeCountries.se, // Sweden
-      PrizeCountries.ch, // Switzerland
-      PrizeCountries.tw, // Taiwan
-      PrizeCountries.th, // Thailand
-      PrizeCountries.tr, // Turkey
-      PrizeCountries.ae, // UAE
-      PrizeCountries.gb, // United Kingdom
-      PrizeCountries.us, // United States
-      PrizeCountries.uy, // Uruguay
-      PrizeCountries.ve, // Venezuela
-      PrizeCountries.vn, // Vietnam
-    ];
-    return allCountries;
-  }
-
-  List<PrizeCountries> _getPopularCountries() {
-    return [
-      PrizeCountries.us,
-      PrizeCountries.ca,
-      PrizeCountries.gb,
-      PrizeCountries.au,
-      PrizeCountries.de,
-      PrizeCountries.fr,
-      PrizeCountries.jp,
-      PrizeCountries.ind,
-      PrizeCountries.br,
-      PrizeCountries.mx,
-    ];
-  }
-
-  String _getCountryName(PrizeCountries country) {
-    final countryNames = {
-      PrizeCountries.all: 'All Countries',
-      PrizeCountries.us: 'United States',
-      PrizeCountries.ca: 'Canada',
-      PrizeCountries.mx: 'Mexico',
-      PrizeCountries.gb: 'United Kingdom',
-      PrizeCountries.de: 'Germany',
-      PrizeCountries.fr: 'France',
-      PrizeCountries.it: 'Italy',
-      PrizeCountries.es: 'Spain',
-      PrizeCountries.au: 'Australia',
-      PrizeCountries.nz: 'New Zealand',
-      PrizeCountries.jp: 'Japan',
-      PrizeCountries.kr: 'South Korea',
-      PrizeCountries.cn: 'China',
-      PrizeCountries.ind: 'India',
-      PrizeCountries.br: 'Brazil',
-      PrizeCountries.ar: 'Argentina',
-      PrizeCountries.nl: 'Netherlands',
-      PrizeCountries.be: 'Belgium',
-      PrizeCountries.ch: 'Switzerland',
-      PrizeCountries.at: 'Austria',
-      PrizeCountries.se: 'Sweden',
-      PrizeCountries.no: 'Norway',
-      PrizeCountries.dk: 'Denmark',
-      PrizeCountries.fi: 'Finland',
-      PrizeCountries.ie: 'Ireland',
-      PrizeCountries.pt: 'Portugal',
-      PrizeCountries.pl: 'Poland',
-      PrizeCountries.cz: 'Czech Republic',
-      PrizeCountries.gr: 'Greece',
-      PrizeCountries.ro: 'Romania',
-      PrizeCountries.hu: 'Hungary',
-      PrizeCountries.sg: 'Singapore',
-      PrizeCountries.my: 'Malaysia',
-      PrizeCountries.th: 'Thailand',
-      PrizeCountries.vn: 'Vietnam',
-      PrizeCountries.ph: 'Philippines',
-      PrizeCountries.id: 'Indonesia',
-      PrizeCountries.tw: 'Taiwan',
-      PrizeCountries.hk: 'Hong Kong',
-      PrizeCountries.ae: 'UAE',
-      PrizeCountries.sa: 'Saudi Arabia',
-      PrizeCountries.il: 'Israel',
-      PrizeCountries.tr: 'Turkey',
-      PrizeCountries.za: 'South Africa',
-      PrizeCountries.ng: 'Nigeria',
-      PrizeCountries.eg: 'Egypt',
-      PrizeCountries.ke: 'Kenya',
-      PrizeCountries.ma: 'Morocco',
-      PrizeCountries.cl: 'Chile',
-      PrizeCountries.co: 'Colombia',
-      PrizeCountries.pe: 'Peru',
-      PrizeCountries.ve: 'Venezuela',
-      PrizeCountries.ec: 'Ecuador',
-      PrizeCountries.bo: 'Bolivia',
-      PrizeCountries.py: 'Paraguay',
-      PrizeCountries.uy: 'Uruguay',
-    };
-    return countryNames[country] ??
-        country.toString().split('.').last.toUpperCase();
-  }
-}
-
-// Cart Dialog Widget
-class _CartDialog extends StatefulWidget {
-  final Set<String> cartItems;
-  final List<Prize> allPrizes;
-  final Map<String, int> quantities;
-  final Function(String) onRemoveItem;
-  final VoidCallback? onCheckout;
-  final String? disabledReason;
-
-  const _CartDialog({
-    required this.cartItems,
-    required this.allPrizes,
-    required this.quantities,
-    required this.onRemoveItem,
-    this.onCheckout,
-    this.disabledReason,
-  });
-
-  @override
-  State<_CartDialog> createState() => _CartDialogState();
-}
-
-class _CartDialogState extends State<_CartDialog> {
-  int _calculateTotal() {
-    int total = 0;
-    for (final prizeId in widget.cartItems) {
-      final prize = widget.allPrizes.firstWhere(
-        (p) => p.id == prizeId,
-        orElse: Prize.empty,
-      );
-      final quantity = widget.quantities[prizeId] ?? 1;
-      total += prize.cost * quantity;
-    }
-    return total;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final userCoins = UserService.currentUser?.bootCoins ?? 0;
-    final cartTotal = _calculateTotal();
-    final isCheckoutEnabled = widget.disabledReason == null;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.shopping_cart, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Shopping Cart',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-
-            // Cart items
-            Expanded(
-              child: widget.cartItems.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.shopping_cart,
-                            size: 64,
-                            color: colorScheme.outline,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Your cart is empty',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: widget.cartItems.length,
-                      itemBuilder: (context, index) {
-                        final prizeId = widget.cartItems.elementAt(index);
-                        final prize = widget.allPrizes.firstWhere(
-                          (p) => p.id == prizeId,
-                          orElse: Prize.empty,
-                        );
-                        final quantity = widget.quantities[prizeId] ?? 1;
-                        final itemTotal = prize.cost * quantity;
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            leading: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child:
-                                  prize.picture != null &&
-                                      prize.picture!.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        prize.picture!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Icon(
-                                          Icons.redeem,
-                                          color: colorScheme.outline,
-                                        ),
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.redeem,
-                                      color: colorScheme.outline,
-                                    ),
-                            ),
-                            title: Text(
-                              prize.title,
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Row(
-                              children: [
-                                Icon(
-                                  Icons.toll,
-                                  size: 14,
-                                  color: TerminalColors.yellow,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${prize.cost}',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: TerminalColors.yellow,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Qty: $quantity',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 20),
-                                  color: TerminalColors.red,
-                                  onPressed: () {
-                                    widget.onRemoveItem(prizeId);
-                                    setState(() {});
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-
-            // Footer with total and checkout
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border(
-                  top: BorderSide(color: colorScheme.outline, width: 1),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total:',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.toll,
-                            size: 20,
-                            color: TerminalColors.yellow,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$cartTotal',
-                            style: textTheme.titleLarge?.copyWith(
-                              color: TerminalColors.yellow,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          isCheckoutEnabled && widget.cartItems.isNotEmpty
-                          ? widget.onCheckout
-                          : null,
-                      icon: Icon(
-                        isCheckoutEnabled ? Icons.shopping_bag : Icons.block,
-                        size: 20,
-                      ),
-                      label: Text(
-                        isCheckoutEnabled
-                            ? 'Checkout'
-                            : (widget.disabledReason ?? 'Cart Empty'),
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isCheckoutEnabled
-                            ? colorScheme.primary
-                            : colorScheme.surfaceContainerHighest,
-                        foregroundColor: isCheckoutEnabled
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  if (!isCheckoutEnabled && widget.cartItems.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      widget.disabledReason == 'Insufficient Coins'
-                          ? 'You need ${cartTotal - userCoins} more coins'
-                          : widget.disabledReason ?? '',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: TerminalColors.red,
-                        fontStyle: FontStyle.italic,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: buttonEnabled
+                            ? () {
+                                //TODO: Navigate to prize details page
+                              }
+                            : null,
+                        child: Text(
+                          buttonText,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+
+    if (!isLocked) {
+      return card;
+    }
+
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        IgnorePointer(child: card),
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface.withValues(alpha: 0.74),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.key_rounded,
+                  size: 54,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'You need the $keyPrizeName to unlock this Prize',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildPrizeBadges(
+    Prize prize,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final badges = <Widget>[];
+
+    if (DateTime.now().difference(prize.createdAt).inDays <= 7) {
+      badges.add(
+        _buildBadge(
+          label: 'NEW',
+          backgroundColor: TerminalColors.green.withValues(alpha: 0.16),
+          foregroundColor: TerminalColors.green,
+          textTheme: textTheme,
+        ),
+      );
+    }
+
+    if (prize.stock <= 0) {
+      badges.add(
+        _buildBadge(
+          label: 'Out of Stock',
+          backgroundColor: TerminalColors.red.withValues(alpha: 0.16),
+          foregroundColor: TerminalColors.red,
+          textTheme: textTheme,
+        ),
+      );
+    } else if (prize.stock <= 5) {
+      badges.add(
+        _buildBadge(
+          label: '${prize.stock} Left',
+          backgroundColor: TerminalColors.yellow.withValues(alpha: 0.16),
+          foregroundColor: TerminalColors.yellow,
+          textTheme: textTheme,
+        ),
+      );
+    }
+
+    if (prize.type == PrizeType.keyed) {
+      badges.add(
+        _buildBadge(
+          label: 'KEYED',
+          backgroundColor: TerminalColors.blue.withValues(alpha: 0.16),
+          foregroundColor: TerminalColors.blue,
+          textTheme: textTheme,
+        ),
+      );
+    }
+
+    return badges;
+  }
+
+  Widget _buildBadge({
+    required String label,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required TextTheme textTheme,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: textTheme.labelSmall?.copyWith(
+          color: foregroundColor,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
         ),
       ),
     );
