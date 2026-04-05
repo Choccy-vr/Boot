@@ -968,7 +968,7 @@ class _ShopPageState extends State<ShopPage> {
     if (prize.type == PrizeType.keyed) {
       badges.add(
         _buildBadge(
-          label: 'KEYED',
+          label: 'Keyed',
           backgroundColor: TerminalColors.blue.withValues(alpha: 0.16),
           foregroundColor: TerminalColors.blue,
           textTheme: textTheme,
