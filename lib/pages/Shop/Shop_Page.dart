@@ -715,7 +715,7 @@ class _ShopPageState extends State<ShopPage> {
 
     final card = InkWell(
       onTap: () {
-        //TODO: Navigate to prize details page
+        Navigator.of(context).pushNamed('/prize/${prize.id}', arguments: prize);
       },
       child: Card(
         color: colorScheme.surfaceContainerLow,
@@ -864,7 +864,10 @@ class _ShopPageState extends State<ShopPage> {
                         ),
                         onPressed: buttonEnabled
                             ? () {
-                                //TODO: Navigate to prize details page
+                                Navigator.of(context).pushNamed(
+                                  '/prize/${prize.id}',
+                                  arguments: prize,
+                                );
                               }
                             : null,
                         child: Text(

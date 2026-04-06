@@ -24,7 +24,6 @@ class BootUser {
   //Role
   UserRole role;
   //shop
-  List<String> cart;
   List<String> keys;
 
   //constructor
@@ -44,7 +43,6 @@ class BootUser {
     this.yswsEligible,
     this.verificationStatus,
     this.role = UserRole.normal,
-    this.cart = const [],
     this.keys = const [],
   });
 
@@ -74,7 +72,6 @@ class BootUser {
         (r) => r.name == (json['role'] ?? 'normal'),
         orElse: () => UserRole.normal,
       ),
-      cart: List<String>.from(json['cart'] ?? []),
       keys: List<String>.from(json['keys'] ?? []),
     );
   }
@@ -96,7 +93,6 @@ class BootUser {
       'ysws_eligible': yswsEligible,
       'verification_status': verificationStatus,
       'role': role.name,
-      'cart': cart,
       'keys': keys,
     };
   }

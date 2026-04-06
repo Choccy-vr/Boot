@@ -1,44 +1,45 @@
 import 'package:flutter/material.dart';
-import '/theme/terminal_theme.dart';
+import 'package:flutter/services.dart';
 import '/services/prizes/Prize.dart';
+import '/services/users/User.dart';
 import '/widgets/shared_navigation_rail.dart';
 
 class PrizeDetailsPage extends StatefulWidget {
   final Prize prize;
-  final bool isInCart;
-  final int currentQuantity;
-  final Function(String, int) onAddToCart;
 
-  const PrizeDetailsPage({
-    super.key,
-    required this.prize,
-    required this.isInCart,
-    required this.currentQuantity,
-    required this.onAddToCart,
-  });
+  const PrizeDetailsPage({super.key, required this.prize});
 
   @override
   State<PrizeDetailsPage> createState() => _PrizeDetailsPageState();
 }
 
 class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
-  late int _quantity;
-  late int _grantAmount;
+  final TextEditingController _quantityController = TextEditingController(
+    text: '1',
+  );
 
   @override
-  void initState() {
-    super.initState();
-    _quantity = widget.currentQuantity > 0 ? widget.currentQuantity : 1;
-    _grantAmount = widget.prize.type == PrizeType.grant ? 10 : 0;
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
+  }
+
+  int _quantityForPrize(Prize prize) {
+    final stockLimit = prize.stock.clamp(0, 20);
+    final parsedQuantity = int.tryParse(_quantityController.text) ?? 1;
+    return parsedQuantity.clamp(1, stockLimit == 0 ? 1 : stockLimit);
+  }
+
+  bool _userHasRequiredKey(Prize prize) {
+    if (prize.key.isEmpty) return true;
+    return UserService.currentUser?.keys.contains(prize.key) ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final bool isOutOfStock = widget.prize.stock <= 0;
-    final bool isGrant = widget.prize.type == PrizeType.grant;
-    final bool isLowStock = widget.prize.stock > 0 && widget.prize.stock <= 5;
+    final prize = widget.prize;
 
     return SharedNavigationRail(
       showAppBar: false,
@@ -61,387 +62,380 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
             ],
           ),
         ),
-        body: SingleChildScrollView(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isMobile = constraints.maxWidth < 900;
-                  if (isMobile) {
-                    return _buildMobileLayout(
-                      colorScheme,
-                      textTheme,
-                      isOutOfStock,
-                      isGrant,
-                      isLowStock,
-                    );
-                  } else {
-                    return _buildDesktopLayout(
-                      colorScheme,
-                      textTheme,
-                      isOutOfStock,
-                      isGrant,
-                      isLowStock,
-                    );
-                  }
-                },
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 700;
+            final useVerticalLayout = constraints.maxWidth < 980;
+            final horizontalPadding = isCompact ? 12.0 : 24.0;
+            final panelRadius = isCompact ? 18.0 : 24.0;
+            final panelMaxWidth = isCompact ? 640.0 : 1200.0;
+            final imageFrameHeight = useVerticalLayout ? 260.0 : 420.0;
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 18,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: panelMaxWidth),
+                      child: Material(
+                        elevation: 8,
+                        color: colorScheme.surfaceContainerLow,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(panelRadius),
+                          side: BorderSide(
+                            color: colorScheme.primary.withValues(alpha: 0.45),
+                            width: 1,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(isCompact ? 18 : 28),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: useVerticalLayout
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ..._buildDetailSection(
+                                        prize,
+                                        colorScheme,
+                                        textTheme,
+                                        imageFrameHeight,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildCheckoutSection(
+                                        prize,
+                                        colorScheme,
+                                        textTheme,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            ..._buildDetailSection(
+                                              prize,
+                                              colorScheme,
+                                              textTheme,
+                                              imageFrameHeight,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 36),
+                                      Expanded(
+                                        child: _buildCheckoutSection(
+                                          prize,
+                                          colorScheme,
+                                          textTheme,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildMobileLayout(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    bool isOutOfStock,
-    bool isGrant,
-    bool isLowStock,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildImage(colorScheme),
-          const SizedBox(height: 24),
-          _buildProductInfo(
-            colorScheme,
-            textTheme,
-            isOutOfStock,
-            isGrant,
-            isLowStock,
-          ),
-          const SizedBox(height: 24),
-          _buildPurchaseBox(
-            colorScheme,
-            textTheme,
-            isOutOfStock,
-            isGrant,
-            isLowStock,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    bool isOutOfStock,
-    bool isGrant,
-    bool isLowStock,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Image
-          Expanded(flex: 4, child: _buildImage(colorScheme)),
-          const SizedBox(width: 24),
-          // Middle: Product Info
-          Expanded(
-            flex: 5,
-            child: _buildProductInfo(
-              colorScheme,
-              textTheme,
-              isOutOfStock,
-              isGrant,
-              isLowStock,
-            ),
-          ),
-          const SizedBox(width: 24),
-          // Right: Purchase Box
-          SizedBox(
-            width: 320,
-            child: _buildPurchaseBox(
-              colorScheme,
-              textTheme,
-              isOutOfStock,
-              isGrant,
-              isLowStock,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImage(ColorScheme colorScheme) {
+  Widget _buildImagePanel({
+    required Prize prize,
+    required ColorScheme colorScheme,
+    required double height,
+  }) {
     return Container(
+      width: double.infinity,
+      height: height,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.28),
+          width: 1,
+        ),
       ),
-      padding: const EdgeInsets.all(24),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: widget.prize.picture != null && widget.prize.picture!.isNotEmpty
-            ? Image.network(
-                widget.prize.picture!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // This backdrop stays visible through transparent image pixels.
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.surfaceContainerHigh,
+                    colorScheme.surfaceContainerLow,
+                  ],
+                ),
+              ),
+            ),
+            if (prize.picture != null && prize.picture!.isNotEmpty)
+              Image.network(
+                prize.picture!,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                errorBuilder: (_, __, ___) => Container(
+                  alignment: Alignment.center,
+                  color: colorScheme.surfaceContainerLow,
                   child: Icon(
-                    Icons.redeem,
-                    size: 120,
+                    Icons.image_not_supported_outlined,
                     color: colorScheme.outline,
                   ),
                 ),
               )
-            : Center(
-                child: Icon(
-                  Icons.redeem,
-                  size: 120,
-                  color: colorScheme.outline,
-                ),
+            else
+              Container(
+                alignment: Alignment.center,
+                color: colorScheme.surfaceContainerLow,
+                child: Icon(Icons.redeem, size: 40, color: colorScheme.outline),
               ),
-      ),
-    );
-  }
-
-  Widget _buildProductInfo(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    bool isOutOfStock,
-    bool isGrant,
-    bool isLowStock,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Title
-        Text(
-          widget.prize.title,
-          style: textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Price/Cost
-        if (!isGrant)
-          Row(
-            children: [
-              Icon(Icons.toll, size: 28, color: TerminalColors.yellow),
-              const SizedBox(width: 8),
-              Text(
-                '${widget.prize.cost}',
-                style: textTheme.headlineLarge?.copyWith(
-                  color: TerminalColors.yellow,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'coins',
-                style: textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-
-        if (isGrant)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: TerminalColors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: TerminalColors.green.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.volunteer_activism,
-                  size: 24,
-                  color: TerminalColors.green,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Grant Prize',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: TerminalColors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        const SizedBox(height: 16),
-
-        // Stock status
-        Row(
-          children: [
-            Icon(
-              Icons.inventory_2,
-              size: 20,
-              color: isOutOfStock
-                  ? TerminalColors.red
-                  : isLowStock
-                  ? TerminalColors.yellow
-                  : TerminalColors.green,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              isOutOfStock
-                  ? 'Out of Stock'
-                  : isLowStock
-                  ? 'Only ${widget.prize.stock} left in stock'
-                  : 'In Stock (${widget.prize.stock} available)',
-              style: textTheme.titleMedium?.copyWith(
-                color: isOutOfStock
-                    ? TerminalColors.red
-                    : isLowStock
-                    ? TerminalColors.yellow
-                    : TerminalColors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ],
         ),
-
-        const SizedBox(height: 24),
-        Divider(color: colorScheme.outline.withValues(alpha: 0.3)),
-        const SizedBox(height: 24),
-
-        // Description
-        Text(
-          'About this prize',
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          widget.prize.description,
-          style: textTheme.bodyLarge?.copyWith(
-            height: 1.6,
-            color: colorScheme.onSurface,
-          ),
-        ),
-
-        // Specs
-        if (widget.prize.specs.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Product Details',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Text(
-              widget.prize.specs,
-              style: textTheme.bodyMedium?.copyWith(
-                height: 1.6,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
-
-        // Available Countries
-        if (widget.prize.countries.isNotEmpty &&
-            !widget.prize.countries.contains(PrizeCountries.all)) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Ships to',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: widget.prize.countries.map((country) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  country.name,
-                  style: textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  Widget _buildPurchaseBox(
+  List<Widget> _buildDetailSection(
+    Prize prize,
     ColorScheme colorScheme,
     TextTheme textTheme,
-    bool isOutOfStock,
-    bool isGrant,
-    bool isLowStock,
+    double imageFrameHeight,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
+    return [
+      _buildImagePanel(
+        prize: prize,
+        colorScheme: colorScheme,
+        height: imageFrameHeight,
       ),
-      padding: const EdgeInsets.all(20),
+      const SizedBox(height: 14),
+      Text(
+        prize.title,
+        style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 8),
+      Text(prize.description, style: textTheme.bodyMedium),
+      if (prize.specs.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainer.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.28),
+              width: 1,
+            ),
+          ),
+          child: Text(prize.specs, style: textTheme.bodyMedium),
+        ),
+      ],
+    ];
+  }
+
+  Widget _buildCheckoutSection(
+    Prize prize,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final quantity = _quantityForPrize(prize);
+    final availableCoins = UserService.currentUser?.bootCoins ?? 0;
+    final totalCost = prize.cost * quantity;
+    final hasKey = _userHasRequiredKey(prize);
+    final isOutOfStock = prize.stock <= 0;
+    final hasEnoughCoins = totalCost <= availableCoins;
+    final canOrder = !isOutOfStock && hasKey && hasEnoughCoins;
+
+    final buttonText = isOutOfStock
+        ? 'Out of Stock'
+        : !hasKey
+        ? 'Requires Key'
+        : !hasEnoughCoins
+        ? 'Need ${totalCost - availableCoins} more coins'
+        : 'Order now';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.28),
+          width: 1,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Price Summary
-          if (!isGrant) ...[
-            Row(
+          Text(
+            'Order Summary',
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Quantity',
+            style: textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _quantityController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 2,
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: '1 - 20',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              isDense: true,
+            ),
+            onChanged: (value) {
+              final parsed = int.tryParse(value);
+              if (parsed == null) {
+                return;
+              }
+
+              final clamped = parsed.clamp(
+                1,
+                prize.stock < 20 ? prize.stock : 20,
+              );
+
+              if (clamped != parsed) {
+                _quantityController.value = TextEditingValue(
+                  text: clamped.toString(),
+                  selection: TextSelection.collapsed(
+                    offset: clamped.toString().length,
+                  ),
+                );
+              }
+
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Max quantity is 20.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.18),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.toll, size: 32, color: TerminalColors.yellow),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${widget.prize.cost}',
-                      style: textTheme.headlineMedium?.copyWith(
-                        color: TerminalColors.yellow,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'coins each',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                _buildSummaryRow(
+                  label: 'Price per item',
+                  value: '${prize.cost} coins',
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                ),
+                const SizedBox(height: 10),
+                _buildSummaryRow(
+                  label: 'Quantity',
+                  value: quantity.toString(),
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                ),
+                const Divider(height: 24),
+                _buildSummaryRow(
+                  label: 'Total cost',
+                  value: '$totalCost coins',
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  emphasize: true,
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: canOrder
+                  ? () {
+                      // TODO: submit order
+                    }
+                  : null,
+              child: Text(buttonText),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You will be redirected to reauthenticate.',
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSummaryRow({
+    required String label,
+    required String value,
+    required TextTheme textTheme,
+    required ColorScheme colorScheme,
+    bool emphasize = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: textTheme.bodyMedium?.copyWith(
+            fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          value,
+          style: textTheme.bodyMedium?.copyWith(
+            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 }

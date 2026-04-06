@@ -519,13 +519,25 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       /*page = const ShopUnderConstructionRedirectPage();*/
       routeName = '/shop';
       break;
+    case 'prize':
     case 'prizes':
       if (segments.length >= 2) {
         final prizeId = segments[1];
         if (prizeId.isNotEmpty) {
-          // Prize details page will load the prize
-          page = PrizeLoaderPage(prizeId: prizeId);
-          routeName = '/prizes/$prizeId';
+          Prize? prefetchedPrize;
+          final prizeArg = settings.arguments;
+          if (prizeArg is Prize) {
+            prefetchedPrize = prizeArg;
+          } else if (prizeArg is Map) {
+            prefetchedPrize = prizeArg['prize'] as Prize?;
+          }
+
+          // Prize details page will load the prize if it is not passed.
+          page = PrizeLoaderPage(
+            prizeId: prizeId,
+            prefetchedPrize: prefetchedPrize,
+          );
+          routeName = '/prize/$prizeId';
         }
       }
       break;
@@ -1029,12 +1041,26 @@ class UserLoaderPage extends StatelessWidget {
 }
 
 class PrizeLoaderPage extends StatelessWidget {
-  const PrizeLoaderPage({super.key, required this.prizeId});
+  const PrizeLoaderPage({
+    super.key,
+    required this.prizeId,
+    this.prefetchedPrize,
+  });
 
   final String prizeId;
+  final Prize? prefetchedPrize;
 
   @override
   Widget build(BuildContext context) {
+    if (prefetchedPrize != null) {
+      return DeferredPage(
+        loadLibrary: prize_details_page.loadLibrary,
+        buildPage: (_) =>
+            prize_details_page.PrizeDetailsPage(prize: prefetchedPrize!),
+        placeholder: const _LoadingScaffold(),
+      );
+    }
+
     return FutureBuilder<List<Prize>>(
       future: PrizeService.fetchPrizes(),
       builder: (context, snapshot) {
@@ -1045,31 +1071,12 @@ class PrizeLoaderPage extends StatelessWidget {
         final prize = prizes.where((p) => p.id == prizeId).firstOrNull;
 
         if (prize == null) {
-          return NotFoundPage(path: '/prizes/$prizeId');
+          return NotFoundPage(path: '/prize/$prizeId');
         }
 
-        // Get cart state from current user
-        final cartItems = Set<String>.from(UserService.currentUser?.cart ?? []);
-        final isInCart = cartItems.contains(prizeId);
-
-        // For now, quantity is 1, but this could be tracked in user's cart data
         return DeferredPage(
           loadLibrary: prize_details_page.loadLibrary,
-          buildPage: (_) => prize_details_page.PrizeDetailsPage(
-            prize: prize,
-            isInCart: isInCart,
-            currentQuantity: 1,
-            onAddToCart: (prizeId, qty) async {
-              // Update cart
-              final user = UserService.currentUser;
-              if (user != null) {
-                if (!user.cart.contains(prizeId)) {
-                  user.cart.add(prizeId);
-                  await UserService.updateUser();
-                }
-              }
-            },
-          ),
+          buildPage: (_) => prize_details_page.PrizeDetailsPage(prize: prize),
           placeholder: const _LoadingScaffold(),
         );
       },
