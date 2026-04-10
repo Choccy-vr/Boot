@@ -348,6 +348,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
             ),
           ),
           const SizedBox(height: 20),
+          //TODO: PRIZE VARIANTS
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),

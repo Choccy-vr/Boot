@@ -4,6 +4,7 @@ import '/services/navigation/navigation_service.dart';
 import '/services/users/User.dart';
 import '/services/users/Boot_User.dart';
 import '/theme/terminal_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// A shared navigation rail widget that can be used across all pages.
 /// It overlays content when expanded instead of pushing it.
@@ -234,6 +235,18 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                     destination: AppDestination.shop,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
+                  );
+                },
+              ),
+              _buildRailItem(
+                icon: Icons.book_rounded,
+                title: 'Guides',
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                onTap: () {
+                  launchUrl(
+                    Uri.parse('https://boot.hackclub.com/guides/home'),
+                    mode: LaunchMode.externalApplication,
                   );
                 },
               ),

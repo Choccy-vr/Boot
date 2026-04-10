@@ -166,7 +166,7 @@ class PrizeOptionValues {
   }
 }
 
-enum PrizeType { normal, grant, reward, keyed }
+enum PrizeType { normal, reward, keyed }
 
 enum PrizeCountries {
   all,

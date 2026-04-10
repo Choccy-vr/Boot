@@ -593,7 +593,6 @@ class _AdminPageState extends State<AdminPage> {
     String? imageUrl;
     PrizeType selectedType;
     Set<PrizeCountries> selectedCountries;
-    bool customGrant;
     bool isEditing;
     List<Map<String, dynamic>> prizeOptions = [];
     List<Map<String, dynamic>> prizeOptionValues = [];
@@ -610,7 +609,6 @@ class _AdminPageState extends State<AdminPage> {
       imageUrl = null;
       selectedType = PrizeType.normal;
       selectedCountries = {PrizeCountries.all};
-      customGrant = true;
       isEditing = false;
     } else {
       titleController = TextEditingController(text: prize.title);
@@ -626,7 +624,6 @@ class _AdminPageState extends State<AdminPage> {
       imageUrl = prize.picture;
       selectedType = prize.type;
       selectedCountries = prize.countries.toSet();
-      customGrant = prize.customGrant;
       isEditing = true;
     }
 
@@ -669,7 +666,6 @@ class _AdminPageState extends State<AdminPage> {
               type: selectedType,
               countries: selectedCountries.toList(),
               specs: specsController.text,
-              customGrant: customGrant,
             );
 
             return AlertDialog(
@@ -762,27 +758,15 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                             const SizedBox(height: 16),
                             if (selectedType != PrizeType.reward) ...[
-                              if (customGrant) ...[
-                                _buildTextField(
-                                  controller: costController,
-                                  label: 'Cost Per Dollar',
-                                  icon: Icons.paid,
-                                  keyboardType: TextInputType.number,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                ),
-                                const SizedBox(height: 16),
-                              ] else ...[
-                                _buildTextField(
-                                  controller: costController,
-                                  label: 'Cost (coins)',
-                                  icon: Icons.paid,
-                                  keyboardType: TextInputType.number,
-                                  colorScheme: colorScheme,
-                                  textTheme: textTheme,
-                                ),
-                                const SizedBox(height: 16),
-                              ],
+                              _buildTextField(
+                                controller: costController,
+                                label: 'Cost (coins)',
+                                icon: Icons.paid,
+                                keyboardType: TextInputType.number,
+                                colorScheme: colorScheme,
+                                textTheme: textTheme,
+                              ),
+                              const SizedBox(height: 16),
                             ],
                             // Conditional fields based on type
                             if (selectedType == PrizeType.keyed ||
@@ -849,27 +833,6 @@ class _AdminPageState extends State<AdminPage> {
                                 onChanged: () => setDialogState(() {}),
                                 colorScheme: colorScheme,
                                 textTheme: textTheme,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Custom Grant checkbox (only for grant type)
-                            if (selectedType == PrizeType.grant) ...[
-                              CheckboxListTile(
-                                value: customGrant,
-                                onChanged: (value) {
-                                  setDialogState(() {
-                                    customGrant = value ?? true;
-                                  });
-                                },
-                                title: Text(
-                                  'Custom Grant',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
                               ),
                               const SizedBox(height: 16),
                             ],
@@ -1004,7 +967,6 @@ class _AdminPageState extends State<AdminPage> {
                             double.tryParse(multiplierController.text) ?? 0,
                         countries: selectedCountries.toList(),
                         specs: specsController.text,
-                        customGrant: customGrant,
                         options: prizeOptions
                             .map(
                               (o) => PrizeOption(
@@ -1063,7 +1025,6 @@ class _AdminPageState extends State<AdminPage> {
     double multiplier = 0,
     List<PrizeCountries> countries = const [PrizeCountries.all],
     String specs = '',
-    bool customGrant = false,
     List<PrizeOption> options = const [],
     List<PrizeOptionValues> optionValues = const [],
   }) async {
@@ -1084,7 +1045,6 @@ class _AdminPageState extends State<AdminPage> {
               .map((c) => c.toString().split('.').last)
               .toList(),
           'specs': specs,
-          'custom_grant': customGrant,
         },
       );
       if (options.isNotEmpty) {
@@ -1124,7 +1084,6 @@ class _AdminPageState extends State<AdminPage> {
               .map((c) => c.toString().split('.').last)
               .toList(),
           'specs': specs,
-          'custom_grant': customGrant,
         },
         column: 'id',
         value: prizeId,
