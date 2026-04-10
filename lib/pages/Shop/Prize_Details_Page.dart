@@ -24,8 +24,17 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     super.dispose();
   }
 
+  bool _isGrantPrize(Prize prize) {
+    return prize.title.toLowerCase().contains('grant');
+  }
+
+  int _maxQuantityForPrize(Prize prize) {
+    final cap = _isGrantPrize(prize) ? 500 : 20;
+    return prize.stock.clamp(0, cap);
+  }
+
   int _quantityForPrize(Prize prize) {
-    final stockLimit = prize.stock.clamp(0, 20);
+    final stockLimit = _maxQuantityForPrize(prize);
     final parsedQuantity = int.tryParse(_quantityController.text) ?? 1;
     return parsedQuantity.clamp(1, stockLimit == 0 ? 1 : stockLimit);
   }
@@ -262,6 +271,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     TextTheme textTheme,
   ) {
     final quantity = _quantityForPrize(prize);
+    final maxQuantity = _maxQuantityForPrize(prize);
     final availableCoins = UserService.currentUser?.bootCoins ?? 0;
     final totalCost = prize.cost * quantity;
     final isRewardPrize = prize.type == PrizeType.reward;
@@ -312,10 +322,10 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
             controller: _quantityController,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            maxLength: 2,
+            maxLength: maxQuantity >= 100 ? 3 : 2,
             decoration: InputDecoration(
               counterText: '',
-              hintText: '1 - 20',
+              hintText: '1 - $maxQuantity',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -329,7 +339,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
 
               final clamped = parsed.clamp(
                 1,
-                prize.stock < 20 ? prize.stock : 20,
+                maxQuantity == 0 ? 1 : maxQuantity,
               );
 
               if (clamped != parsed) {
@@ -346,7 +356,7 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Max quantity is 20.',
+            'Max quantity is $maxQuantity.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
