@@ -264,12 +264,15 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     final quantity = _quantityForPrize(prize);
     final availableCoins = UserService.currentUser?.bootCoins ?? 0;
     final totalCost = prize.cost * quantity;
+    final isRewardPrize = prize.type == PrizeType.reward;
     final hasKey = _userHasRequiredKey(prize);
     final isOutOfStock = prize.stock <= 0;
     final hasEnoughCoins = totalCost <= availableCoins;
-    final canOrder = !isOutOfStock && hasKey && hasEnoughCoins;
+    final canOrder = !isRewardPrize && !isOutOfStock && hasKey && hasEnoughCoins;
 
-    final buttonText = isOutOfStock
+    final buttonText = isRewardPrize
+        ? 'Reward prizes cannot be ordered'
+        : isOutOfStock
         ? 'Out of Stock'
         : !hasKey
         ? 'Requires Key'
@@ -391,6 +394,10 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                disabledForegroundColor: colorScheme.onSurfaceVariant,
+              ),
               onPressed: canOrder
                   ? () {
                       // TODO: submit order

@@ -131,6 +131,10 @@ class _ShopPageState extends State<ShopPage> {
     return currentUserKeys.contains(prize.key);
   }
 
+  bool _isShopVisiblePrize(Prize prize) {
+    return prize.type != PrizeType.reward;
+  }
+
   Future<void> _loadPrizes() async {
     if (!mounted) return;
     setState(() => _isLoadingPrizes = true);
@@ -173,11 +177,11 @@ class _ShopPageState extends State<ShopPage> {
         break;
     }
 
+    filtered.removeWhere((prize) => !_isShopVisiblePrize(prize));
+
     final normalPrizes = filtered
         .where(
-          (prize) =>
-              prize.type != PrizeType.reward &&
-              (prize.type != PrizeType.keyed || _userHasPrizeKey(prize)),
+          (prize) => (prize.type != PrizeType.keyed || _userHasPrizeKey(prize)),
         )
         .toList();
 
@@ -234,7 +238,7 @@ class _ShopPageState extends State<ShopPage> {
               .where(
                 (prize) =>
                     DateTime.now().difference(prize.createdAt).inDays <= 7 &&
-                    prize.type != PrizeType.reward,
+                    _isShopVisiblePrize(prize),
               )
               .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
