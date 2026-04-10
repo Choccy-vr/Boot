@@ -268,7 +268,8 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     final hasKey = _userHasRequiredKey(prize);
     final isOutOfStock = prize.stock <= 0;
     final hasEnoughCoins = totalCost <= availableCoins;
-    final canOrder = !isRewardPrize && !isOutOfStock && hasKey && hasEnoughCoins;
+    final canOrder =
+        !isRewardPrize && !isOutOfStock && hasKey && hasEnoughCoins;
 
     final buttonText = isRewardPrize
         ? 'Reward prizes cannot be ordered'

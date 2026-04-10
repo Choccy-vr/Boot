@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '/services/prizes/Prize.dart';
 import '/services/prizes/Prize_Service.dart';
@@ -22,6 +24,8 @@ class _AdminPageState extends State<AdminPage> {
   List<Challenge> _challenges = [];
   bool _isLoading = false;
 
+  final Random _random = Random.secure();
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,25 @@ class _AdminPageState extends State<AdminPage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  String _generateUuidV4() {
+    String randomHex(int length) {
+      const chars = '0123456789abcdef';
+      return List.generate(
+        length,
+        (_) => chars[_random.nextInt(chars.length)],
+      ).join();
+    }
+
+    return '${randomHex(8)}-${randomHex(4)}-4${randomHex(3)}-${['8', '9', 'a', 'b'][_random.nextInt(4)]}${randomHex(3)}-${randomHex(12)}';
+  }
+
+  bool _isUuid(String value) {
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    return uuidRegex.hasMatch(value);
   }
 
   @override
@@ -771,15 +794,45 @@ class _AdminPageState extends State<AdminPage> {
                             // Conditional fields based on type
                             if (selectedType == PrizeType.keyed ||
                                 selectedType == PrizeType.reward) ...[
-                              _buildTextField(
-                                controller: keyController,
-                                label: selectedType == PrizeType.keyed
-                                    ? 'Required Key (required)'
-                                    : 'Key (optional)',
-                                icon: Icons.key,
-                                colorScheme: colorScheme,
-                                textTheme: textTheme,
-                              ),
+                              if (selectedType == PrizeType.reward)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: keyController,
+                                        label: 'Key (optional)',
+                                        icon: Icons.key,
+                                        colorScheme: colorScheme,
+                                        textTheme: textTheme,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: OutlinedButton.icon(
+                                        onPressed: () {
+                                          keyController.text =
+                                              _generateUuidV4();
+                                          setDialogState(() {});
+                                        },
+                                        icon: const Icon(
+                                          Icons.casino,
+                                          size: 16,
+                                        ),
+                                        label: const Text('Generate UUID'),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                _buildTextField(
+                                  controller: keyController,
+                                  label: 'Required Key (required)',
+                                  icon: Icons.key,
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                ),
                               const SizedBox(height: 16),
                             ],
                             if (selectedType == PrizeType.reward) ...[
@@ -967,28 +1020,8 @@ class _AdminPageState extends State<AdminPage> {
                             double.tryParse(multiplierController.text) ?? 0,
                         countries: selectedCountries.toList(),
                         specs: specsController.text,
-                        options: prizeOptions
-                            .map(
-                              (o) => PrizeOption(
-                                id: o['id'] ?? '',
-                                createdAt: o['createdAt'] ?? DateTime.now(),
-                                prizeId: prize?.id ?? '',
-                                name: o['name'] ?? '',
-                              ),
-                            )
-                            .toList(),
-                        optionValues: prizeOptionValues
-                            .map(
-                              (v) => PrizeOptionValues(
-                                id: v['id'] ?? '',
-                                createdAt: v['createdAt'] ?? DateTime.now(),
-                                optionId: v['optionId'] ?? '',
-                                label: v['label'] ?? '',
-                                priceModifier: v['priceModifier'] ?? 0,
-                                stock: v['stock'] ?? 0,
-                              ),
-                            )
-                            .toList(),
+                        options: prizeOptions,
+                        optionValues: prizeOptionValues,
                       );
                       Navigator.pop(context);
                       _loadData();
@@ -1025,42 +1058,34 @@ class _AdminPageState extends State<AdminPage> {
     double multiplier = 0,
     List<PrizeCountries> countries = const [PrizeCountries.all],
     String specs = '',
-    List<PrizeOption> options = const [],
-    List<PrizeOptionValues> optionValues = const [],
+    List<Map<String, dynamic>> options = const [],
+    List<Map<String, dynamic>> optionValues = const [],
   }) async {
+    final prizeData = {
+      'title': title,
+      'description': description,
+      'cost': cost,
+      'stock': stock,
+      'picture': imageUrl,
+      'type': type.toString().split('.').last,
+      'key': key == '' ? null : key,
+      'coins': coins,
+      'multiplier': multiplier,
+      'countries': countries.map((c) => c.toString().split('.').last).toList(),
+      'specs': specs,
+    };
+
+    String effectivePrizeId = prizeId;
+
     if (!isEditing) {
-      await SupabaseDB.upsertData(
+      final insertedPrize = await SupabaseDB.insertAndReturnData(
         table: 'prizes',
-        data: {
-          'title': title,
-          'description': description,
-          'cost': cost,
-          'stock': stock,
-          'picture': imageUrl,
-          'type': imageUrl.toString().split('.').last,
-          'key': key == '' ? null : key,
-          'coins': coins,
-          'multiplier': multiplier,
-          'countries': countries
-              .map((c) => c.toString().split('.').last)
-              .toList(),
-          'specs': specs,
-        },
+        data: prizeData,
       );
-      if (options.isNotEmpty) {
-        await SupabaseDB.upsertData(
-          table: 'prize_options',
-          bulkData: options.map((option) => option.toJson()).toList(),
-        );
+      if (insertedPrize.isEmpty || insertedPrize.first['id'] == null) {
+        throw Exception('Failed to create prize');
       }
-      if (optionValues.isNotEmpty) {
-        await SupabaseDB.upsertData(
-          table: 'prize_option_values',
-          bulkData: optionValues
-              .map((optionValue) => optionValue.toJson())
-              .toList(),
-        );
-      }
+      effectivePrizeId = insertedPrize.first['id'].toString();
     } else {
       if (prizeId.isEmpty) {
         GlobalNotificationService.instance.showError(
@@ -1070,40 +1095,115 @@ class _AdminPageState extends State<AdminPage> {
       }
       await SupabaseDB.updateData(
         table: 'prizes',
-        data: {
-          'title': title,
-          'description': description,
-          'cost': cost,
-          'stock': stock,
-          'picture': imageUrl,
-          'type': type.toString().split('.').last,
-          'key': key == '' ? null : key,
-          'coins': coins,
-          'multiplier': multiplier,
-          'countries': countries
-              .map((c) => c.toString().split('.').last)
-              .toList(),
-          'specs': specs,
-        },
+        data: prizeData,
         column: 'id',
         value: prizeId,
       );
-      if (options.isNotEmpty) {
-        await SupabaseDB.updateBulkData(
-          table: 'prize_options',
-          bulkData: options.map((option) => option.toJson()).toList(),
-          onConflict: 'id',
-        );
+      effectivePrizeId = prizeId;
+    }
+
+    if (type != PrizeType.normal && type != PrizeType.keyed) {
+      return;
+    }
+
+    final optionIdMap = <String, String>{};
+    final optionRowsToUpsert = <Map<String, dynamic>>[];
+    final optionRowsToInsert = <Map<String, dynamic>>[];
+    final optionInsertClientIds = <String>[];
+
+    for (final option in options) {
+      final optionName = (option['name'] ?? '').toString().trim();
+      if (optionName.isEmpty) continue;
+
+      final rawId = (option['id'] ?? '').toString();
+      final clientId = (option['clientId'] ?? rawId).toString();
+
+      if (_isUuid(rawId)) {
+        optionIdMap[clientId] = rawId;
+        optionRowsToUpsert.add({
+          'id': rawId,
+          'prize_id': effectivePrizeId,
+          'name': optionName,
+        });
+      } else {
+        optionRowsToInsert.add({
+          'prize_id': effectivePrizeId,
+          'name': optionName,
+        });
+        optionInsertClientIds.add(clientId);
       }
-      if (optionValues.isNotEmpty) {
-        await SupabaseDB.updateBulkData(
-          table: 'prize_option_values',
-          bulkData: optionValues
-              .map((optionValue) => optionValue.toJson())
-              .toList(),
-          onConflict: 'id',
-        );
+    }
+
+    if (optionRowsToUpsert.isNotEmpty) {
+      await SupabaseDB.upsertData(
+        table: 'prize_options',
+        bulkData: optionRowsToUpsert,
+      );
+    }
+
+    if (optionRowsToInsert.isNotEmpty) {
+      final insertedOptions = await SupabaseDB.insertAndReturnData(
+        table: 'prize_options',
+        bulkData: optionRowsToInsert,
+      );
+
+      for (
+        var i = 0;
+        i < insertedOptions.length && i < optionInsertClientIds.length;
+        i++
+      ) {
+        final insertedId = (insertedOptions[i]['id'] ?? '').toString();
+        if (_isUuid(insertedId)) {
+          optionIdMap[optionInsertClientIds[i]] = insertedId;
+        }
       }
+    }
+
+    final optionValueRowsToUpsert = <Map<String, dynamic>>[];
+    final optionValueRowsToInsert = <Map<String, dynamic>>[];
+
+    for (final optionValue in optionValues) {
+      final rawOptionId = (optionValue['optionId'] ?? '').toString();
+      final resolvedOptionId = optionIdMap[rawOptionId] ?? rawOptionId;
+      if (!_isUuid(resolvedOptionId)) {
+        continue;
+      }
+
+      final label = (optionValue['label'] ?? '').toString().trim();
+      if (label.isEmpty) continue;
+
+      final valuePayload = {
+        'option_id': resolvedOptionId,
+        'label': label,
+        'price_modifier':
+            int.tryParse((optionValue['priceModifier'] ?? 0).toString()) ?? 0,
+        'stock': int.tryParse((optionValue['stock'] ?? 0).toString()) ?? 0,
+      };
+
+      final rawId = optionValue['id'];
+      final parsedId = rawId is int
+          ? rawId
+          : int.tryParse((rawId ?? '').toString());
+
+      if (parsedId != null) {
+        optionValueRowsToUpsert.add({'id': parsedId, ...valuePayload});
+      } else {
+        optionValueRowsToInsert.add(valuePayload);
+      }
+    }
+
+    if (optionValueRowsToUpsert.isNotEmpty) {
+      await SupabaseDB.upsertData(
+        table: 'prize_option_values',
+        bulkData: optionValueRowsToUpsert,
+      );
+    }
+
+    if (optionValueRowsToInsert.isNotEmpty) {
+      await SupabaseDB.insertData(
+        table: 'prize_option_values',
+        bulkData: optionValueRowsToInsert,
+      );
     }
   }
 
@@ -2819,7 +2919,8 @@ class _AdminPageState extends State<AdminPage> {
               itemCount: prizeOptions.length,
               itemBuilder: (context, index) {
                 final option = prizeOptions[index];
-                final optionId = option['id'];
+                final optionId = (option['id'] ?? option['clientId'])
+                    .toString();
                 final values = prizeOptionValues
                     .where((v) => v['optionId'] == optionId)
                     .toList();
@@ -3060,7 +3161,7 @@ class _AdminPageState extends State<AdminPage> {
                   return;
                 }
                 Navigator.pop(context, {
-                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  'clientId': _generateUuidV4(),
                   'createdAt': DateTime.now(),
                   'prizeId': prizeId,
                   'name': nameController.text.trim(),
@@ -3151,7 +3252,6 @@ class _AdminPageState extends State<AdminPage> {
                   return;
                 }
                 Navigator.pop(context, {
-                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
                   'createdAt': DateTime.now(),
                   'optionId': optionId,
                   'label': labelController.text.trim(),
