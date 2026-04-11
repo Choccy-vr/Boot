@@ -643,14 +643,6 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
                   : Text(buttonText),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'You will be redirected to reauthenticate.',
-            textAlign: TextAlign.center,
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
         ],
       ),
     );
