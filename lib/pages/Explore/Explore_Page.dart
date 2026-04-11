@@ -13,10 +13,7 @@ class ExplorePage extends StatefulWidget {
   State<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _ExplorePageState extends State<ExplorePage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _ExplorePageState extends State<ExplorePage> {
   // All Projects tab state
   List<Project> _allProjects = [];
   bool _isLoadingAllProjects = false;
@@ -28,7 +25,7 @@ class _ExplorePageState extends State<ExplorePage>
   // Search and filter state
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _sortBy = 'recent'; // recent, favorites, hours
+  String _sortBy = 'recent'; // recent, hours
   final List<String> _selectedTags = [];
   final List<String> _allAvailableTags = [];
   List<Project> _filteredProjects = [];
@@ -36,7 +33,6 @@ class _ExplorePageState extends State<ExplorePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 1, vsync: this);
     _loadAllProjects();
     _searchController.addListener(_applyFiltersAndSort);
 
@@ -50,7 +46,6 @@ class _ExplorePageState extends State<ExplorePage>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _allProjectsScrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -147,8 +142,6 @@ class _ExplorePageState extends State<ExplorePage>
 
       // Apply sorting
       switch (_sortBy) {
-        case 'favorites':
-          break;
         case 'hours':
           filtered.sort((a, b) => b.time.compareTo(a.time));
           break;
@@ -211,18 +204,8 @@ class _ExplorePageState extends State<ExplorePage>
           backgroundColor: colorScheme.surfaceContainerLow,
           elevation: 1,
           automaticallyImplyLeading: false,
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [Tab(icon: Icon(Icons.public), text: 'All Projects')],
-            labelColor: colorScheme.primary,
-            unselectedLabelColor: colorScheme.onSurfaceVariant,
-            indicatorColor: colorScheme.primary,
-          ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [_buildAllProjectsTab(colorScheme, textTheme)],
-        ),
+        body: _buildAllProjectsTab(colorScheme, textTheme),
       ),
     );
   }
@@ -286,10 +269,6 @@ class _ExplorePageState extends State<ExplorePage>
                         DropdownMenuItem(
                           value: 'recent',
                           child: Text('Sort by: Recently Created'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'favorites',
-                          child: Text('Sort by: Most Favorites'),
                         ),
                         DropdownMenuItem(
                           value: 'hours',

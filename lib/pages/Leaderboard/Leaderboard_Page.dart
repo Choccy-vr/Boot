@@ -15,28 +15,14 @@ class LeaderboardPage extends StatefulWidget {
 
 class _LeaderboardPageState extends State<LeaderboardPage>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
   // Most Time tab state
   List<Project> _mostTimeProjects = [];
   bool _isLoadingMostTime = false;
 
-  // Most Challenges tab state
-  List<Project> _mostChallengesProjects = [];
-  bool _isLoadingMostChallenges = false;
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadMostTime();
-    _loadMostChallenges();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadMostTime() async {
@@ -47,7 +33,7 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     });
 
     try {
-      final projects = await ProjectService.getTopProjectsByTime(limit: 50);
+      final projects = await ProjectService.getTopProjectsByTime(limit: 10);
 
       setState(() {
         _mostTimeProjects = projects;
@@ -58,30 +44,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
         _isLoadingMostTime = false;
       });
       _showErrorSnackbar('Failed to load most time projects: $e');
-    }
-  }
-
-  Future<void> _loadMostChallenges() async {
-    if (_isLoadingMostChallenges) return;
-
-    setState(() {
-      _isLoadingMostChallenges = true;
-    });
-
-    try {
-      final projects = await ProjectService.getTopProjectsByChallenges(
-        limit: 50,
-      );
-
-      setState(() {
-        _mostChallengesProjects = projects;
-        _isLoadingMostChallenges = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMostChallenges = false;
-      });
-      _showErrorSnackbar('Failed to load most bounties projects: $e');
     }
   }
 
@@ -98,19 +60,10 @@ class _LeaderboardPageState extends State<LeaderboardPage>
     await _loadMostTime();
   }
 
-  Future<void> _refreshMostChallenges() async {
-    await _loadMostChallenges();
-  }
-
   Future<void> _navigateToProject(Project project) async {
     await NavigationService.openProject(project, context);
     if (!mounted) return;
-    // Refresh current tab
-    if (_tabController.index == 0) {
-      await _refreshMostTime();
-    } else {
-      await _refreshMostChallenges();
-    }
+    await _refreshMostTime();
   }
 
   @override
@@ -143,25 +96,8 @@ class _LeaderboardPageState extends State<LeaderboardPage>
           automaticallyImplyLeading: false,
           backgroundColor: colorScheme.surfaceContainerLow,
           elevation: 1,
-          bottom: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabs: const [
-              Tab(icon: Icon(Icons.schedule), text: 'Most Time'),
-              Tab(icon: Icon(Icons.emoji_events), text: 'Most Bounties'),
-            ],
-            labelColor: colorScheme.primary,
-            unselectedLabelColor: colorScheme.onSurfaceVariant,
-            indicatorColor: colorScheme.primary,
-          ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildMostTimeTab(colorScheme, textTheme),
-            _buildMostChallengesTab(colorScheme, textTheme),
-          ],
-        ),
+        body: _buildMostTimeTab(colorScheme, textTheme),
       ),
     );
   }
@@ -203,54 +139,6 @@ class _LeaderboardPageState extends State<LeaderboardPage>
                   primaryStat: _mostTimeProjects[index].readableTime,
                   primaryIcon: Icons.schedule,
                   primaryColor: TerminalColors.cyan,
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildMostChallengesTab(ColorScheme colorScheme, TextTheme textTheme) {
-    return RefreshIndicator(
-      onRefresh: _refreshMostChallenges,
-      child: _mostChallengesProjects.isEmpty && _isLoadingMostChallenges
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading leaderboard...',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _mostChallengesProjects.isEmpty
-          ? _buildEmptyState(
-              icon: Icons.emoji_events,
-              title: 'No Projects Yet',
-              subtitle: 'Complete bounties to climb the leaderboard!',
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            )
-          : ListView.builder(
-              padding: Responsive.pagePadding(context),
-              itemCount: _mostChallengesProjects.length,
-              itemBuilder: (context, index) {
-                return _buildLeaderboardCard(
-                  project: _mostChallengesProjects[index],
-                  rank: index + 1,
-                  primaryStat: _mostChallengesProjects[index]
-                      .challengeIds
-                      .length
-                      .toString(),
-                  primaryIcon: Icons.emoji_events,
-                  primaryColor: TerminalColors.yellow,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                 );
