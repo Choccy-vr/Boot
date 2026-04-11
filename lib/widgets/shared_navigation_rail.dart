@@ -245,7 +245,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 textTheme: textTheme,
                 onTap: () {
                   launchUrl(
-                    Uri.parse('https://boot.hackclub.com/guides/home'),
+                    Uri.parse('https://boot.hackclub.com/guides'),
                     mode: LaunchMode.externalApplication,
                   );
                 },
