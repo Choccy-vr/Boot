@@ -1,4 +1,8 @@
+import 'package:boot_app/services/navigation/navigation_service.dart';
+import 'package:boot_app/services/order/Order_Service.dart';
 import 'package:boot_app/services/prizes/Prize_Service.dart';
+import 'package:boot_app/services/auth/Auth.dart';
+import 'package:boot_app/services/slack/slack_manager.dart';
 import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +22,7 @@ class PrizeDetailsPage extends StatefulWidget {
 class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
   Prize updatedPrize = Prize.empty();
   bool _isPrizeLoaded = false;
+  bool _isSubmittingOrder = false;
   final Map<String, String> _selectedOptionValueByOptionId = {};
 
   final TextEditingController _quantityController = TextEditingController(
@@ -141,6 +146,78 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
       return '+$amount';
     }
     return amount.toString();
+  }
+
+  List<PrizeOptionValues> _selectedOptionValues(Prize prize) {
+    if (prize.options.isEmpty) {
+      return [];
+    }
+
+    return prize.options
+        .map((option) {
+          final selectedValueId = _selectedOptionValueByOptionId[option.id];
+          if (selectedValueId == null) {
+            return null;
+          }
+          return option.values.firstWhere(
+            (value) => value.id == selectedValueId,
+            orElse: () => option.values.first,
+          );
+        })
+        .whereType<PrizeOptionValues>()
+        .toList();
+  }
+
+  Future<void> _showOrderSuccessDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('🎉'),
+          content: const Text('Your order has been successfully submitted.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                NavigationService.navigateTo(
+                  context: context,
+                  destination: AppDestination.home,
+                  colorScheme: Theme.of(context).colorScheme,
+                  textTheme: Theme.of(context).textTheme,
+                );
+              },
+              child: const Text('Yay!'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleOrderPressed(Prize prize, int quantity) async {
+    if (_isSubmittingOrder) {
+      return;
+    }
+
+    setState(() {
+      _isSubmittingOrder = true;
+    });
+
+    final orderSuccess = await OrderService.placeOrder(
+      prize,
+      quantity,
+      _selectedOptionValues(prize),
+    );
+
+    if (!mounted) return;
+    if (orderSuccess) {
+      await _showOrderSuccessDialog();
+      SlackManager.sendMessage(
+        destination: UserService.currentUser?.slackUserId ?? '',
+        message:
+            "Heyo :roblox-wave:\n\nYour order for ${prize.title} has been received! :ultrafastparrot:\n\nWe'll send you another message once it's fulfilled. In the meantime, lets go over some order details:\n\n- Quantity: $quantity\n- Total Cost: ${prize.cost * quantity} coins\n\nKeep building your OS! :parrot_love:",
+      );
+    }
   }
 
   @override
@@ -554,12 +631,16 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
                 disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                 disabledForegroundColor: colorScheme.onSurfaceVariant,
               ),
-              onPressed: canOrder
-                  ? () {
-                      // TODO: submit order
-                    }
+              onPressed: canOrder && !_isSubmittingOrder
+                  ? () => _handleOrderPressed(prize, quantity)
                   : null,
-              child: Text(buttonText),
+              child: _isSubmittingOrder
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(buttonText),
             ),
           ),
           const SizedBox(height: 8),

@@ -17,6 +17,9 @@ const buildCorsHeaders = (origin: string | null) => {
   };
 };
 
+const AIRTABLE_TOKEN = Deno.env.get("AIRTABLE_PAT")!;
+const AIRTABLE_BASE_ID = Deno.env.get("AIRTABLE_BASE_ID")!;
+
 type SupabaseClientType = ReturnType<typeof createClient>;
 
 interface PrizeInput {
@@ -60,6 +63,10 @@ interface UserRow {
   id: string;
   boot_coins: number;
   keys: string[] | null;
+  access_token_encrypted: string | null;
+  slack_user_id: string | null;
+  verification_status: boolean | null;
+  ysws_eligible: boolean | null;
 }
 
 interface SelectedOptionValueResult {
@@ -78,6 +85,34 @@ interface BuiltOrder {
   pricePerItem: number;
   totalCost: number;
   selectedOptionValues: SelectedOptionValueResult[];
+}
+
+interface StockMutationResult {
+  user_id: string;
+  boot_coins: number;
+  prize_id: string;
+  prize_stock: number;
+  option_value_stocks: Array<{ id: number; stock: number }>;
+}
+
+interface HackClubUserInfo {
+  sub: string;
+  email: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+  birthdate?: string;
+  address?: {
+    street_address?: string;
+    locality?: string;
+    region?: string;
+    country?: string;
+    postal_code?: string;
+  };
+  verification_status?: boolean;
+  ysws_eligible?: boolean;
+  slack_id?: string;
 }
 
 class HttpError extends Error {
@@ -276,6 +311,60 @@ const buildOrderFromPrize = async (
   };
 };
 
+const fromBase64 = (base64: string) =>
+  Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+const decryptAccessToken = async (encryptedToken: string): Promise<string> => {
+  const masterKeyB64 = Deno.env.get("ACCESS_TOKEN_SECRET") ?? "";
+  if (!masterKeyB64) {
+    throw new Error("Missing ACCESS_TOKEN_SECRET");
+  }
+
+  const [ivB64, ciphertextB64] = encryptedToken.split(":");
+  if (!ivB64 || !ciphertextB64) {
+    throw new Error("Invalid encrypted token format");
+  }
+
+  const keyBytes = fromBase64(masterKeyB64);
+  if (keyBytes.length !== 32) {
+    throw new Error("ACCESS_TOKEN_SECRET must decode to 32 bytes");
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"]
+  );
+
+  const iv = fromBase64(ivB64);
+  const ciphertext = fromBase64(ciphertextB64);
+
+  const plaintextBuffer = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    cryptoKey,
+    ciphertext
+  );
+
+  return new TextDecoder().decode(plaintextBuffer);
+};
+
+async function insertAirtableRow(table: string, fields: Record<string, unknown>) {
+  const res = await fetch('https://api.airtable.com/v0/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(table), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ fields, typecast: true })
+  });
+
+  if(!res.ok) throw new Error(`Airtable insert failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+
+}
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const corsHeaders = buildCorsHeaders(origin);
@@ -338,7 +427,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: userRow, error: userRowError } = await supabaseAdmin
       .from("users")
-      .select("id, boot_coins, keys")
+      .select(
+        "id, boot_coins, keys, access_token_encrypted, slack_user_id, verification_status, ysws_eligible"
+      )
       .eq("id", user.id)
       .maybeSingle<UserRow>();
 
@@ -376,26 +467,100 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(400, "Insufficient balance");
     }
 
-    // TODO: HCA check
+    const encryptedAccessToken = userRow.access_token_encrypted;
 
-    const newBootCoins = userBalance - order.totalCost;
-    const { data: updatedUser, error: updateUserError } = await supabaseAdmin
-      .from("users")
-      .update({ boot_coins: newBootCoins })
-      .eq("id", user.id)
-      .gte("boot_coins", order.totalCost)
-      .select("id, boot_coins")
-      .maybeSingle();
+    if(!encryptedAccessToken) {
+      throw new Error("User has no encrypted Hack Club access token");
+    }
+    const accessToken = await decryptAccessToken(encryptedAccessToken);
+    // make HCA calls to get address, and other
+    const userInfoResponse = await fetch(
+      "https://auth.hackclub.com/oauth/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-    if (updateUserError) {
-      throw updateUserError;
+    if (!userInfoResponse.ok) {
+      console.error("UserInfo fetch failed:", await userInfoResponse.text());
+      return new Response(
+        JSON.stringify({
+          error: "Failed to fetch user info",
+        }),
+        {
+          status: userInfoResponse.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    if (!updatedUser) {
-      throw new HttpError(409, "Insufficient balance");
+    const userInfo: HackClubUserInfo = await userInfoResponse.json();
+
+    if (!userInfo.sub || !userInfo.email || !userInfo.birthdate || !userInfo.name || !userInfo.address) {
+      throw new HttpError(400, "Invalid user info: missing sub, email, birthdate, name, or address");
     }
 
-    // TODO: Airtable Order
+    const finalVerificationStatus =
+      userInfo.verification_status ?? userRow.verification_status;
+    const finalYswsEligible = userInfo.ysws_eligible ?? userRow.ysws_eligible;
+
+    if (!finalVerificationStatus || !finalYswsEligible) {
+      throw new HttpError(403, "User is not verified or eligible for this prize");
+    }
+
+    const { data: mutationResult, error: mutationError } = await supabaseAdmin.rpc(
+      "apply_shop_order_mutations",
+      {
+        p_user_id: user.id,
+        p_prize_id: order.prize.id,
+        p_quantity: order.quantity,
+        p_total_cost: order.totalCost,
+        p_selected_option_value_ids: order.selectedOptionValues.map(
+          (value) => value.id
+        ),
+      }
+    );
+
+    if (mutationError) {
+      const errorMessage = String(mutationError.message ?? "").toUpperCase();
+
+      if (errorMessage.includes("INSUFFICIENT_BALANCE")) {
+        throw new HttpError(409, "Insufficient balance");
+      }
+      if (errorMessage.includes("INSUFFICIENT_PRIZE_STOCK")) {
+        throw new HttpError(409, "Insufficient prize stock");
+      }
+      if (errorMessage.includes("INSUFFICIENT_OPTION_STOCK")) {
+        throw new HttpError(409, "Insufficient selected option stock");
+      }
+
+      throw mutationError;
+    }
+
+    const stockMutation = (mutationResult ?? {}) as Partial<StockMutationResult>;
+    const updatedBootCoins = toInt(stockMutation.boot_coins);
+
+    try {
+      await insertAirtableRow("Orders", {
+        boot_user_id: user.id,
+        total_cost: order.totalCost,
+        prize: order.prize.title,
+        prize_options: order.selectedOptionValues.map((v) => v.label).join(", "),
+        quantity: order.quantity,
+        name: userInfo.name,
+        email: userInfo.email,
+        "Slack Id": userRow.slack_user_id ?? userInfo.slack_id,
+        "Address (Line 1)": userInfo.address.street_address,
+        City: userInfo.address.locality,
+        "State / Province": userInfo.address.region,
+        Country: userInfo.address.country,
+        "ZIP / Postal Code": userInfo.address.postal_code,
+      });
+    } catch (airtableError) {
+      console.error("Airtable order insert failed:", airtableError);
+    }
 
     return new Response(
       JSON.stringify({
@@ -410,8 +575,14 @@ Deno.serve(async (req: Request) => {
           selectedOptionValues: order.selectedOptionValues,
         },
         user: {
-          id: updatedUser.id,
-          boot_coins: toInt(updatedUser.boot_coins),
+          id: user.id,
+          boot_coins: updatedBootCoins,
+        },
+        stock: {
+          prize_stock: toInt(stockMutation.prize_stock),
+          option_value_stocks: Array.isArray(stockMutation.option_value_stocks)
+            ? stockMutation.option_value_stocks
+            : [],
         },
       }),
       {
