@@ -1,3 +1,5 @@
+import 'package:boot_app/services/prizes/Prize_Service.dart';
+import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '/services/prizes/Prize.dart';
@@ -14,6 +16,10 @@ class PrizeDetailsPage extends StatefulWidget {
 }
 
 class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
+  Prize updatedPrize = Prize.empty();
+  bool _isPrizeLoaded = false;
+  final Map<String, String> _selectedOptionValueByOptionId = {};
+
   final TextEditingController _quantityController = TextEditingController(
     text: '1',
   );
@@ -22,6 +28,13 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
   void dispose() {
     _quantityController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    updatedPrize = widget.prize;
+    _loadPrizeDetails();
   }
 
   bool _isGrantPrize(Prize prize) {
@@ -44,11 +57,97 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     return UserService.currentUser?.keys.contains(prize.key) ?? false;
   }
 
+  void _loadPrizeDetails() async {
+    await PrizeService.updatePrizeWithOptions(updatedPrize);
+    if (mounted) {
+      setState(() {
+        _initializeOptionSelections(updatedPrize);
+        _isPrizeLoaded = true;
+      });
+    }
+  }
+
+  void _initializeOptionSelections(Prize prize) {
+    final validOptionIds = <String>{};
+
+    for (final option in prize.options) {
+      validOptionIds.add(option.id);
+      if (option.values.isEmpty) {
+        _selectedOptionValueByOptionId.remove(option.id);
+        continue;
+      }
+
+      final sortedValues = [...option.values]
+        ..sort((a, b) => a.priceModifier.compareTo(b.priceModifier));
+      final selectedValueId = _selectedOptionValueByOptionId[option.id];
+      final hasSelectedValue = sortedValues.any(
+        (value) => value.id == selectedValueId,
+      );
+
+      _selectedOptionValueByOptionId[option.id] = hasSelectedValue
+          ? selectedValueId!
+          : sortedValues.first.id;
+    }
+
+    _selectedOptionValueByOptionId.removeWhere(
+      (optionId, _) => !validOptionIds.contains(optionId),
+    );
+  }
+
+  void _selectOptionValue(String optionId, String valueId) {
+    if (_selectedOptionValueByOptionId[optionId] == valueId) {
+      return;
+    }
+
+    setState(() {
+      _selectedOptionValueByOptionId[optionId] = valueId;
+    });
+  }
+
+  List<MapEntry<String, int>> _selectedOptionAdjustments(Prize prize) {
+    final adjustments = <MapEntry<String, int>>[];
+
+    for (final option in prize.options) {
+      final selectedValueId = _selectedOptionValueByOptionId[option.id];
+      if (selectedValueId == null) {
+        continue;
+      }
+
+      PrizeOptionValues? selectedValue;
+      for (final value in option.values) {
+        if (value.id == selectedValueId) {
+          selectedValue = value;
+          break;
+        }
+      }
+
+      if (selectedValue == null || selectedValue.priceModifier == 0) {
+        continue;
+      }
+
+      adjustments.add(
+        MapEntry(
+          '${option.name}: ${selectedValue.label}',
+          selectedValue.priceModifier,
+        ),
+      );
+    }
+
+    return adjustments;
+  }
+
+  String _formatSignedCoins(int amount) {
+    if (amount > 0) {
+      return '+$amount';
+    }
+    return amount.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final prize = widget.prize;
+    final prize = updatedPrize;
 
     return SharedNavigationRail(
       showAppBar: false,
@@ -91,45 +190,27 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: panelMaxWidth),
-                      child: Material(
-                        elevation: 8,
-                        color: colorScheme.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(panelRadius),
-                          side: BorderSide(
-                            color: colorScheme.primary.withValues(alpha: 0.45),
-                            width: 1,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(isCompact ? 18 : 28),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: useVerticalLayout
-                                ? Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      ..._buildDetailSection(
-                                        prize,
-                                        colorScheme,
-                                        textTheme,
-                                        imageFrameHeight,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildCheckoutSection(
-                                        prize,
-                                        colorScheme,
-                                        textTheme,
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
+                      child: _isPrizeLoaded
+                          ? Material(
+                              elevation: 8,
+                              color: colorScheme.surfaceContainerLow,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  panelRadius,
+                                ),
+                                side: BorderSide(
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.45,
+                                  ),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.all(isCompact ? 18 : 28),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: useVerticalLayout
+                                      ? Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
@@ -139,22 +220,51 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
                                               textTheme,
                                               imageFrameHeight,
                                             ),
+                                            const SizedBox(height: 24),
+                                            _buildCheckoutSection(
+                                              prize,
+                                              colorScheme,
+                                              textTheme,
+                                            ),
+                                          ],
+                                        )
+                                      : Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  ..._buildDetailSection(
+                                                    prize,
+                                                    colorScheme,
+                                                    textTheme,
+                                                    imageFrameHeight,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 36),
+                                            Expanded(
+                                              child: _buildCheckoutSection(
+                                                prize,
+                                                colorScheme,
+                                                textTheme,
+                                              ),
+                                            ),
                                           ],
                                         ),
-                                      ),
-                                      const SizedBox(width: 36),
-                                      Expanded(
-                                        child: _buildCheckoutSection(
-                                          prize,
-                                          colorScheme,
-                                          textTheme,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -273,7 +383,13 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     final quantity = _quantityForPrize(prize);
     final maxQuantity = _maxQuantityForPrize(prize);
     final availableCoins = UserService.currentUser?.bootCoins ?? 0;
-    final totalCost = prize.cost * quantity;
+    final selectedOptionAdjustments = _selectedOptionAdjustments(prize);
+    final selectedModifierPerItem = selectedOptionAdjustments.fold<int>(
+      0,
+      (sum, adjustment) => sum + adjustment.value,
+    );
+    final pricePerItem = prize.cost + selectedModifierPerItem;
+    final totalCost = pricePerItem * quantity;
     final isRewardPrize = prize.type == PrizeType.reward;
     final hasKey = _userHasRequiredKey(prize);
     final isOutOfStock = prize.stock <= 0;
@@ -362,7 +478,27 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
             ),
           ),
           const SizedBox(height: 20),
-          //TODO: PRIZE VARIANTS
+          if (prize.options.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.outline.withValues(alpha: 0.18),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var option in prize.options)
+                    _buildOptionSection(option, colorScheme, textTheme),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -378,10 +514,19 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
               children: [
                 _buildSummaryRow(
                   label: 'Price per item',
-                  value: '${prize.cost} coins',
+                  value: '$pricePerItem coins',
                   textTheme: textTheme,
                   colorScheme: colorScheme,
                 ),
+                for (final adjustment in selectedOptionAdjustments) ...[
+                  const SizedBox(height: 10),
+                  _buildSummaryRow(
+                    label: adjustment.key,
+                    value: '${_formatSignedCoins(adjustment.value)} coins',
+                    textTheme: textTheme,
+                    colorScheme: colorScheme,
+                  ),
+                ],
                 const SizedBox(height: 10),
                 _buildSummaryRow(
                   label: 'Quantity',
@@ -455,6 +600,105 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOptionSection(
+    PrizeOption option,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final sortedValues = [...option.values]
+      ..sort((a, b) => a.priceModifier.compareTo(b.priceModifier));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Text(
+            option.name,
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          for (var value in sortedValues) ...[
+            _buildOptionValue(
+              optionId: option.id,
+              value: value,
+              isSelected: _selectedOptionValueByOptionId[option.id] == value.id,
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionValue({
+    required String optionId,
+    required PrizeOptionValues value,
+    required bool isSelected,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: isSelected ? null : () => _selectOptionValue(optionId, value.id),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow.withValues(
+              alpha: isSelected ? 0.7 : 0.45,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.outline.withValues(alpha: 0.5),
+              width: 2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  value.label,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.toll_rounded,
+                    size: 16,
+                    color: TerminalColors.yellow,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    value.priceModifier.toString(),
+                    style: textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

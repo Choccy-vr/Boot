@@ -50,6 +50,73 @@ class PrizeService {
     }
   }
 
+  static Future<List<Prize>> getPrizesByKeys(List<String> keys) async {
+    try {
+      if (keys.isEmpty) return [];
+      final response = await SupabaseDB.getMultipleRowData(
+        table: 'prizes',
+        column: 'key',
+        columnValue: keys,
+      );
+      return (response as List).map((json) => Prize.fromJson(json)).toList();
+    } catch (e, stack) {
+      AppLogger.error('Error getting prizes by keys', e, stack);
+      return [];
+    }
+  }
+
+  static Future<List<PrizeOption>> getPrizeOptions(Prize prize) async {
+    try {
+      final response = await SupabaseDB.getMultipleRowData(
+        table: 'prize_options',
+        column: 'prize_id',
+        columnValue: [prize.id],
+      );
+      return (response as List)
+          .map((json) => PrizeOption.fromJson(json))
+          .toList();
+    } catch (e, stack) {
+      AppLogger.error('Error getting options for prize ${prize.id}', e, stack);
+      return [];
+    }
+  }
+
+  static Future<List<PrizeOptionValues>> getPrizeOptionValues(
+    PrizeOption option,
+  ) async {
+    try {
+      final response = await SupabaseDB.getMultipleRowData(
+        table: 'prize_option_values',
+        column: 'option_id',
+        columnValue: [option.id],
+      );
+      return (response as List)
+          .map((json) => PrizeOptionValues.fromJson(json))
+          .toList();
+    } catch (e, stack) {
+      AppLogger.error('Error getting values for option ${option.id}', e, stack);
+      return [];
+    }
+  }
+
+  static Future<void> updatePrizeWithOptions(Prize prize) async {
+    try {
+      final options = await getPrizeOptions(prize);
+      final optionValues = (await Future.wait(
+        options.map(getPrizeOptionValues),
+      )).expand((values) => values).toList();
+
+      prize.options = options;
+      for (var option in prize.options) {
+        option.values = optionValues
+            .where((value) => value.optionId == option.id)
+            .toList();
+      }
+    } catch (e, stack) {
+      AppLogger.error('Error getting options for prize ${prize.id}', e, stack);
+    }
+  }
+
   static Future<List<Prize>> purchasePrizes(List<Prize> selectedPrizes) async {
     try {
       return selectedPrizes;

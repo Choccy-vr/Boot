@@ -13,6 +13,7 @@ class Prize {
   final List<PrizeCountries> countries;
   final String specs;
   final bool customGrant;
+  List<PrizeOption> options;
 
   Prize({
     required this.id,
@@ -29,6 +30,7 @@ class Prize {
     this.countries = const [PrizeCountries.all],
     this.specs = '',
     this.customGrant = true,
+    this.options = const [],
   });
 
   /// Factory constructor for creating an empty/fallback Prize instance
@@ -43,25 +45,28 @@ class Prize {
       countries: const [PrizeCountries.all],
       specs: '',
       customGrant: true,
+      options: const [],
     );
   }
 
   factory Prize.fromJson(Map<String, dynamic> json) {
     return Prize(
-      id: json['id'] ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      title: json['title'] ?? 'Untitled Prize',
-      description: json['description'] ?? 'No description provided',
-      picture: json['picture'],
-      cost: json['cost'] ?? 0,
-      stock: json['stock'] ?? 0,
+      id: json['id']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      title: json['title']?.toString() ?? 'Untitled Prize',
+      description: json['description']?.toString() ?? 'No description provided',
+      picture: json['picture']?.toString(),
+      cost: (json['cost'] as num?)?.toInt() ?? 0,
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
       multiplier: json['multiplier'] != null
           ? (json['multiplier'] as num).toDouble()
           : 0,
-      key: json['key'] ?? '',
-      coins: json['coins'] ?? 0,
+      key: json['key']?.toString() ?? '',
+      coins: (json['coins'] as num?)?.toInt() ?? 0,
       type: PrizeType.values.firstWhere(
-        (e) => e.toString() == 'PrizeType.${json['type']}',
+        (e) => e.toString() == 'PrizeType.${json['type']?.toString()}',
         orElse: () => PrizeType.normal,
       ),
       countries: json['countries'] != null
@@ -69,8 +74,9 @@ class Prize {
                 .map((country) => prizeCountryFromJsonValue(country))
                 .toList()
           : [PrizeCountries.all],
-      specs: json['specs'] ?? '',
+      specs: json['specs']?.toString() ?? '',
       customGrant: json['custom_grant'] ?? true,
+      options: const [],
     );
   }
 
@@ -99,20 +105,29 @@ class PrizeOption {
   final DateTime createdAt;
   final String prizeId;
   final String name;
+  List<PrizeOptionValues> values;
 
   PrizeOption({
     required this.id,
     required this.createdAt,
     required this.prizeId,
     required this.name,
+    this.values = const [],
   });
 
   factory PrizeOption.fromJson(Map<String, dynamic> json) {
     return PrizeOption(
-      id: json['id'] ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      prizeId: json['prize_id'] ?? '',
-      name: json['name'] ?? 'Untitled Option',
+      id: json['id']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      prizeId: json['prize_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Untitled Option',
+      values: json['values'] != null
+          ? (json['values'] as List)
+                .map((value) => PrizeOptionValues.fromJson(value))
+                .toList()
+          : const [],
     );
   }
 
@@ -145,12 +160,14 @@ class PrizeOptionValues {
 
   factory PrizeOptionValues.fromJson(Map<String, dynamic> json) {
     return PrizeOptionValues(
-      id: json['id'] ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      optionId: json['option_id'] ?? '',
-      label: json['label'] ?? 'No Label',
-      priceModifier: json['price_modifier'] ?? 0,
-      stock: json['stock'] ?? 0,
+      id: json['id']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      optionId: json['option_id']?.toString() ?? '',
+      label: json['label']?.toString() ?? 'No Label',
+      priceModifier: (json['price_modifier'] as num?)?.toInt() ?? 0,
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
     );
   }
 
