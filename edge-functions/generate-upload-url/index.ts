@@ -100,7 +100,9 @@ serve(async (req) => {
       }
 
       if (project.owner !== user.id) {
-        throw new Error("Unauthorized");
+        if(!["admin", "reviewer", "owner"].includes(user.role)){
+          throw new Error("Unauthorized");
+        }
       }
     }
 
