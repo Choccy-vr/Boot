@@ -60,6 +60,18 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
+    const { data: userRow, error: userError } = await supabaseClient
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !userRow) {
+      throw new Error("Unauthorized");
+    }
+
+    const role = String(userRow.role ?? "").toLowerCase();
+
     const { path, contentType } = await req.json();
 
     if (!path || !contentType) {
@@ -82,7 +94,26 @@ serve(async (req) => {
       throw new Error("Invalid upload path");
     }
 
-    if (path.startsWith("projects/")) {
+    const shipUploadMatch = path.match(/^projects\/(\d+)\/ship_(\d+)\//);
+
+    if (shipUploadMatch) {
+      if (role !== "reviewer" && role !== "admin" && role !== "owner") {
+        throw new Error("Unauthorized");
+      }
+
+      const projectId = Number(shipUploadMatch[1]);
+      const shipId = Number(shipUploadMatch[2]);
+
+      const { data: ship, error: shipError } = await supabaseClient
+        .from("ships")
+        .select("project")
+        .eq("id", shipId)
+        .single();
+
+      if (shipError || !ship || Number(ship.project) !== projectId) {
+        throw new Error("Invalid upload path");
+      }
+    } else if (path.startsWith("projects/")) {
       const match = path.match(/^projects\/(\d+)\//);
       if (!match) {
         throw new Error("Invalid upload path");
@@ -100,9 +131,7 @@ serve(async (req) => {
       }
 
       if (project.owner !== user.id) {
-        if(!["admin", "reviewer", "owner"].includes(user.role)){
-          throw new Error("Unauthorized");
-        }
+        throw new Error("Unauthorized");
       }
     }
 
@@ -111,18 +140,6 @@ serve(async (req) => {
       if (!prizePath || prizePath.startsWith("/") || prizePath.includes("..")) {
         throw new Error("Invalid upload path");
       }
-
-      const { data: userRow, error: userError } = await supabaseClient
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (userError || !userRow) {
-        throw new Error("Unauthorized");
-      }
-
-      const role = String(userRow.role ?? "").toLowerCase();
       if (role !== "admin" && role !== "owner") {
         throw new Error("Unauthorized");
       }
