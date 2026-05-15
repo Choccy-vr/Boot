@@ -37,8 +37,17 @@ interface HackClubUserInfo {
   };
 }
 
-const AIRTABLE_TOKEN = Deno.env.get("AIRTABLE_PAT")!;
-const AIRTABLE_BASE_ID = Deno.env.get("AIRTABLE_BASE_ID")!;
+const AIRTABLE_TOKEN = Deno.env.get("AIRTABLE_PAT") ?? "";
+const AIRTABLE_BASE_ID = Deno.env.get("AIRTABLE_BASE_ID") ?? "";
+
+const logFailure = (step: string, details?: unknown) => {
+  if (details === undefined) {
+    console.error(`[ship-thingy] ${step}`);
+    return;
+  }
+
+  console.error(`[ship-thingy] ${step}`, details);
+};
 
 const extractGithubUsername = (repoUrl: unknown): string => {
   if (typeof repoUrl !== "string" || repoUrl.trim() === "") {
@@ -71,19 +80,49 @@ const extractGithubUsername = (repoUrl: unknown): string => {
 const fromBase64 = (base64: string) =>
   Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 
+const extractBearerToken = (authorizationHeader: string): string => {
+  const normalizedHeader = authorizationHeader.trim();
+  const bearerPrefix = /^Bearer\s+/i;
+
+  if (!bearerPrefix.test(normalizedHeader)) {
+    return "";
+  }
+
+  return normalizedHeader.replace(bearerPrefix, "").trim();
+};
+
+const fetchWithTimeout = (url: string, options: RequestInit & { timeout?: number } = {}) => {
+  const { timeout = 10000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  return fetch(url, { ...fetchOptions, signal: controller.signal })
+    .then(res => {
+      clearTimeout(timeoutId);
+      return res;
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      throw err;
+    });
+};
+
 const decryptAccessToken = async (encryptedToken: string): Promise<string> => {
   const masterKeyB64 = Deno.env.get("ACCESS_TOKEN_SECRET") ?? "";
   if (!masterKeyB64) {
+    logFailure("Missing ACCESS_TOKEN_SECRET");
     throw new Error("Missing ACCESS_TOKEN_SECRET");
   }
 
   const [ivB64, ciphertextB64] = encryptedToken.split(":");
   if (!ivB64 || !ciphertextB64) {
+    logFailure("Invalid encrypted token format");
     throw new Error("Invalid encrypted token format");
   }
 
   const keyBytes = fromBase64(masterKeyB64);
   if (keyBytes.length !== 32) {
+    logFailure("ACCESS_TOKEN_SECRET must decode to 32 bytes");
     throw new Error("ACCESS_TOKEN_SECRET must decode to 32 bytes");
   }
 
@@ -108,16 +147,34 @@ const decryptAccessToken = async (encryptedToken: string): Promise<string> => {
 };
 
 async function insertAirtableRow(table: string, fields: Record<string, unknown>) {
-  const res = await fetch('https://api.airtable.com/v0/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(table), {
+  logFailure("Airtable insert starting", { table });
+  
+  if (!AIRTABLE_TOKEN) {
+    logFailure("Missing AIRTABLE_PAT - skipping Airtable insert");
+    return;
+  }
+
+  if (!AIRTABLE_BASE_ID) {
+    logFailure("Missing AIRTABLE_BASE_ID - skipping Airtable insert");
+    return;
+  }
+
+  const res = await fetchWithTimeout('https://api.airtable.com/v0/' + AIRTABLE_BASE_ID + '/' + encodeURIComponent(table), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ fields, typecast: true })
+    body: JSON.stringify({ fields, typecast: true }),
+    timeout: 10000
   });
 
-  if(!res.ok) throw new Error(`Airtable insert failed: ${res.status} ${await res.text()}`);
+  if(!res.ok) {
+    const errorText = await res.text();
+    logFailure("Airtable insert failed", { table, status: res.status, errorText });
+    throw new Error(`Airtable insert failed: ${res.status} ${errorText}`);
+  }
+  logFailure("Airtable insert succeeded", { table });
   return await res.json();
 
 }
@@ -131,6 +188,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
+    logFailure("Method not allowed", { method: req.method });
     return new Response(JSON.stringify({ message: "Method not allowed" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -140,6 +198,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      logFailure("Missing auth header");
       return new Response(JSON.stringify({ message: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -147,7 +206,12 @@ Deno.serve(async (req) => {
     }
 
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
+    const authToken = extractBearerToken(authHeader);
+    const isServiceRole = authToken !== "" && authToken === serviceRoleKey.trim();
+
+    if (!serviceRoleKey) {
+      logFailure("Missing SUPABASE_SERVICE_ROLE_KEY in function environment");
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -166,6 +230,10 @@ Deno.serve(async (req) => {
       } = await supabaseUser.auth.getUser();
 
       if (!user) {
+        logFailure("Auth token did not resolve to a user", {
+          authHeaderPresent: true,
+          serviceRoleMatch: isServiceRole,
+        });
         return new Response(JSON.stringify({ message: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -179,6 +247,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!roleRow || !["admin", "reviewer"].includes(roleRow.role)) {
+        logFailure("Forbidden: user is not an admin or reviewer", {
+          userId: user.id,
+          role: roleRow?.role,
+        });
         return new Response(JSON.stringify({ message: "Forbidden" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -189,6 +261,7 @@ Deno.serve(async (req) => {
     const { shipId }: reqPayload = await req.json();
 
     if (!shipId) {
+      logFailure("Missing shipId in request body");
       return new Response(JSON.stringify({ message: "shipId required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -201,12 +274,21 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("id", shipId);
 
-    if (shipFetchError) throw shipFetchError;
-    if (!shipRows || shipRows.length === 0) throw new Error("Ship not found");
+    if (shipFetchError) {
+      logFailure("Failed to fetch ship", { shipId, error: shipFetchError });
+      throw shipFetchError;
+    }
+    if (!shipRows || shipRows.length === 0) {
+      logFailure("Ship not found", { shipId });
+      throw new Error("Ship not found");
+    }
 
     let ship = shipRows[0];
 
-    if (!ship.approved) throw new Error("Not Approved");
+    if (!ship.approved) {
+      logFailure("Ship not approved", { shipId });
+      throw new Error("Not Approved");
+    }
 
     const { data: project_temp, error: projectError } = await supabaseAdmin
       .from("projects")
@@ -214,8 +296,14 @@ Deno.serve(async (req) => {
       .eq("id", ship.project)
       .maybeSingle();
 
-    if (projectError) throw projectError;
-    if (!project_temp) throw new Error("Project Not Found");
+    if (projectError) {
+      logFailure("Failed to fetch project", { shipId, projectId: ship.project, error: projectError });
+      throw projectError;
+    }
+    if (!project_temp) {
+      logFailure("Project not found", { shipId, projectId: ship.project });
+      throw new Error("Project Not Found");
+    }
 
     let project = project_temp;
 
@@ -248,7 +336,10 @@ Deno.serve(async (req) => {
           .select("id, coins, key")
           .in("id", challengesCompleted);
 
-      if (challengeError) throw challengeError;
+      if (challengeError) {
+        logFailure("Failed to fetch challenges", { shipId, challengeIds: challengesCompleted, error: challengeError });
+        throw challengeError;
+      }
       const safeChallengeRows = Array.isArray(challengeRows)
         ? challengeRows
         : [];
@@ -290,7 +381,10 @@ Deno.serve(async (req) => {
         })
         .eq("id", project.id);
 
-      if (projectUpdateError) throw projectUpdateError;
+      if (projectUpdateError) {
+        logFailure("Failed to update project challenge state", { shipId, projectId: project.id, error: projectUpdateError });
+        throw projectUpdateError;
+      }
     }
 
     let coinsEarned: number;
@@ -309,6 +403,7 @@ Deno.serve(async (req) => {
 
     // Safety check: ensure integers for bigint columns
     if (!Number.isInteger(coinsEarned)) {
+      logFailure("Rounded coins were not an integer", { shipId, coinsEarned });
       throw new Error("Rounded values are not integers");
     }
 
@@ -322,8 +417,14 @@ Deno.serve(async (req) => {
       .select("*")
       .maybeSingle();
 
-    if (shipWriteError) throw shipWriteError;
-    if (!updatedShip) throw new Error("Ship update affected no rows");
+    if (shipWriteError) {
+      logFailure("Failed to update ship", { shipId, error: shipWriteError });
+      throw shipWriteError;
+    }
+    if (!updatedShip) {
+      logFailure("Ship update affected no rows", { shipId });
+      throw new Error("Ship update affected no rows");
+    }
 
     // Get user (single)
     const { data: userRow, error: userError } = await supabaseAdmin
@@ -332,8 +433,14 @@ Deno.serve(async (req) => {
       .eq("id", project.owner)
       .maybeSingle();
 
-    if (userError) throw userError;
-    if (!userRow) throw new Error("User Not Found");
+    if (userError) {
+      logFailure("Failed to fetch project owner user", { shipId, userId: project.owner, error: userError });
+      throw userError;
+    }
+    if (!userRow) {
+      logFailure("User not found", { shipId, userId: project.owner });
+      throw new Error("User Not Found");
+    }
 
     //write to airtable
     // decrypt HCA access token
@@ -341,22 +448,30 @@ Deno.serve(async (req) => {
       userRow.access_token_encrypted ?? userRow.encrypted_access_token;
 
     if(!encryptedAccessToken) {
+      logFailure("User is missing encrypted Hack Club access token", { shipId, userId: userRow.id });
       throw new Error("User has no encrypted Hack Club access token");
     }
 
     const accessToken = await decryptAccessToken(encryptedAccessToken);
+    
     // make HCA calls to get address, name, email and bday
-    const userInfoResponse = await fetch(
+    logFailure("[HCA] Starting userinfo fetch", { shipId });
+    const userInfoResponse = await fetchWithTimeout(
       "https://auth.hackclub.com/oauth/userinfo",
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+        timeout: 10000
       }
     );
 
     if (!userInfoResponse.ok) {
-      console.error("UserInfo fetch failed:", await userInfoResponse.text());
+      logFailure("[HCA] Userinfo fetch failed", {
+        shipId,
+        status: userInfoResponse.status,
+        errorText: await userInfoResponse.text(),
+      });
       return new Response(
         JSON.stringify({
           error: "Failed to fetch user info",
@@ -368,9 +483,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    logFailure("[HCA] Parsing userinfo JSON", { shipId });
     const userInfo: HackClubUserInfo = await userInfoResponse.json();
+    logFailure("[HCA] Userinfo received successfully", { shipId });
 
     if (!userInfo.sub || !userInfo.email || !userInfo.birthdate || !userInfo.name || !userInfo.address) {
+      logFailure("[HCA] Userinfo missing required fields", { shipId, userInfo });
       return new Response(
         JSON.stringify({ error: "Invalid user info: missing sub, email, birthdate, name, or address" }),
         {
@@ -382,34 +500,66 @@ Deno.serve(async (req) => {
 
     const githubUsername = extractGithubUsername(project.github_repo);
 
-    //call airtable api
-    insertAirtableRow('YSWS Project Submission', {
-      'Code URL': project.github_repo,
-      'Playable URL': project.github_repo,
-      'How did you hear about this?': updatedShip.where_feedback,
-      'What are we doing well?': updatedShip.good_feedback,
-      'How can we improve?': updatedShip.improve_feedback,
-      'First Name': userInfo.given_name,
-      'Last Name': userInfo.family_name,
-      'Email': userInfo.email,
-      'Screenshot': [{ url: updatedShip.screenshot_url }],
-      'Description': project.description,
-      'GitHub Username': githubUsername,
-      'Address (Line 1)': userInfo.address.street_address,
-      'City': userInfo.address.locality,
-      'State / Province': userInfo.address.region,
-      'Country': userInfo.address.country,
-      'ZIP / Postal Code': userInfo.address.postal_code,
-      'Birthday': userInfo.birthdate,
-      'Automation - Submit to Unified YSWS': false, //FOR TESTING ONLY - set to true when ready
-      ...(updatedShip.override_hours != null
-    ? {
-        "Optional - Override Hours Spent": updatedShip.override_hours,
-        "Optional - Override Hours Spent Justification":
-          updatedShip.override_hours_justification,
-      }
-    : {}),
-    });
+    // call airtable api; log failures but don't block the response
+    try {
+      await insertAirtableRow('YSWS Project Submission', {
+        'Code URL': project.github_repo,
+        'Playable URL': project.github_repo,
+        'How did you hear about this?': updatedShip.where_feedback,
+        'What are we doing well?': updatedShip.good_feedback,
+        'How can we improve?': updatedShip.improve_feedback,
+        'First Name': userInfo.given_name,
+        'Last Name': userInfo.family_name,
+        'Email': userInfo.email,
+        'Screenshot': [{ url: updatedShip.screenshot_url }],
+        'Description': project.description,
+        'GitHub Username': githubUsername,
+        'Address (Line 1)': userInfo.address.street_address,
+        'City': userInfo.address.locality,
+        'State / Province': userInfo.address.region,
+        'Country': userInfo.address.country,
+        'ZIP / Postal Code': userInfo.address.postal_code,
+        'Birthday': userInfo.birthdate,
+        'Automation - Submit to Unified YSWS': false,
+        ...(updatedShip.override_hours != null
+      ? {
+          "Optional - Override Hours Spent": updatedShip.override_hours,
+          "Optional - Override Hours Spent Justification":
+            `This project was submitted by ${userRow.username} on ${updatedShip.created_at}.
+This project was approved for ${updatedShip.time} hours.
+Justification for override hours: ${updatedShip.override_justification}"}
+
+[INSERT Description Here]
+
+This project has ${updatedShip.time} Hackatime-tracked hours.
+
+The Hackatime projects were: 
+${(project.hackatime_projects || []).length > 0 ? (project.hackatime_projects).map((hp: string) => `- ${hp}`).join("\n") : "None tracked"}
+
+The project was approved by 'Ginobeano' on ${new Date().toLocaleDateString()}..`
+        }
+      : {
+          "Optional - Override Hours Spent": updatedShip.time,
+          "Optional - Override Hours Spent Justification":
+  `This project was submitted by ${userRow.username} on ${updatedShip.created_at}.
+This project was approved for ${updatedShip.time} hours.
+
+[INSERT Description Here]
+
+This project has ${updatedShip.time} Hackatime-tracked hours.
+
+The Hackatime projects were: 
+${(project.hackatime_projects || []).length > 0 ? (project.hackatime_projects).map((hp: string) => `- ${hp}`).join("\n") : "None tracked"}
+
+The project was approved by 'Ginobeano' on ${new Date().toLocaleDateString()}..`
+      }),
+      });
+    } catch (airtableError) {
+      logFailure("Airtable insert failed but continuing with response", {
+        shipId,
+        error: airtableError instanceof Error ? airtableError.message : String(airtableError),
+      });
+    }
 
 
 
@@ -427,8 +577,14 @@ Deno.serve(async (req) => {
       .select("*")
       .maybeSingle();
 
-    if (userWriteError) throw userWriteError;
-    if (!updatedUser) throw new Error("User update affected no rows");
+    if (userWriteError) {
+      logFailure("Failed to update user coins and keys", { shipId, userId: userRow.id, error: userWriteError });
+      throw userWriteError;
+    }
+    if (!updatedUser) {
+      logFailure("User update affected no rows", { shipId, userId: userRow.id });
+      throw new Error("User update affected no rows");
+    }
 
     return new Response(
       JSON.stringify({
@@ -444,7 +600,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
-    console.error("Function error:", err);
+    console.error("[ship-thingy] Function error:", err);
     return new Response(
       JSON.stringify({ message: err?.message ?? String(err) }),
       {

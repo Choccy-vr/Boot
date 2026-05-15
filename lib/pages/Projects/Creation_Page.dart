@@ -50,7 +50,7 @@ class _CreateProjectPageState extends State<CreateProjectPage>
   bool _showHackatimeValidation = false;
 
   final Map<String, String> _osTypes = {
-    'scratch': 'From Scratch (LFS, Buildroot, etc.)',
+    'scratch': 'From Scratch',
     'base': 'Based On Another Distro (Debian, Ubuntu, etc.)',
   };
 

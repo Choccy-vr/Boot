@@ -39,23 +39,6 @@ serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { destination, content } = await req.json();
 
     if (!destination || !content) {
@@ -68,30 +51,54 @@ serve(async (req) => {
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const bearerPrefix = /^Bearer\s+/i;
+    const authToken = authHeader.replace(bearerPrefix, "").trim();
+    const isServiceRole = authToken !== "" && authToken === serviceRoleKey.trim();
 
-    const { data: userRow } = await supabaseAdmin
-      .from("users")
-      .select("slack_user_id, role")
-      .eq("id", user.id)
-      .maybeSingle();
+    if (!isServiceRole) {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } }
+      );
 
-    if (!userRow || !userRow.slack_user_id) {
-      return new Response(JSON.stringify({ error: "Slack ID not found" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
 
-    const isReviewer = ["admin", "reviewer"].includes(userRow.role);
-    if (!isReviewer && destination !== userRow.slack_user_id) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+
+      const { data: userRow } = await supabaseAdmin
+        .from("users")
+        .select("slack_user_id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!userRow || !userRow.slack_user_id) {
+        return new Response(JSON.stringify({ error: "Slack ID not found" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const isReviewer = ["admin", "reviewer", "owner"].includes(userRow.role);
+      if (!isReviewer && destination !== userRow.slack_user_id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const SLACK_BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN");

@@ -613,10 +613,13 @@ class _AdminPageState extends State<AdminPage> {
     final TextEditingController coinsController;
     final TextEditingController keyController;
     final TextEditingController specsController;
+    final TextEditingController usdCostController = TextEditingController();
+    final TextEditingController punishmentController = TextEditingController(text: '0');
     String? imageUrl;
     PrizeType selectedType;
     Set<PrizeCountries> selectedCountries;
     bool isEditing;
+    bool isSmartCostMode;
     List<Map<String, dynamic>> prizeOptions = [];
     List<Map<String, dynamic>> prizeOptionValues = [];
 
@@ -633,6 +636,7 @@ class _AdminPageState extends State<AdminPage> {
       selectedType = PrizeType.normal;
       selectedCountries = {PrizeCountries.all};
       isEditing = false;
+      isSmartCostMode = true;
     } else {
       titleController = TextEditingController(text: prize.title);
       descriptionController = TextEditingController(text: prize.description);
@@ -648,6 +652,7 @@ class _AdminPageState extends State<AdminPage> {
       selectedType = prize.type;
       selectedCountries = prize.countries.toSet();
       isEditing = true;
+      isSmartCostMode = false;
     }
 
     showDialog(
@@ -661,14 +666,32 @@ class _AdminPageState extends State<AdminPage> {
             // Add listeners to update preview
             void updatePreview() => setDialogState(() {});
 
+            void updateSmartCost() {
+              if (isSmartCostMode) {
+                final usd = double.tryParse(usdCostController.text) ?? 0;
+                final punishment = double.tryParse(punishmentController.text) ?? 0;
+                // $1 = 10 coins + punishment%
+                final coins = (usd * 10) * (1 + (punishment / 100));
+                if (coins > 0) {
+                  costController.text = coins.round().toString();
+                } else {
+                  costController.text = '0';
+                }
+              }
+              setDialogState(() {});
+            }
+
             titleController.addListener(updatePreview);
             descriptionController.addListener(updatePreview);
+            // costController.addListener(updatePreview); // Handled explicitly where needed to prevent loops if smart cost is on, actually we can just leave it if it only sets state. But wait, costController is user-editable in manual mode. 
             costController.addListener(updatePreview);
             stockController.addListener(updatePreview);
             multiplierController.addListener(updatePreview);
             coinsController.addListener(updatePreview);
             keyController.addListener(updatePreview);
             specsController.addListener(updatePreview);
+            usdCostController.addListener(updateSmartCost);
+            punishmentController.addListener(updateSmartCost);
 
             // Create preview prize
             final previewPrize = Prize(
@@ -781,14 +804,87 @@ class _AdminPageState extends State<AdminPage> {
                             ),
                             const SizedBox(height: 16),
                             if (selectedType != PrizeType.reward) ...[
-                              _buildTextField(
-                                controller: costController,
-                                label: 'Cost (coins)',
-                                icon: Icons.paid,
-                                keyboardType: TextInputType.number,
-                                colorScheme: colorScheme,
-                                textTheme: textTheme,
+                              Row(
+                                children: [
+                                  Text(
+                                    'Cost Mode:',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  SegmentedButton<bool>(
+                                    segments: const [
+                                      ButtonSegment<bool>(
+                                        value: true,
+                                        label: Text('Smart'),
+                                        icon: Icon(Icons.auto_awesome),
+                                      ),
+                                      ButtonSegment<bool>(
+                                        value: false,
+                                        label: Text('Manual'),
+                                        icon: Icon(Icons.edit),
+                                      ),
+                                    ],
+                                    selected: {isSmartCostMode},
+                                    onSelectionChanged: (Set<bool> newSelection) {
+                                      setDialogState(() {
+                                        isSmartCostMode = newSelection.first;
+                                      });
+                                    },
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 16),
+                              if (isSmartCostMode) ...[
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: usdCostController,
+                                        label: 'Real Life Cost (USD)',
+                                        icon: Icons.attach_money,
+                                        keyboardType: TextInputType.number,
+                                        colorScheme: colorScheme,
+                                        textTheme: textTheme,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: punishmentController,
+                                        label: 'Punishment (%)',
+                                        icon: Icons.trending_up,
+                                        keyboardType: TextInputType.number,
+                                        colorScheme: colorScheme,
+                                        textTheme: textTheme,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                // Show calculated cost as read-only or subtle
+                                _buildTextField(
+                                  controller: costController,
+                                  label: 'Calculated Cost (coins)',
+                                  icon: Icons.paid,
+                                  keyboardType: TextInputType.number,
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                  readOnly: true,
+                                ),
+                              ] else ...[
+                                _buildTextField(
+                                  controller: costController,
+                                  label: 'Cost (coins)',
+                                  icon: Icons.paid,
+                                  keyboardType: TextInputType.number,
+                                  colorScheme: colorScheme,
+                                  textTheme: textTheme,
+                                ),
+                              ],
                               const SizedBox(height: 16),
                             ],
                             // Conditional fields based on type
@@ -2261,11 +2357,13 @@ class _AdminPageState extends State<AdminPage> {
     required TextTheme textTheme,
     int maxLines = 1,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      readOnly: readOnly,
       style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
