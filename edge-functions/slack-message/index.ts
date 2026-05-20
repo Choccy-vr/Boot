@@ -51,6 +51,16 @@ serve(async (req) => {
       );
     }
 
+    if (typeof destination !== "string" || !destination.match(/^[UW][A-Z0-9]+$/)) {
+      return new Response(
+        JSON.stringify({ error: "Destination must be a valid Slack User ID" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const bearerPrefix = /^Bearer\s+/i;
     const authToken = authHeader.replace(bearerPrefix, "").trim();
@@ -81,7 +91,7 @@ serve(async (req) => {
 
       const { data: userRow } = await supabaseAdmin
         .from("users")
-        .select("slack_user_id, role")
+        .select("slack_user_id")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -92,9 +102,8 @@ serve(async (req) => {
         });
       }
 
-      const isReviewer = ["admin", "reviewer", "owner"].includes(userRow.role);
-      if (!isReviewer && destination !== userRow.slack_user_id) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
+      if (destination !== userRow.slack_user_id) {
+        return new Response(JSON.stringify({ error: "Forbidden: You can only message your own Slack User ID" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

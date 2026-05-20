@@ -285,6 +285,17 @@ Deno.serve(async (req) => {
 
     let ship = shipRows[0];
 
+    // Update the project's shipped status to false whether the ship is denied or approved
+    const { error: shippedUpdateError } = await supabaseAdmin
+      .from("projects")
+      .update({ shipped: false })
+      .eq("id", ship.project);
+
+    if (shippedUpdateError) {
+      logFailure("Failed to update project shipped status", { shipId, projectId: ship.project, error: shippedUpdateError });
+      throw shippedUpdateError;
+    }
+
     if (!ship.approved) {
       logFailure("Ship not approved", { shipId });
       throw new Error("Not Approved");
