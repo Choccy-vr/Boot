@@ -373,6 +373,15 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const now = new Date();
+  const BOOT_FULLY_LOCKED = new Date("2026-06-08T23:59:00-04:00");
+  if (now > BOOT_FULLY_LOCKED) {
+    return new Response(JSON.stringify({ message: "The Shop is closed. No further orders can be processed." }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ message: "Method not allowed" }), {
       status: 405,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '/services/Projects/project_service.dart';
+import '/services/misc/boot_events.dart';
 import '/services/users/User.dart';
 import '/services/navigation/navigation_service.dart';
 import '/services/Projects/Project.dart';
@@ -125,16 +126,17 @@ class _ProjectsPageState extends State<ProjectsPage>
             ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => NavigationService.navigateTo(
-              context: context,
-              destination: AppDestination.createProject,
-              colorScheme: colorScheme,
-              textTheme: textTheme,
+          if (!BootEvents.isBootEnded)
+            ElevatedButton.icon(
+              onPressed: () => NavigationService.navigateTo(
+                context: context,
+                destination: AppDestination.createProject,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              icon: Icon(Icons.add),
+              label: Text('Create Project'),
             ),
-            icon: Icon(Icons.add),
-            label: Text('Create Project'),
-          ),
         ],
       ),
     );
@@ -431,24 +433,25 @@ class _ProjectsPageState extends State<ProjectsPage>
               tooltip: _isGridView ? 'List View' : 'Grid View',
             ),
             const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: () {
-                NavigationService.navigateTo(
-                  context: context,
-                  destination: AppDestination.createProject,
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                );
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Create Project'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            if (!BootEvents.isBootEnded)
+              ElevatedButton.icon(
+                onPressed: () {
+                  NavigationService.navigateTo(
+                    context: context,
+                    destination: AppDestination.createProject,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                  );
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Create Project'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(width: 16),
           ],
         ),

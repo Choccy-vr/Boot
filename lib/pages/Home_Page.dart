@@ -10,6 +10,7 @@ import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/notifications/notifications.dart';
 import '/services/misc/deferred_pages.dart';
+import '/services/misc/boot_events.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
@@ -166,6 +167,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (BootEvents.isBootEnded && !BootEvents.isFullyLocked)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colorScheme.error),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: colorScheme.error,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Boot has ended. The shop will close on June 8th.',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onErrorContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 _buildTerminalHeader(colorScheme, textTheme),
                 SizedBox(height: Responsive.spacing(context)),
                 if (_isHackatimeBanned) ...[

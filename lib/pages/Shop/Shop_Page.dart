@@ -7,6 +7,7 @@ import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:boot_app/widgets/shared_navigation_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:boot_app/services/misc/boot_events.dart';
 
 class ShopPage extends StatefulWidget {
   const ShopPage({super.key});
@@ -267,6 +268,32 @@ class _ShopPageState extends State<ShopPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    if (BootEvents.isFullyLocked) {
+      return SharedNavigationRail(
+        showAppBar: false,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Row(
+              children: [
+                const Icon(Icons.storefront),
+                const SizedBox(width: 12),
+                const Text('Shop'),
+              ],
+            ),
+            automaticallyImplyLeading: false,
+          ),
+          body: Center(
+            child: Text(
+              'The Shop is Closed.',
+              style: textTheme.headlineMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SharedNavigationRail(
       showAppBar: false,
       child: Scaffold(
@@ -292,6 +319,35 @@ class _ShopPageState extends State<ShopPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (BootEvents.isBootEnded && !BootEvents.isFullyLocked)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: colorScheme.error),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: colorScheme.error,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Boot has ended. The shop will close on June 8th.',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: colorScheme.onErrorContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: _buildShopFilters(colorScheme, textTheme),

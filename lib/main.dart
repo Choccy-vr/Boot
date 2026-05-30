@@ -35,6 +35,7 @@ import 'services/notifications/notifications.dart';
 import 'services/hackatime/hackatime_service.dart';
 import 'services/users/Boot_User.dart';
 import 'services/users/User.dart';
+import 'services/misc/boot_events.dart';
 import 'services/prizes/Prize.dart';
 import 'services/prizes/Prize_Service.dart';
 import 'theme/terminal_theme.dart';
@@ -348,6 +349,57 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     // If not an owner and not trying to access login/signup, show maintenance page
     if (!isOwner && !isLoginOrSignupPage) {
       return _buildRoute(child: const MaintenancePage(), name: '/maintenance');
+    }
+  }
+
+  // Enforce Boot Locks
+  if (BootEvents.isBootEnded) {
+    if (segments.isNotEmpty && segments.first == 'projects') {
+      if (segments.length > 1 && segments[1] == 'create') {
+        // Disallow Create Project after Boot devlog ends (June 1st)
+        return _buildRoute(
+          child: DeferredPage(
+            loadLibrary: home_page.loadLibrary,
+            buildPage: (_) => home_page.HomePage(),
+            placeholder: const _LoadingScaffold(),
+          ),
+          name: '/dashboard',
+        );
+      }
+    }
+  }
+
+  if (BootEvents.isFullyLocked) {
+    final allowedPrefixes = [
+      'login',
+      'signup',
+      'dashboard',
+      'explore',
+      'leaderboard',
+      'projects', // this needs to be narrowed
+    ];
+    if (segments.isNotEmpty && segments.first == 'projects') {
+      if (segments.length == 1) {
+        // Disallow My Projects
+        return _buildRoute(
+          child: DeferredPage(
+            loadLibrary: home_page.loadLibrary,
+            buildPage: (_) => home_page.HomePage(),
+            placeholder: const _LoadingScaffold(),
+          ),
+          name: '/dashboard',
+        );
+      }
+    } else if (segments.isNotEmpty &&
+        !allowedPrefixes.contains(segments.first)) {
+      return _buildRoute(
+        child: DeferredPage(
+          loadLibrary: home_page.loadLibrary,
+          buildPage: (_) => home_page.HomePage(),
+          placeholder: const _LoadingScaffold(),
+        ),
+        name: '/dashboard',
+      );
     }
   }
 

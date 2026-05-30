@@ -21,6 +21,7 @@ import 'package:file_picker/file_picker.dart';
 import '/services/Projects/Project.dart';
 import '/services/Projects/project_service.dart';
 import '/services/navigation/navigation_service.dart';
+import 'package:boot_app/services/misc/boot_events.dart';
 import '../../services/Storage/storage.dart';
 import '../../services/devlog/Devlog.dart';
 import '/services/devlog/devlog_service.dart';
@@ -674,7 +675,27 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     );
   }
 
+  bool _canShip() {
+    if ((UserService.currentUser?.verificationStatus ?? false) == false ||
+        _project.shipped ||
+        UserService.currentUser == null ||
+        UserService.currentUser?.yswsEligible == false ||
+        UserService.currentUser?.yswsEligible == null) {
+      return false;
+    }
+    if (BootEvents.isFullyLocked) {
+      return false;
+    }
+    if (BootEvents.isBootEnded) {
+      if (_ships.isEmpty) return false;
+      final lastShip = _ships.first;
+      return lastShip.reviewed && !lastShip.approved;
+    }
+    return true;
+  }
+
   bool _isOwner() {
+    if (BootEvents.isFullyLocked) return false;
     return UserService.currentUser?.id == _project.owner;
   }
 
@@ -3225,37 +3246,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ElevatedButton(
-                    onPressed:
-                        (UserService.currentUser?.verificationStatus ??
-                                    false) ==
-                                false ||
-                            _project.shipped ||
-                            (UserService.currentUser == null) ||
-                            (UserService.currentUser?.yswsEligible == false) ||
-                            (UserService.currentUser?.yswsEligible == null)
-                        ? null
-                        : () => _showShipConfirmationDialog(),
+                    onPressed: _canShip()
+                        ? () => _showShipConfirmationDialog()
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          (_project.shipped ||
-                              (UserService.currentUser?.verificationStatus ??
-                                      false) ==
-                                  false ||
-                              (UserService.currentUser == null) ||
-                              (UserService.currentUser?.yswsEligible ==
-                                  false) ||
-                              (UserService.currentUser?.yswsEligible == null))
-                          ? colorScheme.outline
-                          : null,
-                      foregroundColor:
-                          (_project.shipped ||
-                              (UserService.currentUser?.verificationStatus ??
-                                      false) ==
-                                  false ||
-                              (UserService.currentUser == null) ||
-                              (UserService.currentUser?.yswsEligible ==
-                                  false) ||
-                              (UserService.currentUser?.yswsEligible == null))
+                      backgroundColor: !_canShip() ? colorScheme.outline : null,
+                      foregroundColor: !_canShip()
                           ? colorScheme.onSurfaceVariant
                           : null,
                       padding: EdgeInsets.symmetric(
@@ -4184,7 +4180,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
           icon: Icons.edit_note,
           color: TerminalColors.blue,
           devlog: devlog,
-          onEdit: _isOwner() ? () => _handleEditDevlog(devlog) : null,
+          onEdit: (_isOwner() && !BootEvents.isBootEnded)
+              ? () => _handleEditDevlog(devlog)
+              : null,
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -4453,7 +4451,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   ),
                 ),
                 const Spacer(),
-                if (_isOwner())
+                if (_isOwner() && !BootEvents.isBootEnded)
                   OutlinedButton.icon(
                     onPressed: _handleCreateDevlog,
                     icon: Icon(Icons.add, size: 18),

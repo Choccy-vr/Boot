@@ -187,6 +187,16 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const now = new Date();
+  const BOOT_FULLY_LOCKED = new Date("2026-06-08T23:59:00-04:00");
+  if (now > BOOT_FULLY_LOCKED) {
+    logFailure("Action blocked - Boot is fully locked");
+    return new Response(JSON.stringify({ message: "Boot is fully locked. No further modifications are allowed." }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method !== "POST") {
     logFailure("Method not allowed", { method: req.method });
     return new Response(JSON.stringify({ message: "Method not allowed" }), {
