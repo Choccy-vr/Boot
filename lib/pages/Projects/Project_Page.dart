@@ -1760,7 +1760,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Upload Image, Video, or GIF',
+                    'Upload Image, or GIF',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600,
