@@ -677,20 +677,30 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
   bool _canShip() {
     if ((UserService.currentUser?.verificationStatus ?? false) == false ||
-        _project.shipped ||
         UserService.currentUser == null ||
         UserService.currentUser?.yswsEligible == false ||
         UserService.currentUser?.yswsEligible == null) {
       return false;
     }
+
     if (BootEvents.isFullyLocked) {
       return false;
     }
-    if (BootEvents.isBootEnded) {
-      if (_ships.isEmpty) return false;
+
+    bool lastShipDenied = false;
+    if (_ships.isNotEmpty) {
       final lastShip = _ships.first;
-      return lastShip.reviewed && !lastShip.approved;
+      lastShipDenied = lastShip.reviewed && !lastShip.approved;
     }
+
+    if (_project.shipped && !lastShipDenied) {
+      return false;
+    }
+
+    if (BootEvents.isBootEnded) {
+      return lastShipDenied;
+    }
+
     return true;
   }
 
@@ -3265,12 +3275,24 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         Icon(Icons.directions_boat, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          _project.shipped ? 'Already Shipped' : 'Ship Project',
+                          (_project.shipped &&
+                                  !(_ships.isNotEmpty &&
+                                      _ships.first.reviewed &&
+                                      !_ships.first.approved))
+                              ? 'Already Shipped'
+                              : (_ships.isNotEmpty &&
+                                    _ships.first.reviewed &&
+                                    !_ships.first.approved)
+                              ? 'Reship Project'
+                              : 'Ship Project',
                         ),
                       ],
                     ),
                   ),
-                  if (_project.shipped) ...[
+                  if (_project.shipped &&
+                      !(_ships.isNotEmpty &&
+                          _ships.first.reviewed &&
+                          !_ships.first.approved)) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -3282,7 +3304,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'You cannot ship again until your first ship is completed',
+                            'You cannot ship again until your current ship is reviewed.',
                             style: textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),

@@ -91,22 +91,34 @@ serve(async (req) => {
 
       const { data: userRow } = await supabaseAdmin
         .from("users")
-        .select("slack_user_id")
+        .select("slack_user_id, role")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (!userRow || !userRow.slack_user_id) {
-        return new Response(JSON.stringify({ error: "Slack ID not found" }), {
+      if (!userRow) {
+        return new Response(JSON.stringify({ error: "User not found" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      if (destination !== userRow.slack_user_id) {
-        return new Response(JSON.stringify({ error: "Forbidden: You can only message your own Slack User ID" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const hasPrivilegedRole = ["owner", "reviewer", "admin"].includes(
+        userRow.role
+      );
+
+      if (
+        !hasPrivilegedRole &&
+        (!userRow.slack_user_id || destination !== userRow.slack_user_id)
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden: You can only message your own Slack User ID",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
