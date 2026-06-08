@@ -102,7 +102,7 @@ class Authentication {
               'redirect_uri': _hackClubRedirectUri!,
               'response_type': 'code',
               'scope':
-                  'openid profile email slack_id verification_status address birthdate',
+                  'openid profile email slack_id verification_status address birthdate phone',
               'state': _hackClubState!,
               if (email != null) 'login_hint': email,
             },
