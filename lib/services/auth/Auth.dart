@@ -224,6 +224,17 @@ class Authentication {
       await _storage.delete(key: 'supabase_session');
       await _storage.delete(key: 'supabase_user');
       await _storage.delete(key: 'hackclub_state');
+
+      // Auto sign-in anonymously for Guest mode if configured
+      final isConfigured = supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
+      if (isConfigured) {
+        try {
+          await Supabase.instance.client.auth.signInAnonymously();
+          AppLogger.info('Signed in anonymously to Supabase after sign out.');
+        } catch (e) {
+          AppLogger.warning('Failed to sign in anonymously on sign out: $e');
+        }
+      }
     } catch (e, stack) {
       AppLogger.error('Sign out failed', e, stack);
       throw AuthFailure('Sign out failed: ${e.toString()}');

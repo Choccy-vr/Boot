@@ -137,6 +137,17 @@ void main() async {
 
   final sessionRestored = results[2] as bool;
 
+  // Sign in anonymously if no session is active and Supabase is configured
+  final isConfigured = supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
+  if (isConfigured && Supabase.instance.client.auth.currentSession == null) {
+    try {
+      await Supabase.instance.client.auth.signInAnonymously();
+      AppLogger.info('Signed in anonymously to Supabase for guest access.');
+    } catch (e) {
+      AppLogger.warning('Failed to sign in anonymously: $e');
+    }
+  }
+
   String initialRoute = '/dashboard';
 
   runApp(MainApp(initialRoute: initialRoute));
