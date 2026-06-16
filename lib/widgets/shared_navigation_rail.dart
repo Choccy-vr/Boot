@@ -168,20 +168,21 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                   );
                 },
               ),
-              _buildRailItem(
-                icon: Icons.construction,
-                title: 'My Projects',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-                onTap: () {
-                  NavigationService.navigateTo(
-                    context: context,
-                    destination: AppDestination.project,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  );
-                },
-              ),
+              if (user != null)
+                _buildRailItem(
+                  icon: Icons.construction,
+                  title: 'My Projects',
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  onTap: () {
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.project,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
+                ),
               _buildRailItem(
                 icon: Icons.explore,
                 title: 'Explore',
@@ -286,7 +287,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
           ),
         ),
         // Profile section
-        if (user != null) _buildRailProfile(user, colorScheme, textTheme),
+        _buildRailProfile(user, colorScheme, textTheme),
       ],
     );
   }
@@ -333,11 +334,12 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
   }
 
   Widget _buildRailProfile(
-    BootUser user,
+    BootUser? user,
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    final hasProfileImage = user.profilePicture.isNotEmpty;
+    final bool isGuest = user == null;
+    final hasProfileImage = !isGuest && user.profilePicture.isNotEmpty;
 
     // When collapsed, just show a centered avatar
     if (!_isRailExpanded) {
@@ -346,12 +348,21 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
         child: Center(
           child: InkWell(
             onTap: () {
-              NavigationService.navigateTo(
-                context: context,
-                destination: AppDestination.profile,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              );
+              if (isGuest) {
+                NavigationService.navigateTo(
+                  context: context,
+                  destination: AppDestination.login,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                );
+              } else {
+                NavigationService.navigateTo(
+                  context: context,
+                  destination: AppDestination.profile,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                );
+              }
             },
             borderRadius: BorderRadius.circular(20),
             child: Container(
@@ -373,9 +384,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                 child: hasProfileImage
                     ? null
                     : Text(
-                        user.username.isNotEmpty
-                            ? user.username[0].toUpperCase()
-                            : '?',
+                        isGuest ? 'G' : (user.username.isNotEmpty ? user.username[0].toUpperCase() : '?'),
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -417,14 +426,16 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
       child: Column(
         children: [
           InkWell(
-            onTap: () {
-              NavigationService.navigateTo(
-                context: context,
-                destination: AppDestination.profile,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              );
-            },
+            onTap: isGuest
+                ? null
+                : () {
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.profile,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  },
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(4),
@@ -449,9 +460,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                       child: hasProfileImage
                           ? null
                           : Text(
-                              user.username.isNotEmpty
-                                  ? user.username[0].toUpperCase()
-                                  : '?',
+                              isGuest ? 'G' : (user.username.isNotEmpty ? user.username[0].toUpperCase() : '?'),
                               style: textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
@@ -466,7 +475,7 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          user.username,
+                          isGuest ? 'Guest' : user.username,
                           style: textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.onSurface,
@@ -484,14 +493,14 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: TerminalColors.yellow.withValues(
-                                alpha: 0.15,
-                              ),
+                              color: isGuest
+                                  ? colorScheme.outline.withValues(alpha: 0.15)
+                                  : TerminalColors.yellow.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: TerminalColors.yellow.withValues(
-                                  alpha: 0.3,
-                                ),
+                                color: isGuest
+                                    ? colorScheme.outline.withValues(alpha: 0.3)
+                                    : TerminalColors.yellow.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -499,15 +508,15 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.toll,
+                                  isGuest ? Icons.info_outline : Icons.toll,
                                   size: 11,
-                                  color: TerminalColors.yellow,
+                                  color: isGuest ? colorScheme.onSurfaceVariant : TerminalColors.yellow,
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  '${user.bootCoins}',
+                                  isGuest ? 'Read-only Mode' : '${user.bootCoins}',
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: TerminalColors.yellow,
+                                    color: isGuest ? colorScheme.onSurfaceVariant : TerminalColors.yellow,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                   ),
@@ -539,25 +548,38 @@ class _SharedNavigationRailState extends State<SharedNavigationRail> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Authentication.signOut();
-                  NavigationService.navigateTo(
-                    context: context,
-                    destination: AppDestination.login,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  );
+                  if (isGuest) {
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.login,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  } else {
+                    Authentication.signOut();
+                    NavigationService.navigateTo(
+                      context: context,
+                      destination: AppDestination.login,
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                    );
+                  }
                 },
-                icon: Icon(Icons.logout, size: 16, color: TerminalColors.red),
+                icon: Icon(
+                  isGuest ? Icons.login : Icons.logout,
+                  size: 16,
+                  color: isGuest ? colorScheme.primary : TerminalColors.red,
+                ),
                 label: Text(
-                  'Logout',
+                  isGuest ? 'Log In' : 'Logout',
                   style: textTheme.bodySmall?.copyWith(
-                    color: TerminalColors.red,
+                    color: isGuest ? colorScheme.primary : TerminalColors.red,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(
-                    color: TerminalColors.red.withValues(alpha: 0.5),
+                    color: (isGuest ? colorScheme.primary : TerminalColors.red).withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 8),

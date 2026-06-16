@@ -5,11 +5,15 @@ import 'package:flutter/material.dart';
 import '/services/supabase/DB/supabase_db.dart';
 import 'Boot_User.dart';
 import '/services/notifications/notifications.dart';
+import '/main.dart' show supabaseUrl, supabaseKey;
 
 class UserService {
   static BootUser? currentUser;
 
+  static bool get _isConfigured => supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
+
   static Future<BootUser?> getUserById(String id) async {
+    if (!_isConfigured) return null;
     try {
       final response = await SupabaseDB.getRowData(table: 'users', rowID: id);
 
@@ -23,6 +27,7 @@ class UserService {
   }
 
   static Future<BootUser?> getUserByEmail(String email) async {
+    if (!_isConfigured) return null;
     try {
       final response = await SupabaseDB.supabase
           .from('users')
@@ -43,6 +48,10 @@ class UserService {
 
   static Future<void> setCurrentUser(String id, {String? email}) async {
     AppLogger.info('[setCurrentUser] Called with ID: $id, email: $email');
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping setCurrentUser.');
+      return;
+    }
     // First try by ID
     var user = await getUserById(id);
 
@@ -74,11 +83,13 @@ class UserService {
   }
 
   static Future<void> updateUser() async {
+    if (!_isConfigured) return;
     final userData = currentUser?.toJson();
     SupabaseDB.upsertData(table: 'users', data: userData);
   }
 
   static Future<void> updateCurrentUser() async {
+    if (!_isConfigured) return;
     currentUser = await getUserById(currentUser?.id ?? '');
   }
 
@@ -87,6 +98,10 @@ class UserService {
     required String email,
     String slackUserId = '',
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping initializeUser.');
+      return;
+    }
     // First, check if a user with this email already exists (might have different ID)
     try {
       final existingByEmail = await SupabaseDB.supabase

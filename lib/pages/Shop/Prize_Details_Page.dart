@@ -1,7 +1,6 @@
 import 'package:boot_app/services/navigation/navigation_service.dart';
 import 'package:boot_app/services/order/Order_Service.dart';
 import 'package:boot_app/services/prizes/Prize_Service.dart';
-import 'package:boot_app/services/auth/Auth.dart';
 import 'package:boot_app/services/slack/slack_manager.dart';
 import 'package:boot_app/theme/terminal_theme.dart';
 import 'package:flutter/material.dart';
@@ -467,22 +466,9 @@ class _PrizeDetailsPageState extends State<PrizeDetailsPage> {
     );
     final pricePerItem = prize.cost + selectedModifierPerItem;
     final totalCost = pricePerItem * quantity;
-    final isRewardPrize = prize.type == PrizeType.reward;
-    final hasKey = _userHasRequiredKey(prize);
-    final isOutOfStock = prize.stock <= 0;
-    final hasEnoughCoins = totalCost <= availableCoins;
-    final canOrder =
-        !isRewardPrize && !isOutOfStock && hasKey && hasEnoughCoins;
+    final canOrder = false;
 
-    final buttonText = isRewardPrize
-        ? 'Reward prizes cannot be ordered'
-        : isOutOfStock
-        ? 'Out of Stock'
-        : !hasKey
-        ? 'Requires Key'
-        : !hasEnoughCoins
-        ? 'Need ${totalCost - availableCoins} more coins'
-        : 'Order now';
+    final buttonText = 'Read-only Mode';
 
     return Container(
       width: double.infinity,

@@ -32,7 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
 
-  bool get _isOwnProfile => UserService.currentUser?.id == widget.user.id;
+  bool get _isOwnProfile => false;
 
   @override
   void initState() {

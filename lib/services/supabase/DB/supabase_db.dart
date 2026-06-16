@@ -1,22 +1,33 @@
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '/main.dart' show supabaseUrl, supabaseKey;
 
 class SupabaseDB {
   static final supabase = Supabase.instance.client;
+
+  static bool get _isConfigured => supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
 
   //Select/Get
   static Future<List<Map<String, dynamic>>> selectData({
     List<String>? columns,
     required String table,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. selectData returning empty list.');
+      return [];
+    }
     try {
+      final dynamic result;
       if (columns == null || columns.isEmpty) {
-        return await supabase.from(table).select();
+        result = await supabase.from(table).select();
+      } else {
+        result = await supabase.from(table).select(columns.join(', '));
       }
-      return await supabase.from(table).select(columns.join(', '));
+      if (result == null) return [];
+      return List<Map<String, dynamic>>.from(result);
     } catch (e, stack) {
       AppLogger.error('Error selecting data from $table', e, stack);
-      throw Exception('Unexpected error: ${e.toString()}');
+      return [];
     }
   }
 
@@ -25,6 +36,10 @@ class SupabaseDB {
     required String column,
     required dynamic value,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. getDataValue returning empty map.');
+      return {};
+    }
     try {
       return await supabase.from(table).select().eq(column, value).single();
     } catch (e, stack) {
@@ -41,6 +56,10 @@ class SupabaseDB {
     required String table,
     required dynamic rowID,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. getRowData returning empty map.');
+      return {};
+    }
     try {
       return await supabase.from(table).select().eq('id', rowID).single();
     } catch (e, stack) {
@@ -58,26 +77,38 @@ class SupabaseDB {
     required String column,
     required List<dynamic> columnValue,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. getMultipleRowData returning empty list.');
+      return [];
+    }
     try {
-      return await supabase.from(table).select().inFilter(column, columnValue);
+      final dynamic result = await supabase.from(table).select().inFilter(column, columnValue);
+      if (result == null) return [];
+      return List<Map<String, dynamic>>.from(result);
     } catch (e, stack) {
       AppLogger.error(
         'Error getting multiple row data from $table for $column',
         e,
         stack,
       );
-      throw Exception('Unexpected error: ${e.toString()}');
+      return [];
     }
   }
 
   static Future<List<Map<String, dynamic>>> getAllRowData({
     required String table,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. getAllRowData returning empty list.');
+      return [];
+    }
     try {
-      return await supabase.from(table).select();
+      final dynamic result = await supabase.from(table).select();
+      if (result == null) return [];
+      return List<Map<String, dynamic>>.from(result);
     } catch (e, stack) {
       AppLogger.error('Error getting all row data from $table', e, stack);
-      throw Exception('Unexpected error: ${e.toString()}');
+      return [];
     }
   }
 
@@ -93,6 +124,11 @@ class SupabaseDB {
       throw ArgumentError(
         'Provide either data or bulkData, but not both or neither',
       );
+    }
+
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping insertData.');
+      return;
     }
 
     try {
@@ -120,6 +156,11 @@ class SupabaseDB {
       );
     }
 
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. insertAndReturnData returning empty list.');
+      return [];
+    }
+
     try {
       if (data != null) {
         return await supabase.from(table).insert(data).select();
@@ -139,6 +180,10 @@ class SupabaseDB {
     required String column,
     required dynamic value,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping updateData.');
+      return;
+    }
     try {
       await supabase.from(table).update(data).eq(column, value);
     } catch (e, stack) {
@@ -153,6 +198,10 @@ class SupabaseDB {
     required String column,
     required dynamic value,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. updateAndReturnData returning empty list.');
+      return [];
+    }
     try {
       final response = await supabase
           .from(table)
@@ -177,6 +226,11 @@ class SupabaseDB {
     bool? defaultToNull,
   }) async {
     if (bulkData.isEmpty) return;
+
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping updateBulkData.');
+      return;
+    }
 
     try {
       final upsertArgs = <String, dynamic>{
@@ -211,6 +265,11 @@ class SupabaseDB {
       throw ArgumentError(
         'Provide either data or bulkData, but not both or neither',
       );
+    }
+
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. upsertData returning empty list.');
+      return [];
     }
 
     try {
@@ -255,6 +314,11 @@ class SupabaseDB {
       );
     }
 
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. Skipping deleteData.');
+      return;
+    }
+
     try {
       if (value != null) {
         await supabase.from(table).delete().eq(column, value);
@@ -276,6 +340,10 @@ class SupabaseDB {
     required String functionName,
     Map<String, dynamic>? parameters,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. callDbFunction returning null.');
+      return null;
+    }
     try {
       if (parameters != null) {
         return await supabase.rpc(functionName, params: parameters);

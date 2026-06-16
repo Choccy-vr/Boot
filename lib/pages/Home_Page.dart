@@ -12,6 +12,7 @@ import '/services/notifications/notifications.dart';
 import '/services/misc/deferred_pages.dart';
 import '/services/misc/boot_events.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/auth/Auth.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -48,8 +49,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadPageData() async {
-    // Run both data fetches in parallel
-    await Future.wait([_loadUserProjects(), _scheduleHackatimeBanCheck()]);
+    await _loadUserProjects();
   }
 
   void _checkProfileSetup() {
@@ -215,8 +215,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     SizedBox(height: Responsive.spacing(context) * 1.5),
                     _buildSetupEnvironmentSection(colorScheme, textTheme),
                   ],
-                  SizedBox(height: Responsive.spacing(context) * 1.5),
-                  _buildBottomSection(colorScheme, textTheme),
+                  if (Authentication.isLoggedIn()) ...[
+                    SizedBox(height: Responsive.spacing(context) * 1.5),
+                    _buildBottomSection(colorScheme, textTheme),
+                  ],
                 ],
               ],
             ),
@@ -532,6 +534,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: CircularProgressIndicator(),
+            ),
+          )
+        else if (!Authentication.isLoggedIn())
+          Card(
+            color: colorScheme.surfaceContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.archive,
+                      size: 48,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Boot Archive (Read-only)',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Explore projects, leaderboards, and bounties completed during the program.',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           )
         else if (_userProjects.isEmpty)

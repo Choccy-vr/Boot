@@ -59,10 +59,7 @@ String? hackatimeBanReason;
 bool get _isHackatimeAuthenticatedEffective =>
     isHackatimeAuthenticated || HackatimeService.hasCachedAccessToken;
 
-bool get _isBootAccessRestricted =>
-    !isHackatimeReachable ||
-    isHackatimeBanned ||
-    (hackatimeBanReason?.isNotEmpty ?? false);
+bool get _isBootAccessRestricted => false;
 
 bool get _shouldShowHackatimeUnavailablePage => !isHackatimeReachable;
 
@@ -140,21 +137,7 @@ void main() async {
 
   final sessionRestored = results[2] as bool;
 
-  if (sessionRestored) {
-    await _restoreHackatimeAuthIfAvailable();
-    await _refreshHackatimeBanRestriction();
-  }
-
-  String initialRoute = '/login';
-  if (_isBootAccessRestricted) {
-    initialRoute = _activeHackatimeRestrictionRoute;
-  } else if (sessionRestored) {
-    final effective = _isHackatimeAuthenticatedEffective;
-    initialRoute = effective ? '/dashboard' : hackatimeLoginRoute;
-    AppLogger.debug(
-      'Session restored; Hackatime auth effective=$effective; initial route=$initialRoute',
-    );
-  }
+  String initialRoute = '/dashboard';
 
   runApp(MainApp(initialRoute: initialRoute));
 }
@@ -369,55 +352,20 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     }
   }
 
-  if (BootEvents.isFullyLocked) {
-    final allowedPrefixes = [
-      'login',
-      'signup',
-      'dashboard',
-      'explore',
-      'leaderboard',
-      'projects', // this needs to be narrowed
-    ];
-    if (segments.isNotEmpty && segments.first == 'projects') {
-      if (segments.length == 1) {
-        // Disallow My Projects
-        return _buildRoute(
-          child: DeferredPage(
-            loadLibrary: home_page.loadLibrary,
-            buildPage: (_) => home_page.HomePage(),
-            placeholder: const _LoadingScaffold(),
-          ),
-          name: '/dashboard',
-        );
-      }
-    } else if (segments.isNotEmpty &&
-        !allowedPrefixes.contains(segments.first)) {
-      return _buildRoute(
-        child: DeferredPage(
-          loadLibrary: home_page.loadLibrary,
-          buildPage: (_) => home_page.HomePage(),
-          placeholder: const _LoadingScaffold(),
-        ),
-        name: '/dashboard',
-      );
-    }
-  }
+
 
   if (segments.isEmpty) {
-    final target = isLoggedIn ? '/dashboard' : '/login';
-    final page = isLoggedIn
-        ? DeferredPage(
-            loadLibrary: home_page.loadLibrary,
-            buildPage: (_) => home_page.HomePage(),
-            placeholder: const _LoadingScaffold(),
-          )
-        : const LoginPage();
-    return _buildRoute(child: page, name: target);
+    final page = DeferredPage(
+      loadLibrary: home_page.loadLibrary,
+      buildPage: (_) => home_page.HomePage(),
+      placeholder: const _LoadingScaffold(),
+    );
+    return _buildRoute(child: page, name: '/dashboard');
   }
 
   Widget? page;
   String routeName = uri.path.isEmpty ? '/' : uri.path;
-  bool requiresAuth = true;
+  bool requiresAuth = false;
   Set<UserRole>? requiredRoles;
 
   switch (segments.first) {
@@ -500,6 +448,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
             placeholder: const _LoadingScaffold(),
           );
           routeName = '/projects/create';
+          requiresAuth = true;
         } else {
           final projectId = int.tryParse(second);
           if (projectId != null) {
@@ -546,6 +495,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       break;
     case 'reviewer':
       requiredRoles = {UserRole.reviewer, UserRole.admin, UserRole.owner};
+      requiresAuth = true;
       page = DeferredPage(
         loadLibrary: reviewer_page.loadLibrary,
         buildPage: (_) => reviewer_page.ReviewerPage(),
@@ -555,6 +505,7 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       break;
     case 'admin':
       requiredRoles = {UserRole.admin, UserRole.owner};
+      requiresAuth = true;
       page = DeferredPage(
         loadLibrary: admin_page.loadLibrary,
         buildPage: (_) => admin_page.AdminPage(),
@@ -627,33 +578,15 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     );
   }
 
-  if (isLoggedIn &&
-      !_isHackatimeAuthenticatedEffective &&
-      requiresAuth &&
-      routeName != hackatimeLoginRoute &&
-      routeName != hackatimeBannedRoute &&
-      routeName != hackatimeUnavailableRoute) {
-    return _buildRoute(
-      child: const HackatimeLoginPage(),
-      name: hackatimeLoginRoute,
-    );
-  }
-
-  // Allow logged-in users to access signup flow pages (profile, hackatime setup)
-  // but redirect them from login page to dashboard
+  // Redirect logged-in users from login page to dashboard
   if (isLoggedIn && !requiresAuth && segments.first == 'login') {
-    final shouldRouteToHackatimeLogin =
-        !_isHackatimeAuthenticatedEffective && !_isBootAccessRestricted;
-
     return _buildRoute(
-      child: shouldRouteToHackatimeLogin
-          ? const HackatimeLoginPage()
-          : DeferredPage(
-              loadLibrary: home_page.loadLibrary,
-              buildPage: (_) => home_page.HomePage(),
-              placeholder: const _LoadingScaffold(),
-            ),
-      name: shouldRouteToHackatimeLogin ? hackatimeLoginRoute : '/dashboard',
+      child: DeferredPage(
+        loadLibrary: home_page.loadLibrary,
+        buildPage: (_) => home_page.HomePage(),
+        placeholder: const _LoadingScaffold(),
+      ),
+      name: '/dashboard',
     );
   }
 

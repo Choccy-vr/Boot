@@ -76,10 +76,8 @@ class NavigationService {
         break;
       case AppDestination.profile:
         final user = UserService.currentUser;
-        if (user == null) {
-          GlobalNotificationService.instance.showWarning(
-            'User profile not loaded yet.',
-          );
+        if (user == null || user.id == 'guest' || user.id.isEmpty) {
+          navigator.pushNamedAndRemoveUntil('/login', (route) => false);
           return;
         }
         navigator.pushNamed('/user/${user.id}', arguments: user);

@@ -1,13 +1,20 @@
 import 'package:boot_app/services/misc/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '/main.dart' show supabaseUrl, supabaseKey;
 
 class SupabaseEdgeFunction {
   static final supabase = Supabase.instance.client;
+
+  static bool get _isConfigured => supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
 
   static Future<dynamic> invokeFunction(
     String functionName, {
     Map<String, dynamic>? payload,
   }) async {
+    if (!_isConfigured) {
+      AppLogger.info('Supabase is not configured. invokeFunction returning null.');
+      return null;
+    }
     try {
       final response = await supabase.functions.invoke(
         functionName,

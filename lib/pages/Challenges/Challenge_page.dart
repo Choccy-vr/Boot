@@ -1199,9 +1199,7 @@ class ChallengeDetailDialog extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: isExpired || !challenge.isActive
-                            ? null
-                            : () => _handleMarkAsCompleted(context),
+                        onPressed: null,
                         icon: Icon(Icons.check, size: 20),
                         label: Text('Mark as Completed'),
                       ),

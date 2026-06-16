@@ -705,8 +705,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   bool _isOwner() {
-    if (BootEvents.isFullyLocked) return false;
-    return UserService.currentUser?.id == _project.owner;
+    return false;
   }
 
   String _formatReadableDuration(int totalSeconds) {
